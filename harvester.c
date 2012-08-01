@@ -6,24 +6,47 @@
 #include "backoff.h"
 #include <unistd.h> /* for close, etc */
 #include <stdio.h> /* printf and friends */
+#include <zmq.h>
 
 #include "insist.h"
 
+#define EMITTER_SOCKET "inproc://emitter"
+#define BUFFERSIZE 16384
+
 void *harvest(void *arg) {
-  const char *path = (const char *)arg;
+  struct harvest_config *config = arg;
   int fd;
-  fd = open(path, O_RDONLY);
-  insist(fd >= 0, "open(%s) failed: %s", path, strerror(errno));
+  int rc;
+
+  fd = open(config->path, O_RDONLY);
+  insist(fd >= 0, "open(%s) failed: %s", config->path, strerror(errno));
 
   char *buf;
   ssize_t bytes;
-  buf = calloc(65536, sizeof(char));
+  buf = calloc(BUFFERSIZE, sizeof(char));
 
   struct backoff sleeper;
   backoff_init(&sleeper, 10000 /* 10ms */, 15000000  /* 15 seconds */);
 
+  void *socket = zmq_socket(config->zmq, ZMQ_PUSH);
+  insist(socket != NULL, "zmq_socket() failed: %s", strerror(errno));
+
   for (;;) {
-    bytes = read(fd, buf, 65536);
+    rc = zmq_connect(socket, config->zmq_endpoint);
+    if (rc != 0 && errno == ECONNREFUSED) {
+      backoff(&sleeper);
+      continue; /* retry */
+    } 
+    insist(rc == 0, "zmq_connect(%s) failed: %s", config->zmq_endpoint,
+           zmq_strerror(errno));
+    break;
+  }
+  backoff_clear(&sleeper);
+
+  int offset = 0;
+  zmq_msg_t message;
+  for (;;) {
+    bytes = read(fd, buf + offset, BUFFERSIZE - offset);
     if (bytes < 0) {
       /* error */
       break;
@@ -31,17 +54,24 @@ void *harvest(void *arg) {
       backoff(&sleeper);
     } else {
       backoff_clear(&sleeper);
-      printf("got: %.*s\n", (int)bytes, buf);
 
       /* Find newlines, emit an event */
       /* Event contents:
-       *  - hostname
        *  - file
        *  - message
+       *  - any arbitrary data the user wants
+       *
+       * Pick a serialization? msgpack?
+       * host+file+message
        */
-      /* keep remainder in the buffer */
+      zmq_msg_init_data(&message, buf, bytes + offset, NULL, NULL);
+      rc = zmq_send(socket, &message, 0);
+      insist(rc == 0, "zmq_send() failed: %s", zmq_strerror(rc));
+      zmq_msg_close(&message);
     }
-  }
+  } /* loop forever, reading from a file */
+
+  free(arg); /* allocated by the main method, up to us to free */
   close(fd);
 
   return NULL;
