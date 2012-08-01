@@ -40,7 +40,10 @@ build/include/insist.h: | build/include
 	curl -s -o $@ https://raw.github.com/jordansissel/experiments/master/c/better-assert/insist.h
 
 build/include/zeromq.h build/lib/libzmq.$(LIBEXT): | build
-	$(MAKE) -C vendor/zeromq/ PREFIX=$$PWD/build
+	$(MAKE) -C vendor/zeromq/ install PREFIX=$$PWD/build
+
+build/include/msgpack.h build/lib/libmsgpack.$(LIBEXT): | build
+	$(MAKE) -C vendor/msgpack/ install PREFIX=$$PWD/build
 
 build:
 	mkdir $@
