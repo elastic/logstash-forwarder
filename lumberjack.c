@@ -3,6 +3,7 @@
 #include <insist.h>
 
 #include <pthread.h>
+#include <unistd.h> /* for gethostname */
 
 #include <string.h> /* for strerror(3) */
 #include <errno.h> /* for errno */
@@ -20,6 +21,8 @@ static struct option options[] = {
   { "version", no_argument, NULL, opt_version },
   { NULL, 0, NULL, 0 }
 };
+
+static char hostname[200];
 
 void *harvest(void *arg) {
   const char *path = (const char *)arg;
@@ -44,13 +47,20 @@ void *harvest(void *arg) {
     } else {
       backoff_clear(&sleeper);
       printf("got: %.*s\n", (int)bytes, buf);
+
+      /* Find newlines, emit an event */
+      /* Event contents:
+       *  - hostname
+       *  - file
+       *  - message
+       */
+      /* keep remainder in the buffer */
     }
   }
   close(fd);
 
   return NULL;
 } /* harvest */
-
 
 int main(int argc, char **argv) {
   int c, i;
@@ -62,6 +72,8 @@ int main(int argc, char **argv) {
   argv += optind;
 
   insist(argc > 0, "No arguments given. What log files do you want shipped?");
+
+  gethostname(hostname, sizeof(hostname));
 
   pthread_t *harvesters = calloc(argc, sizeof(pthread_t));
 
