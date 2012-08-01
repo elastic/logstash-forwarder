@@ -1,3 +1,5 @@
+#define _BSD_SOURCE /* to get gethostname() under linux/gcc */
+#include <sys/types.h>
 #include <getopt.h>
 #include <insist.h>
 #include <pthread.h>
@@ -33,12 +35,12 @@ int main(int argc, char **argv) {
   pthread_t *harvesters = calloc(argc, sizeof(pthread_t));
 
   /* Start harvesters for each path given */
-  for (int i = 0; i < argc; i++) {
+  for (i = 0; i < argc; i++) {
     pthread_create(&harvesters[i], NULL, harvest, argv[i]);
   }
 
   /* Wait for the harvesters to die */
-  for (int i = 0; i < argc; i++) {
+  for (i = 0; i < argc; i++) {
     pthread_join(harvesters[i], NULL);
   }
 

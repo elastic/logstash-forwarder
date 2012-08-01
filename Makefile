@@ -1,8 +1,9 @@
 VERSION=0.0.1
 
-CFLAGS+=-Ibuild/include
-#LDFLAGS+=-pthread
-LDFLAGS=-Lbuild/lib -lzmq -rpath $$ORIGIN/build/lib
+CFLAGS+=-Ibuild/include -std=c99 -Wall -pipe -O2
+LDFLAGS+=-pthread
+LDFLAGS+=-Lbuild/lib -Wl,-rpath='$$ORIGIN/../lib'
+LIBS=-lzmq
 
 PREFIX?=/opt/lumberjack
 
@@ -28,7 +29,7 @@ lumberjack.c: backoff.h harvester.h
 
 build/bin/lumberjack: | build/bin build/lib/libzmq.$(LIBEXT)
 build/bin/lumberjack: lumberjack.o backoff.o harvester.o
-	$(CC) -o $@ $^
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 	@echo " => Build complete: $@"
 	@echo " => Run 'make rpm' to build an rpm (or deb or tarball)"
 

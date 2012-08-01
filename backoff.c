@@ -1,6 +1,7 @@
-#include "backoff.h"
+#define _XOPEN_SOURCE 500 /* for useconds_t */
 #include <stdio.h>
 #include <unistd.h>
+#include "backoff.h"
 
 inline void backoff_init(struct backoff *b, useconds_t min, useconds_t max) {
   b->max = max;

@@ -1,7 +1,9 @@
 #ifndef _BACKOFF_H_
 #define _BACKOFF_H_
 
+#define _XOPEN_SOURCE 500 /* for useconds_t */
 #include <sys/types.h>
+#include <unistd.h>
 
 struct backoff {
   useconds_t max;

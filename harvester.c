@@ -1,3 +1,4 @@
+#define _XOPEN_SOURCE 500 /* for useconds_t */
 #include "harvester.h"
 #include <string.h> /* for strerror(3) */
 #include <errno.h> /* for errno */
