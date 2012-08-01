@@ -8,13 +8,15 @@ Goal: Something small, fast, and light-weight to ship local logs externally.
 
 ## Requirements
 
-* minimal resources
+* minimal resource usage
 * configurable event data
+* encryption and compression
 
 Simple inputs only:
 
 * follow files, respect rename/truncation conditions
-* local sockets
+* local sockets, maybe, if syslog(3) is worth supporting.
+* stdin, useful for things like 'varnishlog | lumberjack ...'
 
 Simple outputs only:
 
@@ -28,5 +30,7 @@ Simple outputs only:
     # Ship apache logs with additional log fields:
     ./lumberjack --target foo:12345 --field host=$HOSTNAME --field role=apt-repo /mnt/apt/access.log
 
-Wire protocol will be msgpack for speed of parsing unless I find something
-faster that's easy to use in as many languages.
+* Serialization: msgpack (likely)
+* Encryption: SSL
+* Authentication (both directions): SSL certificates
+* Compression: TLS v1 comes with compression, might be sufficient.
