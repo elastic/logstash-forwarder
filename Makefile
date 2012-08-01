@@ -1,6 +1,7 @@
 VERSION=0.0.1
 
-CFLAGS+=-Ibuild/include -std=c99 -Wall -pipe -O2
+CFLAGS+=-Ibuild/include -std=c99 -Wall -pipe -g 
+#-O2
 LDFLAGS+=-pthread
 LDFLAGS+=-Lbuild/lib -Wl,-rpath='$$ORIGIN/../lib'
 LIBS=-lzmq
@@ -24,11 +25,12 @@ rpm deb:
 #unixsock.c: build/include/insist.h
 backoff.c: backoff.h
 harvester.c: harvester.h
+emitter.c: emitter.h
 lumberjack.c: build/include/insist.h build/include/zeromq.h
-lumberjack.c: backoff.h harvester.h
+lumberjack.c: backoff.h harvester.h emitter.h
 
 build/bin/lumberjack: | build/bin build/lib/libzmq.$(LIBEXT)
-build/bin/lumberjack: lumberjack.o backoff.o harvester.o
+build/bin/lumberjack: lumberjack.o backoff.o harvester.o emitter.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 	@echo " => Build complete: $@"
 	@echo " => Run 'make rpm' to build an rpm (or deb or tarball)"
