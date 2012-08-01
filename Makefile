@@ -3,7 +3,7 @@ VERSION=0.0.1
 CFLAGS+=-Ibuild/include -std=c99 -Wall -pipe -g 
 #-O2
 LDFLAGS+=-pthread
-LDFLAGS+=-Lbuild/lib -Wl,-rpath='$$ORIGIN/../lib'
+LDFLAGS+=-Lbuild/lib -Wl,-rpath,'$$ORIGIN/../lib'
 LIBS=-lzmq
 
 PREFIX?=/opt/lumberjack
