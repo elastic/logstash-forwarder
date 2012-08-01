@@ -1,6 +1,6 @@
 VERSION=0.0.1
 
-CFLAGS+=-Ibuild/include -std=c99 -Wall -pipe -g 
+CFLAGS+=-Ibuild/include -std=c99 -Wall -Wextra -Werror -pipe -g 
 #-O2
 LDFLAGS+=-pthread
 LDFLAGS+=-Lbuild/lib -Wl,-rpath,'$$ORIGIN/../lib'

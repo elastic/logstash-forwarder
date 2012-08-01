@@ -12,10 +12,10 @@ all:
 	make -C $(WORKDIR) $@
 
 clean:
-	-rm -r $(WORKDIR)
+	-rm -fr $(WORKDIR)
 
 distclean:
-	-rm -r $(TARBALL)
+	-rm -fr $(TARBALL)
 
 fetch: $(TARBALL)
 $(TARBALL):
