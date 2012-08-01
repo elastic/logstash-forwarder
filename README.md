@@ -6,7 +6,7 @@ Problem: logstash jar releases are too fat for constrained systems.
 
 Goal: Something small, fast, and light-weight to ship local logs externally.
 
-## Design
+## Requirements
 
 * minimal resources
 
