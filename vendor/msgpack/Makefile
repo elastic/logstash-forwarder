@@ -10,7 +10,7 @@ default: configure
 
 configure: configure-autoconf
 
-ifeq ($(UNAME),"Darwin")
+ifeq ($(UNAME),Darwin)
 # Use --disable-dependency-tracking otherwise llvm/clang crashes
 # on OS X 10.7.x
 $(WORKDIR)/Makefile: | $(WORKDIR)
