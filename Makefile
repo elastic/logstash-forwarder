@@ -23,6 +23,10 @@ lumberjack.c: backoff.h harvester.h
 build/bin/lumberjack: | build/bin build/lib/libzmq.$(LIBEXT)
 build/bin/lumberjack: lumberjack.o backoff.o harvester.o
 	$(CC) -o $@ $^
+	echo ====
+	echo "Build complete: $@"
+	echo "Run 'make rpm' to build an rpm (or deb or tarball)"
+
 
 build/include/insist.h: | build/include
 	curl -s -o $@ https://raw.github.com/jordansissel/experiments/master/c/better-assert/insist.h
