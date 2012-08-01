@@ -1,0 +1,5 @@
+*.o
+build
+*.tar.gz
+*.rpm
+*.deb
