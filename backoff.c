@@ -9,7 +9,7 @@ inline void backoff_init(struct backoff *b, useconds_t min, useconds_t max) {
 } /* backoff_init */
 
 inline void backoff(struct backoff *b) {
-  printf("Sleeping %f seconds\n", b->time / 1000000.0);
+  //printf("Sleeping %f seconds\n", b->time / 1000000.0);
   usleep(b->time);
 
   /* Exponential backoff */
