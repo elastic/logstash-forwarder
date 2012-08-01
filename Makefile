@@ -4,6 +4,8 @@ CFLAGS+=-Ibuild/include
 #LDFLAGS+=-pthread
 LDFLAGS=-Lbuild/lib -lzmq -rpath $$ORIGIN/build/lib
 
+PREFIX?=/opt/lumberjack
+
 default: build/bin/lumberjack
 include Makefile.ext
 
@@ -14,6 +16,10 @@ rpm deb:
 	fpm -s dir -t $@ -n lumberjack -v $(VERSION) --prefix /opt/lumberjack \
 		bin/lumberjack build/lib
 
+#install: build/bin/lumberjack build/lib/libzmq.$(LIBEXT)
+# install -d -m 755 build/bin/* $(PREFIX)/bin/lumberjack
+# install -d build/lib/* $(PREFIX)/lib
+
 #unixsock.c: build/include/insist.h
 backoff.c: backoff.h
 harvester.c: harvester.h
@@ -23,9 +29,8 @@ lumberjack.c: backoff.h harvester.h
 build/bin/lumberjack: | build/bin build/lib/libzmq.$(LIBEXT)
 build/bin/lumberjack: lumberjack.o backoff.o harvester.o
 	$(CC) -o $@ $^
-	echo ====
-	echo "Build complete: $@"
-	echo "Run 'make rpm' to build an rpm (or deb or tarball)"
+	@echo " => Build complete: $@"
+	@echo " => Run 'make rpm' to build an rpm (or deb or tarball)"
 
 
 build/include/insist.h: | build/include
