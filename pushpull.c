@@ -18,7 +18,7 @@ void *pusher(void *zmq) {
   int rc;
   zmq_setsockopt(socket, ZMQ_HWM, &hwm, sizeof(hwm));
   
-  while (rc = zmq_connect(socket, "inproc://foo"), rc != 0) {
+  while (rc = zmq_connect(socket, ENDPOINT), rc != 0) {
     printf("pusher waiting for connect to succeed...\n");
     sleep(1);
   }
