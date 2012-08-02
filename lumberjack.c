@@ -28,7 +28,6 @@ static struct option options[] = {
   { NULL, 0, NULL, 0 }
 };
 
-static char hostname[200];
 #define ZMQ_EMITTER_ENDPOINT "inproc://emitter"
 
 int main(int argc, char **argv) {
@@ -41,8 +40,6 @@ int main(int argc, char **argv) {
   argv += optind;
 
   insist(argc > 0, "No arguments given. What log files do you want shipped?");
-
-  gethostname(hostname, sizeof(hostname));
 
   pthread_t *harvesters = calloc(argc, sizeof(pthread_t));
   /* no I/O threads needed since we use inproc:// only */
