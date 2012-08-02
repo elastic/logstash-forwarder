@@ -1,10 +1,9 @@
 VERSION=0.0.1
 
 CFLAGS+=-Ibuild/include -std=c99 -Wall -Wextra -Werror -pipe -g 
-#-O2
 LDFLAGS+=-pthread
 LDFLAGS+=-Lbuild/lib -Wl,-rpath,'$$ORIGIN/../lib'
-LIBS=-lzmq -lmsgpack
+LIBS=-lzmq -ljansson
 
 PREFIX?=/opt/lumberjack
 
@@ -13,7 +12,7 @@ include Makefile.ext
 
 clean:
 	-rm -fr lumberjack unixsock *.o build
-	-make -C vendor/msgpack/ clean
+	-#make -C vendor/jansson/ clean
 	-make -C vendor/zeromq/ clean
 
 rpm deb:
@@ -28,10 +27,10 @@ rpm deb:
 backoff.c: backoff.h
 harvester.c: harvester.h
 emitter.c: emitter.h
-lumberjack.c: build/include/insist.h build/include/zeromq.h build/include/msgpack.h
+lumberjack.c: build/include/insist.h build/include/zeromq.h build/include/jansson.h
 lumberjack.c: backoff.h harvester.h emitter.h
 
-build/bin/lumberjack: | build/bin build/lib/libzmq.$(LIBEXT) build/lib/libmsgpack.$(LIBEXT)
+build/bin/lumberjack: | build/bin build/lib/libzmq.$(LIBEXT) build/lib/libjansson.$(LIBEXT)
 build/bin/lumberjack: lumberjack.o backoff.o harvester.o emitter.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 	@echo " => Build complete: $@"
@@ -44,8 +43,11 @@ build/include/insist.h: | build/include
 build/include/zeromq.h build/lib/libzmq.$(LIBEXT): | build
 	$(MAKE) -C vendor/zeromq/ install PREFIX=$$PWD/build
 
-build/include/msgpack.h build/lib/libmsgpack.$(LIBEXT): | build
-	$(MAKE) -C vendor/msgpack/ install PREFIX=$$PWD/build
+#build/include/msgpack.h build/lib/libmsgpack.$(LIBEXT): | build
+#	$(MAKE) -C vendor/msgpack/ install PREFIX=$$PWD/build
+
+build/include/jansson.h build/lib/libjansson.$(LIBEXT): | build
+	$(MAKE) -C vendor/jansson/ install PREFIX=$$PWD/build
 
 build:
 	mkdir $@
