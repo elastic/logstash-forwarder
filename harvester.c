@@ -45,7 +45,7 @@ void *harvest(void *arg) {
   void *socket = zmq_socket(config->zmq, ZMQ_PUSH);
   insist(socket != NULL, "zmq_socket() failed: %s", strerror(errno));
 
-  int hwm = 500;
+  int64_t hwm = 1;
   zmq_setsockopt(socket, ZMQ_HWM, &hwm, sizeof(hwm));
 
   json_t *event = json_object();
@@ -107,8 +107,8 @@ void *harvest(void *arg) {
 
           zmq_msg_init_data(&message, serialized, strlen(serialized), free2, NULL);
           /* if I uncomment this, memory grows unbouned. */
-          //rc = zmq_send(socket, &message, 0);
-          //insist(rc == 0, "zmq_send() failed: %s", zmq_strerror(rc));
+          rc = zmq_send(socket, &message, 0);
+          insist(rc == 0, "zmq_send() failed: %s", zmq_strerror(rc));
 
           zmq_msg_close(&message);
         }
