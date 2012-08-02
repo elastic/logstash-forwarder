@@ -46,6 +46,8 @@ void *harvest(void *arg) {
 
   int offset = 0;
   for (;;) {
+    /* TODO(sissel): is truncation handled? */
+    /* TODO(sissel): what about log rotation? */
     bytes = read(fd, buf + offset, BUFFERSIZE - offset);
     if (bytes < 0) {
       /* error */
