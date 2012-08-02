@@ -1,6 +1,7 @@
 VERSION=0.0.1
 
 CFLAGS+=-Ibuild/include -std=c99 -Wall -Wextra -Werror -pipe -g 
+CFLAGS+=-D_POSIX_C_SOURCE=199309
 LDFLAGS+=-pthread
 LDFLAGS+=-Lbuild/lib -Wl,-rpath,'$$ORIGIN/../lib'
 LIBS=-lzmq -ljansson

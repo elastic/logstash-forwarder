@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 199309L /* for struct timespec */
 #include <stdio.h>
 #include "backoff.h"
 
