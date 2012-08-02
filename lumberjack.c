@@ -60,9 +60,10 @@ int main(int argc, char **argv) {
   emitter(&config);
 
   /* Wait for the harvesters to die */
-  //for (i = 0; i < argc; i++) {
-    //pthread_join(harvesters[i], NULL);
-  //}
+  for (i = 0; i < argc; i++) {
+    pthread_join(harvesters[i], NULL);
+  }
+  exit(0);
 
   return 0;
 } /* main */
