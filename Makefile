@@ -11,9 +11,9 @@ default: build/bin/lumberjack
 include Makefile.ext
 
 clean:
-	-rm -fr lumberjack unixsock *.o build
-	-#make -C vendor/jansson/ clean
-	-make -C vendor/zeromq/ clean
+	-@rm -fr lumberjack unixsock *.o build
+	-@make -C vendor/jansson/ clean
+	-@make -C vendor/zeromq/ clean
 
 rpm deb:
 	fpm -s dir -t $@ -n lumberjack -v $(VERSION) --prefix /opt/lumberjack \
