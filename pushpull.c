@@ -14,8 +14,8 @@ void free2(void *data, void __attribute__((unused)) *hint) {
 
 void *pusher(void *zmq) {
   void *socket = zmq_socket(zmq, ZMQ_PUSH);
-  int hwm = 1;
   int rc;
+  int hwm = 1;
   zmq_setsockopt(socket, ZMQ_HWM, &hwm, sizeof(hwm));
   
   while (rc = zmq_connect(socket, ENDPOINT), rc != 0) {
@@ -45,16 +45,21 @@ void *puller(void *zmq) {
   }
 }
 
-int main() {
+int main(int argc, char **argv) {
   pthread_t p;
   void *zmq = zmq_init(0); /* inproc only, no threads needed */
+
+  if (argc != 2) {
+    printf("Usage: %s <THREADCOUNT>\n", argv[0]);
+    return 1;
+  }
 
   pthread_create(&p, NULL, puller, zmq);
 
   int i = 0;
-
-  /* Create pusher threads */
-  for (i = 0; i < 10; i++) {
+  
+  /* Create pusher threads, thread count comes from command args */
+  for (i = 0; i < atoi(argv[1]); i++) {
     pthread_t *pushthread = calloc(1, sizeof(pthread_t));
     pthread_create(pushthread, NULL, pusher, zmq);
   }
