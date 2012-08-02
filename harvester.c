@@ -104,7 +104,6 @@ void *harvest(void *arg) {
           /* Purge the 'line' from the event object so it'll be freed */
           json_object_del(event, "line");
           json_decref(line_obj);
-          free(serialized);
 
           zmq_msg_init_data(&message, serialized, strlen(serialized), free2, NULL);
           /* if I uncomment this, memory grows unbouned. */
