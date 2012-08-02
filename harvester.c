@@ -1,13 +1,15 @@
 #define _BSD_SOURCE
+#define _XOPEN_SOURCE 500 /* for useconds_t */
 #include <string.h> /* for strsep, etc */
-#include "harvester.h"
 #include <string.h> /* for strerror(3) */
 #include <errno.h> /* for errno */
 #include <fcntl.h> /* for open(2) */
-#include "backoff.h"
 #include <unistd.h> /* for close, etc */
 #include <stdio.h> /* printf and friends */
 #include <zmq.h>
+
+#include "harvester.h"
+#include "backoff.h"
 
 #include "insist.h"
 
