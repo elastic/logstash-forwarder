@@ -1,19 +1,16 @@
 #ifndef _BACKOFF_H_
 #define _BACKOFF_H_
 
-#define _XOPEN_SOURCE 500 /* for useconds_t */
-#define _BSD_SOURCE /* also for useconds_t ? */
-#include <unistd.h>
-#include <sys/types.h>
+#include <time.h>
 
 struct backoff {
-  useconds_t max;
-  useconds_t min;
-  useconds_t time;
+  struct timespec max;
+  struct timespec min;
+  struct timespec sleep;
 };
 
 /* Initialize a backoff struct with a max value */
-void backoff_init(struct backoff *b, useconds_t min, useconds_t max);
+void backoff_init(struct backoff *b, struct timespec *min, struct timespec *max);
 
 /* Execute a backoff. This will sleep for a time.
  * The next backoff() call will sleep twice as long (or the max value,
