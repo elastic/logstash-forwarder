@@ -25,5 +25,4 @@ void *emitter(void *arg) {
     /* TODO(sissel): emit this event over... some network.  */
     zmq_msg_close(&message);
   }
-
-}
+} /* emitter */
