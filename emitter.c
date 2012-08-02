@@ -22,6 +22,7 @@ void *emitter(void *arg) {
            config->zmq_endpoint, rc, zmq_strerror(errno));
     printf("received: %.*s\n", (int)zmq_msg_size(&message),
            (char *)zmq_msg_data(&message));
+    /* TODO(sissel): emit this event over... some network.  */
     zmq_msg_close(&message);
   }
 
