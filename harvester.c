@@ -12,6 +12,12 @@
 #include "backoff.h"
 #include "insist.h"
 
+#ifdef __MACH__
+/* OS X is dumb, or I am dumb, or we are both dumb. I don't know anymore. */
+extern char *strsep(char **stringp, const char *delim);
+extern int gethostname(char *name, size_t namelen);
+#endif
+
 #define EMITTER_SOCKET "inproc://emitter"
 #define BUFFERSIZE 16384
 
