@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <stdint.h> /* C99 for int64_t */
 #include <string.h>
+#include <time.h> /* struct timespec, clock_gettime */
 
 #ifdef __MACH__
 // copied mostly from https://gist.github.com/1087739
@@ -23,8 +24,6 @@ long clock_gettime(clockid_t __attribute__((unused)) which_clock, struct timespe
   tp->tv_nsec = mts.tv_nsec;
   return 0; /* success, according to clock_gettime(3) */
 }
-#else
-#include <time.h>
 #endif
 // end gist copy
 
