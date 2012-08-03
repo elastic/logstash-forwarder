@@ -17,7 +17,7 @@ typedef int clockid_t;
 long clock_gettime(clockid_t __attribute__((unused)) which_clock, struct timespec *tp) {
   clock_serv_t cclock;
   mach_timespec_t mts;
-  host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
+  host_get_clock_service(mach_host_self(), REALTIME_CLOCK, &cclock);
   clock_get_time(cclock, &mts);
   mach_port_deallocate(mach_task_self(), cclock);
   tp->tv_sec = mts.tv_sec;
