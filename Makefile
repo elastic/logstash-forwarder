@@ -1,7 +1,7 @@
 VERSION=0.0.1
 
 CFLAGS+=-Ibuild/include -std=c99 -Wall -Wextra -Werror -pipe -g 
-CFLAGS+=-D_POSIX_C_SOURCE=199309
+#CFLAGS+=-D_POSIX_C_SOURCE=201201
 LDFLAGS+=-pthread
 LDFLAGS+=-Lbuild/lib -Wl,-rpath,'$$ORIGIN/../lib'
 LIBS=-lzmq -ljansson
@@ -28,7 +28,7 @@ rpm deb:
 backoff.c: backoff.h
 harvester.c: harvester.h
 emitter.c: emitter.h
-lumberjack.c: build/include/insist.h build/include/zeromq.h build/include/jansson.h
+lumberjack.c: build/include/insist.h build/include/zmq.h build/include/jansson.h
 lumberjack.c: backoff.h harvester.h emitter.h
 
 build/bin/pushpull: | build/lib/libzmq.$(LIBEXT) build/lib/libjansson.$(LIBEXT) build/bin
@@ -45,7 +45,7 @@ build/bin/lumberjack: lumberjack.o backoff.o harvester.o emitter.o
 build/include/insist.h: | build/include
 	curl -s -o $@ https://raw.github.com/jordansissel/experiments/master/c/better-assert/insist.h
 
-build/include/zeromq.h build/lib/libzmq.$(LIBEXT): | build
+build/include/zmq.h build/lib/libzmq.$(LIBEXT): | build
 	$(MAKE) -C vendor/zeromq/ install PREFIX=$$PWD/build
 
 #build/include/msgpack.h build/lib/libmsgpack.$(LIBEXT): | build
