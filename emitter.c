@@ -57,8 +57,8 @@ void *emitter(void *arg) {
     rc = zmq_recv(socket, &message, 0);
     insist(rc == 0, "zmq_recv(%s) failed (returned %d): %s",
            config->zmq_endpoint, rc, zmq_strerror(errno));
-    //printf("received: %.*s\n", (int)zmq_msg_size(&message),
-           //(char *)zmq_msg_data(&message));
+    printf("received: %.*s\n", (int)zmq_msg_size(&message),
+           (char *)zmq_msg_data(&message));
 
     /* TODO(sissel): ship this out to a remote server */
     zmq_msg_close(&message);
