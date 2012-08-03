@@ -11,7 +11,18 @@
 * ordered
 * scalable (load balance, etc)
 
-* needs to be easy to integrate into logstash
+* needs to be easy to code into logstash and other projects
+
+## Prior Art in network protocols
+
+* http://fabiensanglard.net/quake3/network.php
+* TCP, SCTP, WebSockets, HTTP, TLS, SSH
+* WebSockets are fail, because almost no load loadbalancers support HTTP Upgrade.
+* SCTP is fail, because most folks don't understand how to firewall it and it's
+  not supported on (any?) cloud stuff.
+* HTTP is request/response with high overhead.
+* TLS is a good framework to sit on to get encryption and authentication.
+* SSH v2 channels are pretty neat. Also solves encryption + authentication.
 
 ## Questions:
 
@@ -23,7 +34,7 @@
 * Messaging: Length-known messages sent over an encrypted TLS channel. Messages
   have a sequence id.
 * Serialization: versioned, minimal+documented map-like string:string serialization.
-* Authentication: ssl certs.
+* Authentication: ssl certs
 * Encryption: tls
 * Compression: gzip (most common)
 
