@@ -48,8 +48,8 @@ awkward and/or slow in Java, thrift is C++, etc.
 
 * Serialization: msgpack, json, thrift, and protobufs are all too hard to
   integrate/deploy or are too slow/complex to generate (json).
-* Framing: zeromq can be easily vendored
 * Encryption: openssl is fairly ubiquitous and nontrivial to reimplement.
+* Framing: version, frame type, payload.
 
 ### Small CPU-cost
 
@@ -57,3 +57,50 @@ awkward and/or slow in Java, thrift is C++, etc.
   serialization mechanisms that inspect and possibly modify every single byte
   of a string (json's UTF-8 + escape code enforcement).
 
+# Lumberjack Protocol (Still in development)
+
+## Behavior
+
+Sequence and ack behavior (including sliding window, etc) is similar to TCP,
+but instead of bytes, messages are the base unit.
+
+A writer with a window size of 50 events can send up to 50 unacked events
+before blocking. A reader can acknowledge the 'last event' received to
+support bulk acknowledgements.
+
+Reliable, ordered byte transport is ensured by using TCP (or TLS on top), and
+this protocol aims to provide reliable, application-level, message transport.
+
+## Wire Format
+
+### Framing
+
+      0                   1                   2                   3
+      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     +---------------+---------------+-------------------------------+
+     |   version     |   frame type  |     payload ...               |
+     +---------------------------------------------------------------+
+     |   payload continued...                                        |
+     +---------------------------------------------------------------+
+
+### 'data' frame type
+
+data is a map of string:string pairs. This is analogous to a Hash in Ruby, a
+JSON map, etc, but only strings are supported at this time.
+
+* frame type value: ASCII 'D' aka byte value 0x44
+
+Payload:
+
+* 32bit unsigned sequence number
+* Any number of key-value pairs:
+  * 32bit unsigned key length followed by that many bytes for the key
+  * 32bit unsigned value length followed by that many bytes for the value
+
+### 'ack' frame type
+
+* frame type value: ASCII 'A' aka byte value 0x41
+
+Payload:
+
+* 32bit unsigned sequence number.
