@@ -31,6 +31,10 @@ emitter.c: emitter.h
 lumberjack.c: build/include/insist.h build/include/zeromq.h build/include/jansson.h
 lumberjack.c: backoff.h harvester.h emitter.h
 
+build/bin/pushpull: | build/lib/libzmq.$(LIBEXT) build/lib/libjansson.$(LIBEXT) build/bin
+build/bin/pushpull: pushpull.o
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
 build/bin/lumberjack: | build/bin build/lib/libzmq.$(LIBEXT) build/lib/libjansson.$(LIBEXT)
 build/bin/lumberjack: lumberjack.o backoff.o harvester.o emitter.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
