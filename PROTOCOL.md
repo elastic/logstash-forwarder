@@ -27,14 +27,16 @@
 * Encryption: tls
 * Compression: gzip (most common)
 
+I'd rather not invent my own serialization for the protocol, but everything
+else seems rather awkward to use. Protobufs are C++ (not C), msgpack may be
+awkward and/or slow in Java, thrift is C++, etc.
+
 ## Implementation Considerations
 
 ### Simple/Few/Fast Dependencies
 
 * Serialization: msgpack, json, thrift, and protobufs are all too hard to
   integrate/deploy or are too slow/complex to generate (json).
-* Serialization: Maybe msgpack, it's the best (simple/easy/fast) of all options
-  it seems.
 * Framing: zeromq can be easily vendored
 * Encryption: openssl is fairly ubiquitous and nontrivial to reimplement.
 
