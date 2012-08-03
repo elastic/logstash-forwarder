@@ -1,5 +1,7 @@
 # lumberjack
 
+o/~ I'm a lumberjack and I'm ok! I sleep when idle, then I ship logs all day! I parse your logs, I eat the JVM agent for lunch! o/~
+
 Collect logs locally in preparation for processing elsewhere!
 
 Problem: logstash jar releases are too fat for constrained systems.
