@@ -28,8 +28,11 @@ install: $(PREFIX)/lib/libzmq.1.$(LIBEXT) $(PREFIX)/lib/libzmq.$(LIBEXT)
 else
 install: $(PREFIX)/lib/libzmq.$(LIBEXT).1 $(PREFIX)/lib/libzmq.$(LIBEXT)
 endif
+install: $(PREFIX)/include/zmq.h $(PREFIX)/include/zmq_utils.h
 
-$(PREFIX)/lib/libzmq.1.$(LIBEXT) $(PREFIX)/lib/libzmq.$(LIBEXT).1:
+$(PREFIX)/lib/libzmq.1.$(LIBEXT):
+	cp $(WORKDIR)/src/.libs/libzmq.1.$(LIBEXT) $@
+$(PREFIX)/lib/libzmq.$(LIBEXT).1:
 	cp $(WORKDIR)/src/.libs/libzmq.$(LIBEXT).1 $@
 
 ifeq ($(UNAME),Darwin)
