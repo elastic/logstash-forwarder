@@ -50,7 +50,7 @@ void *emitter(void *arg) {
       clock_gettime(CLOCK_MONOTONIC, &now);
       double s = (start.tv_sec + 0.0) + (start.tv_nsec / 1000000000.0);
       double n = (now.tv_sec + 0.0) + (now.tv_nsec / 1000000000.0);
-      printf("Rate: %f\n", (count + 0.0) / (n - s));
+      fprintf(stderr, "Rate: %f\n", (count + 0.0) / (n - s));
       clock_gettime(CLOCK_MONOTONIC, &start);
       count = 0;
     }
