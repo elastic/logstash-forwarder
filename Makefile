@@ -30,9 +30,15 @@ rpm deb:
 
 #unixsock.c: build/include/insist.h
 backoff.c: backoff.h
+<<<<<<< Updated upstream
 harvester.c: harvester.h
 emitter.c: emitter.h
 lumberjack.c: build/include/insist.h build/include/zmq.h build/include/msgpack.h
+=======
+harvester.c: harvester.h build/include/insist.h build/include/zmq.h
+emitter.c: emitter.h build/include/zmq.h
+lumberjack.c: build/include/insist.h build/include/zmq.h build/include/jansson.h
+>>>>>>> Stashed changes
 lumberjack.c: backoff.h harvester.h emitter.h
 
 build/bin/pushpull: | build/lib/libzmq.$(LIBEXT) build/lib/libmsgpack.$(LIBEXT) build/bin
