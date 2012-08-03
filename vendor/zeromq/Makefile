@@ -24,13 +24,26 @@ $(WORKDIR)/src/.libs/libzmq.$(LIBEXT): | configure
 
 install: | compile $(PREFIX)/lib $(PREFIX)/include
 ifeq ($(UNAME),Darwin)
-	cp $(WORKDIR)/src/.libs/libzmq.1.$(LIBEXT) $(PREFIX)/lib
-	ln -sf $(PREFIX)/lib/libzmq.1.$(LIBEXT) $(PREFIX)/lib/libzmq.$(LIBEXT)
+install: $(PREFIX)/lib/libzmq.1.$(LIBEXT) $(PREFIX)/lib/libzmq.$(LIBEXT)
 else
-	cp $(WORKDIR)/src/.libs/libzmq.$(LIBEXT).1 $(PREFIX)/lib
-	ln -sf $(PREFIX)/lib/libzmq.$(LIBEXT).1 $(PREFIX)/lib/libzmq.$(LIBEXT)
+install: $(PREFIX)/lib/libzmq.$(LIBEXT).1 $(PREFIX)/lib/libzmq.$(LIBEXT)
 endif
+
+$(PREFIX)/lib/libzmq.1.$(LIBEXT) $(PREFIX)/lib/libzmq.$(LIBEXT).1:
+	cp $(WORKDIR)/src/.libs/libzmq.$(LIBEXT).1 $@
+
+ifeq ($(UNAME),Darwin)
+$(PREFIX)/lib/libzmq.$(LIBEXT): $(PREFIX)/lib/libzmq.1.$(LIBEXT) 
+	ln -sf libzmq.1.$(LIBEXT) $(PREFIX)/lib/libzmq.$(LIBEXT)
+else
+$(PREFIX)/lib/libzmq.$(LIBEXT): $(PREFIX)/lib/libzmq.$(LIBEXT).1
+	ln -sf libzmq.$(LIBEXT).1 $(PREFIX)/lib/libzmq.$(LIBEXT)
+endif
+
+$(PREFIX)/include/zmq.h:
 	cp $(WORKDIR)/include/zmq.h $(PREFIX)/include
+
+$(PREFIX)/include/zmq_utils.h:
 	cp $(WORKDIR)/include/zmq_utils.h $(PREFIX)/include
 
 $(PREFIX)/lib/libuuid.$(LIBEXT) $(PREFIX)/include/uuid/uuid.h:
