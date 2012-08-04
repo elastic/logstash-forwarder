@@ -6,7 +6,8 @@ CFLAGS+=-D_POSIX_C_SOURCE=199309 -std=c99 -Wall -Wextra -Werror -pipe -g
 CFLAGS+=-Wno-unused-function
 LDFLAGS+=-pthread
 LDFLAGS+=-Lbuild/lib -Wl,-rpath,'$$ORIGIN/../lib'
-LIBS=-lzmq -lmsgpack
+LIBS=-lzmq
+#-lmsgpack
 #-ljansson
 
 PREFIX?=/opt/lumberjack
