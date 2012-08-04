@@ -7,6 +7,7 @@
 #include <zmq.h>
 #include "harvester.h"
 #include "emitter.h"
+#include <jemalloc/jemalloc.h>
 
 typedef enum {
   opt_help = 'h',
