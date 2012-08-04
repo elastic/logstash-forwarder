@@ -67,11 +67,8 @@ void *emitter(void *arg) {
     //write(1, zmq_msg_data(&message), zmq_msg_size(&message));
     //write(1, "\n", 1);
 
-
     /* TODO(sissel): pick sequence number */
     /* TODO(sissel): put the event into the ring buffer */
-
-    /* TODO(sissel): ship this out to a remote server */
     zmq_msg_close(&message);
 
     count++;
