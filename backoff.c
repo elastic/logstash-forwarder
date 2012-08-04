@@ -30,6 +30,10 @@ static inline void timespec_copy(struct timespec *source, struct timespec *dest)
   dest->tv_nsec = source->tv_nsec;
 } /* timespec_copy */
 
+inline void backoff_clear(struct backoff *b) {
+  timespec_copy(&b->min, &b->sleep);
+} /* backoff_clear */
+
 inline void backoff_init(struct backoff *b, struct timespec *min,
                          struct timespec *max) {
   timespec_copy(min, &b->min);
@@ -55,7 +59,3 @@ inline void backoff(struct backoff *b) {
     timespec_copy(&b->max, &b->sleep);
   }
 } /* backoff_sleep */
-
-inline void backoff_clear(struct backoff *b) {
-  timespec_copy(&b->min, &b->sleep);
-} /* backoff_clear */
