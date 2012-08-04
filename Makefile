@@ -1,12 +1,12 @@
 VERSION=0.0.1
 
 CFLAGS+=-Ibuild/include 
-CFLAGS+=-D_POSIX_C_SOURCE=199309 -std=c99 -Wall -Wextra -Werror -pipe -g 
+CFLAGS+=-D_POSIX_C_SOURCE=199309 -std=c99 -Wall -Wextra -Werror -pipe -O2
 # msgpack fails to compile without this.
 CFLAGS+=-Wno-unused-function
 LDFLAGS+=-pthread
 LDFLAGS+=-Lbuild/lib -Wl,-rpath,'$$ORIGIN/../lib'
-LIBS=-lzmq
+LIBS=-lzmq -ljemalloc
 
 #-lmsgpack
 #-ljansson
@@ -25,6 +25,8 @@ clean:
 	-@rm -fr lumberjack unixsock *.o build
 	-@make -C vendor/msgpack/ clean
 	-@make -C vendor/jansson/ clean
+	-@make -C vendor/jemalloc/ clean
+	-@make -C vendor/libuuid/ clean
 	-@make -C vendor/zeromq/ clean
 
 rpm deb:
@@ -41,6 +43,7 @@ harvester.c: harvester.h proto.h str.h build/include/insist.h build/include/zmq.
 emitter.c: emitter.h build/include/zmq.h
 lumberjack.c: build/include/insist.h build/include/zmq.h build/include/msgpack.h
 lumberjack.c: backoff.h harvester.h emitter.h
+harvester.c lumberjack.c pushpull.c ring.c str.c: build/include/jemalloc/jemalloc.h
 str.c: str.h
 proto.c: proto.h str.h
 
@@ -49,6 +52,7 @@ build/bin/pushpull: pushpull.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 build/bin/lumberjack: | build/bin build/lib/libzmq.$(LIBEXT) build/lib/libmsgpack.$(LIBEXT)
+build/bin/lumberjack: | build/lib/libjemalloc.$(LIBEXT)
 build/bin/lumberjack: lumberjack.o backoff.o harvester.o emitter.o str.o proto.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 	@echo " => Build complete: $@"
@@ -65,6 +69,9 @@ build/include/zmq.h build/lib/libzmq.$(LIBEXT): | build
 
 build/include/msgpack.h build/lib/libmsgpack.$(LIBEXT): | build
 	$(MAKE) -C vendor/msgpack/ install PREFIX=$$PWD/build
+
+build/include/jemalloc/jemalloc.h build/lib/libjemalloc.$(LIBEXT): | build
+	$(MAKE) -C vendor/jemalloc/ install PREFIX=$$PWD/build
 
 build:
 	mkdir $@
