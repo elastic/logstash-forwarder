@@ -5,6 +5,7 @@
 #include <stdint.h> /* C99 for int64_t */
 #include <string.h>
 #include <time.h> /* struct timespec, clock_gettime */
+#include <unistd.h>
 
 #ifdef __MACH__
 // copied mostly from https://gist.github.com/1087739
@@ -57,8 +58,10 @@ void *emitter(void *arg) {
     rc = zmq_recv(socket, &message, 0);
     insist(rc == 0, "zmq_recv(%s) failed (returned %d): %s",
            config->zmq_endpoint, rc, zmq_strerror(errno));
-    printf("received: %.*s\n", (int)zmq_msg_size(&message),
-           (char *)zmq_msg_data(&message));
+    //printf("received: %.*s\n", (int)zmq_msg_size(&message),
+           //(char *)zmq_msg_data(&message));
+    write(1, zmq_msg_data(&message), zmq_msg_size(&message));
+    write(1, "\n", 1);
 
     /* TODO(sissel): ship this out to a remote server */
     zmq_msg_close(&message);
