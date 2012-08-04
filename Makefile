@@ -7,6 +7,7 @@ CFLAGS+=-Wno-unused-function
 LDFLAGS+=-pthread
 LDFLAGS+=-Lbuild/lib -Wl,-rpath,'$$ORIGIN/../lib'
 LIBS=-lzmq
+
 #-lmsgpack
 #-ljansson
 
@@ -14,6 +15,11 @@ PREFIX?=/opt/lumberjack
 
 default: build/bin/lumberjack
 include Makefile.ext
+
+ifeq ($(UNAME),Linux)
+# clock_gettime is in librt on linux.
+LIBS+=-lrt
+endif
 
 clean:
 	-@rm -fr lumberjack unixsock *.o build
@@ -47,7 +53,6 @@ build/bin/lumberjack: lumberjack.o backoff.o harvester.o emitter.o str.o proto.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 	@echo " => Build complete: $@"
 	@echo " => Run 'make rpm' to build an rpm (or deb or tarball)"
-
 
 build/include/insist.h: | build/include
 	curl -s -o $@ https://raw.github.com/jordansissel/experiments/master/c/better-assert/insist.h
