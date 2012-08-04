@@ -12,19 +12,20 @@ inline struct str *str_new_size(size_t size) {
   str = malloc(sizeof(struct str));
   str->data_size = size;
   str->data_len = 0;
-  /* benchmark difference in allocating 'str' and its data in the same malloc call */
-  //str->data = malloc(str->data_size * sizeof(char));
-  str->data = (char *)(str + sizeof(struct str));
+  str->data = malloc(str->data_size * sizeof(char));
+  /* We could save ourselves a malloc call by storing the str struct and its
+   * data in the same allocation. Needs benchmarking. */
+  // Example: str->data = (char *)(str + sizeof(struct str));
   return str;
 } /* str */
 
 inline void str_free(struct str *str) {
-  //free(str->data);
+  free(str->data);
   free(str);
 } /* str */
 
 inline void str_grow(struct str *str) {
-  str->data_size <<= 2;
+  str->data_size <<= 1; /* double the data size */
   str->data = realloc(str->data, str->data_size);
 } /* str */
 
@@ -32,11 +33,13 @@ inline size_t str_length(struct str *str) {
   return str->data_len;
 } /* str_length */
 
-inline char *str_value(struct str *str) {
+inline char *str_data(struct str *str) {
   return str->data;
-} /* str_value */
+} /* str_data */
 
 inline void str_append(struct str *str, const char *data, size_t length) {
+  /* Grow the string if the new length will be longer than the current
+   * allocation */
   while (str->data_size < (str->data_len + length)) {
     str_grow(str);
   }
