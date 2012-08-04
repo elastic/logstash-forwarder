@@ -30,17 +30,19 @@ rpm deb:
 
 #unixsock.c: build/include/insist.h
 backoff.c: backoff.h
-harvester.c: harvester.h build/include/insist.h build/include/zmq.h
+harvester.c: harvester.h proto.h str.h build/include/insist.h build/include/zmq.h
 emitter.c: emitter.h build/include/zmq.h
 lumberjack.c: build/include/insist.h build/include/zmq.h build/include/msgpack.h
 lumberjack.c: backoff.h harvester.h emitter.h
+str.c: str.h
+proto.c: proto.h str.h
 
 build/bin/pushpull: | build/lib/libzmq.$(LIBEXT) build/lib/libmsgpack.$(LIBEXT) build/bin
 build/bin/pushpull: pushpull.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 build/bin/lumberjack: | build/bin build/lib/libzmq.$(LIBEXT) build/lib/libmsgpack.$(LIBEXT)
-build/bin/lumberjack: lumberjack.o backoff.o harvester.o emitter.o
+build/bin/lumberjack: lumberjack.o backoff.o harvester.o emitter.o str.o proto.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 	@echo " => Build complete: $@"
 	@echo " => Run 'make rpm' to build an rpm (or deb or tarball)"
