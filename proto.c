@@ -7,13 +7,6 @@
 #include "proto.h"
 #include "str.h"
 
-struct kv {
-  char *key;
-  size_t key_len;
-  char *value;
-  size_t value_len;
-}; /* struct kv */
-
 struct str* lumberjack_kv_pack(struct kv *kv_list, size_t kv_count) {
   struct str *payload;
 
@@ -30,22 +23,25 @@ struct str* lumberjack_kv_pack(struct kv *kv_list, size_t kv_count) {
    *     };
    *
    * Looping doing this:
-   *      p = lumberjack_kv_pack(map, 3);
+   *      p = _kv_pack(map, 3);
    *      str_free(p);
    *
    * Relative time spent (on 10,000,000 iterations):
-   *   - 20 bytes - 3.87
-   *   - 100 bytes - 2.99
    *   - 768 bytes - 1.65
    *   - 1008 bytes - 1.65
    *   - 1009 bytes - 1.24
    *   - 1010 bytes - 1.24
    *   - 1024 bytes - 1.24
    *
+   * Platform tested was OS X 10.7 with XCode's clang/cc
+   *   % cc -O4 ...
+   *
+   * Given that, I pick 1024 (nice round number) for the initial string size
+   * for the payload.
    */
-  payload = str_new_size(1009);
+  payload = str_new_size(1024);
 
-  for (int i = 0; i < kv_count; i++) {
+  for (size_t i = 0; i < kv_count; i++) {
     str_append_uint32(payload, kv_list[i].key_len);
     str_append(payload, kv_list[i].key, kv_list[i].key_len);
     str_append_uint32(payload, kv_list[i].value_len);
@@ -55,7 +51,8 @@ struct str* lumberjack_kv_pack(struct kv *kv_list, size_t kv_count) {
   return payload;
 }
 
-int main(int argc, char *argv[]) {
+/* Example code */
+static int example(void) {
   struct str *p;
   char log[] = "Aug  3 17:01:05 sandwich ReportCrash[38216]: Removing excessive log: file://localhost/Users/jsissel/Library/Logs/DiagnosticReports/a.out_2012-08-01-164517_sandwich.crash";
   char file[] = "/var/log/system.log";
@@ -67,8 +64,7 @@ int main(int argc, char *argv[]) {
     { "host", 4, hostname, strlen(hostname) }
   };
 
-  int max = atoi(argv[1]);
-  for (int i = 0; i < max; i++) {
+  for (int i = 0; i < 1000000; i++) {
     p = lumberjack_kv_pack(map, 3);
     str_free(p);
   }
