@@ -4,15 +4,22 @@
 #include "str.h"
 
 inline struct str *str_new(void) {
+  return str_new_size(20); /* default small size */
+} /* str */
+
+inline struct str *str_new_size(size_t size) {
   struct str *str;
-  str = calloc(1, sizeof(struct str));
-  str->data_size = 20;
-  str->data = calloc(str->data_size, sizeof(char));
+  str = malloc(sizeof(struct str));
+  str->data_size = size;
+  str->data_len = 0;
+  /* benchmark difference in allocating 'str' and its data in the same malloc call */
+  //str->data = malloc(str->data_size * sizeof(char));
+  str->data = (char *)(str + sizeof(struct str));
   return str;
 } /* str */
 
 inline void str_free(struct str *str) {
-  free(str->data);
+  //free(str->data);
   free(str);
 } /* str */
 

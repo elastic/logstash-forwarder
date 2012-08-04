@@ -4,14 +4,21 @@
 #include <sys/types.h>
 
 struct str {
-  char *data;
   size_t data_len;
   size_t data_size;
+  char *data;
 }; /* struct str */
 
+/* Make a new str. */
 struct str *str_new(void);
+struct str *str_new_size(size_t size);
+
+/* Free a str */
 void str_free(struct str *str);
+
+/* grow a string; doubles the storage size */
 void str_grow(struct str *str);
+
 size_t str_length(struct str *str);
 char *str_value(struct str *str);
 void str_append(struct str *str, const char *data, size_t length);
