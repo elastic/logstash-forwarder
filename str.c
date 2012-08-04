@@ -2,6 +2,7 @@
 #include <string.h> /* for memmove, etc */
 #include <stdlib.h> /* for calloc, realloc, etc */
 #include "str.h"
+#include <jemalloc/jemalloc.h>
 
 inline struct str *str_new(void) {
   return str_new_size(20); /* default small size */
