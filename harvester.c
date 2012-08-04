@@ -8,6 +8,8 @@
 #include <zmq.h> /* zeromq messaging library */
 #include "str.h" /* dynamic string library */
 #include "proto.h" /* lumberjack wire format serialization */
+#include <sys/stat.h>
+#include <jemalloc/jemalloc.h>
 
 #include "harvester.h"
 #include "backoff.h"
@@ -24,8 +26,8 @@ extern int gethostname(char *name, size_t namelen);
 #define EMITTER_SOCKET "inproc://emitter"
 #define BUFFERSIZE 16384
 
-static struct timespec min_sleep = { 0, 10000000 }; /* 10ms */
-static struct timespec max_sleep = { 15, 0 }; /* 15 */
+static struct timespec MIN_SLEEP = { 0, 10000000 }; /* 10ms */
+static struct timespec MAX_SLEEP = { 15, 0 }; /* 15 */
 
 /* A free function that simply calls free(3) for zmq_msg */
 //static inline void free2(void *data, void __attribute__((__unused__)) *hint) {
@@ -36,6 +38,8 @@ static struct timespec max_sleep = { 15, 0 }; /* 15 */
 static inline void my_str_free(void __attribute__((__unused__)) *data, void *hint) {
   str_free((struct str *)hint);
 } /* my_str_free */
+
+static void track_rotation(int *fd, const char *path);
 
 void *harvest(void *arg) {
   struct harvest_config *config = arg;
@@ -63,9 +67,6 @@ void *harvest(void *arg) {
   ssize_t bytes;
   buf = calloc(BUFFERSIZE, sizeof(char));
 
-  struct backoff sleeper;
-  backoff_init(&sleeper, &min_sleep, &max_sleep);
-
   void *socket = zmq_socket(config->zmq, ZMQ_PUSH);
   insist(socket != NULL, "zmq_socket() failed: %s", strerror(errno));
 
@@ -73,31 +74,31 @@ void *harvest(void *arg) {
   zmq_setsockopt(socket, ZMQ_HWM, &hwm, sizeof(hwm));
 
   /* Wait for the zmq endpoint to be up (wait for connect to succeed) */
+  struct backoff sleeper;
+  backoff_init(&sleeper, &MIN_SLEEP, &MAX_SLEEP);
   for (;;) {
     rc = zmq_connect(socket, config->zmq_endpoint);
     if (rc != 0 && errno == ECONNREFUSED) {
       backoff(&sleeper);
       continue; /* retry */
-    } 
+    }
     insist(rc == 0, "zmq_connect(%s) failed: %s", config->zmq_endpoint,
            zmq_strerror(errno));
     break;
   }
-  backoff_clear(&sleeper);
 
   int offset = 0;
   for (;;) {
-    /* TODO(sissel): is truncation handled? */
-    /* TODO(sissel): what about log rotation? */
     bytes = read(fd, buf + offset, BUFFERSIZE - offset - 1);
     if (bytes < 0) {
       /* error, maybe indicate a failure of some kind. */
       break;
     } else if (bytes == 0) {
       backoff(&sleeper);
+      track_rotation(&fd, config->path);
     } else {
+      /* Data read, handle it! */
       backoff_clear(&sleeper);
-
       /* For each line, emit. Save the remainder */
       char *line;
       char *septok = buf;
@@ -117,7 +118,7 @@ void *harvest(void *arg) {
           event[2].value_len = line_len;
 
           /* pack using lumberjack data payload */
-          serialized = lumberjack_kv_pack(event, 3 /* 3 elements */);
+          serialized = lumberjack_kv_pack(event, 3);
 
           zmq_msg_t event;
           zmq_msg_init_data(&event, str_data(serialized), str_length(serialized), my_str_free, serialized);
@@ -126,16 +127,6 @@ void *harvest(void *arg) {
           zmq_msg_close(&event);
         }
       } /* for each token */
-
-      /* Find newlines, emit an event */
-      /* Event contents:
-       *  - file
-       *  - message
-       *  - any arbitrary data the user wants
-       *
-       * Pick a serialization? msgpack?
-       * host+file+message
-       */
     }
   } /* loop forever, reading from a file */
 
@@ -145,3 +136,31 @@ void *harvest(void *arg) {
   return NULL;
 } /* harvest */
 
+
+void track_rotation(int *fd, const char *path) {
+  struct stat pathstat, fdstat;
+  int rc;
+  fstat(*fd, &fdstat);
+  rc = stat(path, &pathstat);
+  if (rc == -1) {
+    /* error stat'ing the file path, restart loop and try again */
+    return;
+  }
+
+  if (pathstat.st_dev != fdstat.st_dev || pathstat.st_ino != fdstat.st_ino) {
+    /* device or inode number changed, this file was renamed or rotated. */
+    rc = open(path, O_RDONLY);
+    if (rc == -1) {
+      /* Error opening file, restart loop and try again. */
+      return;
+    }
+    close(*fd);
+    /* start reading the new file! */
+    *fd = rc; 
+  } else if (pathstat.st_size < fdstat.st_size) {
+    /* the file was truncated, jump back to the beginning */
+    lseek(*fd, 0, SEEK_SET);
+
+    /* start the loop over */
+  }
+} /* track_rotation */
