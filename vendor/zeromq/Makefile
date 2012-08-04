@@ -15,7 +15,7 @@ CXXFLAGS=-I$(PREFIX)/include
 #dependencies: $(PREFIX)/include/uuid/uuid.h
 
 configure: | $(WORKDIR)/Makefile
-$(WORKDIR)/Makefile: | $(WORKDIR) 
+$(WORKDIR)/Makefile: | $(WORKDIR) $(PREFIX)/lib/libuuid.$(LIBEXT) $(PREFIX)/include/uuid/uuid.h
 	cd $(WORKDIR); CFLAGS=$(CFLAGS) CXXFLAGS=$(CXXFLAGS) LDFLAGS=$(LDFLAGS) ./configure --prefix=$(PREFIX)
 
 compile: | $(WORKDIR)/src/.libs/libzmq.$(LIBEXT)
