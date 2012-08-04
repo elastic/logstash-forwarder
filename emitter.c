@@ -7,9 +7,9 @@
 #include <time.h> /* struct timespec, clock_gettime */
 #include <unistd.h>
 
-#ifdef __MACH__
 // copied mostly from https://gist.github.com/1087739
-/* OS X doesn't have clock_gettime, sigh */
+/* OS X doesn't have clock_gettime, sigh. */
+#ifdef __MACH__
 #include <mach/clock.h>
 #include <mach/mach.h>
 
@@ -40,12 +40,41 @@ void *emitter(void *arg) {
   insist(rc != -1, "zmq_bind(%s) failed: %s", config->zmq_endpoint,
          zmq_strerror(errno));
 
+  //srand(time(NULL));
+
   struct timespec start;
   clock_gettime(CLOCK_MONOTONIC, &start);
-  for (int count = 0; ;count++) {
+  long count = 0;
+
+  for (;;) {
+    /* TODO(sissel): If buffer is full and this is not a fresh connection,
+     * block for acks */
+    /* TODO(sissel): If buffer is not empty, write one event. */
+      /* TODO(sissel): write frame header (version + frame type 'D') */
+      /* TODO(sissel): write sequence number */
+      /* TODO(sissel): write event payload */
+    /* TODO(sissel): On any write/connect error, block until reconnected. 
+     * When reconnected, restart this loop to flush buffer. */
+
+    /* Receive an event from a harvester and put it in the queue */
     zmq_msg_t message;
     rc = zmq_msg_init(&message);
     insist(rc == 0, "zmq_msg_init failed");
+    rc = zmq_recv(socket, &message, 0);
+    insist(rc == 0, "zmq_recv(%s) failed (returned %d): %s",
+           config->zmq_endpoint, rc, zmq_strerror(errno));
+
+    //write(1, zmq_msg_data(&message), zmq_msg_size(&message));
+    //write(1, "\n", 1);
+
+
+    /* TODO(sissel): pick sequence number */
+    /* TODO(sissel): put the event into the ring buffer */
+
+    /* TODO(sissel): ship this out to a remote server */
+    zmq_msg_close(&message);
+
+    count++;
     if (count == 1000000) {
       struct timespec now;
       clock_gettime(CLOCK_MONOTONIC, &now);
@@ -55,15 +84,5 @@ void *emitter(void *arg) {
       clock_gettime(CLOCK_MONOTONIC, &start);
       count = 0;
     }
-    rc = zmq_recv(socket, &message, 0);
-    insist(rc == 0, "zmq_recv(%s) failed (returned %d): %s",
-           config->zmq_endpoint, rc, zmq_strerror(errno));
-    //printf("received: %.*s\n", (int)zmq_msg_size(&message),
-           //(char *)zmq_msg_data(&message));
-    write(1, zmq_msg_data(&message), zmq_msg_size(&message));
-    write(1, "\n", 1);
-
-    /* TODO(sissel): ship this out to a remote server */
-    zmq_msg_close(&message);
   }
 } /* emitter */
