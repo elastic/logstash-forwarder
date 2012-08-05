@@ -93,9 +93,10 @@ JSON map, etc, but only strings are supported at this time.
 Payload:
 
 * 32bit unsigned sequence number
-* Any number of key-value pairs:
-  * 32bit unsigned key length followed by that many bytes for the key
-  * 32bit unsigned value length followed by that many bytes for the value
+* 32bit 'pair' count (how many key/value sequences follow)
+* 32bit unsigned key length followed by that many bytes for the key
+* 32bit unsigned value length followed by that many bytes for the value
+* repeat key/value 'count' times.
 
 ### 'ack' frame type
 
