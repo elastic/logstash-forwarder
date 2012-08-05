@@ -1,8 +1,8 @@
 VERSION=0.0.1
 
 CFLAGS+=-Ibuild/include 
-CFLAGS+=-D_POSIX_C_SOURCE=199309 -std=c99 -Wall -Wextra -Werror -pipe -O2
-# msgpack fails to compile without this.
+CFLAGS+=-D_POSIX_C_SOURCE=199309 -std=c99 -Wall -Wextra -Werror -pipe -g 
+#-O2
 CFLAGS+=-Wno-unused-function
 LDFLAGS+=-pthread
 LDFLAGS+=-Lbuild/lib -Wl,-rpath,'$$ORIGIN/../lib'
@@ -40,20 +40,26 @@ rpm deb:
 #unixsock.c: build/include/insist.h
 backoff.c: backoff.h
 harvester.c: harvester.h proto.h str.h build/include/insist.h build/include/zmq.h
-emitter.c: emitter.h build/include/zmq.h
-lumberjack.c: build/include/insist.h build/include/zmq.h build/include/msgpack.h
+emitter.c: emitter.h ring.h build/include/zmq.h
+lumberjack.c: build/include/insist.h build/include/zmq.h 
 lumberjack.c: backoff.h harvester.h emitter.h
 harvester.c lumberjack.c pushpull.c ring.c str.c: build/include/jemalloc/jemalloc.h
 str.c: str.h
 proto.c: proto.h str.h
+ring.c: ring.h
 
-build/bin/pushpull: | build/lib/libzmq.$(LIBEXT) build/lib/libmsgpack.$(LIBEXT) build/bin
-build/bin/pushpull: pushpull.o
-	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+# Tests
+test_ring.c: ring.h build/include/jemalloc/jemalloc.h build/include/insist.h
+build/test/test_ring: test_ring.o ring.o  | build/test
+	$(CC) $(LDFLAGS) -o $@ $^ -ljemalloc
 
-build/bin/lumberjack: | build/bin build/lib/libzmq.$(LIBEXT) build/lib/libmsgpack.$(LIBEXT)
+#build/bin/pushpull: | build/lib/libzmq.$(LIBEXT) build/lib/libmsgpack.$(LIBEXT) build/bin
+#build/bin/pushpull: pushpull.o
+#	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+build/bin/lumberjack: | build/bin build/lib/libzmq.$(LIBEXT)
 build/bin/lumberjack: | build/lib/libjemalloc.$(LIBEXT)
-build/bin/lumberjack: lumberjack.o backoff.o harvester.o emitter.o str.o proto.o
+build/bin/lumberjack: lumberjack.o backoff.o harvester.o emitter.o str.o proto.o ring.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 	@echo " => Build complete: $@"
 	@echo " => Run 'make rpm' to build an rpm (or deb or tarball)"
@@ -76,8 +82,5 @@ build/include/jemalloc/jemalloc.h build/lib/libjemalloc.$(LIBEXT): | build
 build:
 	mkdir $@
 
-build/include: | build
-	mkdir $@
-
-build/bin: | build
+build/include build/bin build/test: | build
 	mkdir $@
