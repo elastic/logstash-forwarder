@@ -25,9 +25,13 @@ inline int ring_is_full(struct ring *ring) {
 } /* ring_is_full */
 
 inline int ring_pop(struct ring *ring, void **object_ret) {
-  int rc = ring_peek(ring, 0, object_ret);
-  if (rc != RING_OK) {
-    return RING_IS_EMPTY;
+  int rc;
+  if (object_ret != NULL) {
+    /* Only store it if object_ret is not NULL */
+    rc = ring_peek(ring, 0, object_ret);
+    if (rc != RING_OK) {
+      return RING_IS_EMPTY;
+    }
   }
 
   /* increment reader position and wrap write if necessary */
