@@ -33,7 +33,7 @@ void *emitter(void *arg) {
   clock_gettime(CLOCK_MONOTONIC, &start);
   //long count = 0;
 
-  struct ring *ring = ring_new_size(64); /* power of 2 is probably best */
+  struct ring *ring = ring_new_size(2048); /* power of 2 is required*/
 
   struct backoff sleeper;
   backoff_init(&sleeper, &MIN_SLEEP, &MAX_SLEEP);
@@ -42,6 +42,7 @@ void *emitter(void *arg) {
   lumberjack = lumberjack_new("localhost", 1234);
   insist(lumberjack != NULL, "lumberjack_new failed");
 
+  long count = 0;
   for (;;) {
     if (!lumberjack_connected(lumberjack)) {
       backoff(&sleeper);
@@ -82,8 +83,9 @@ void *emitter(void *arg) {
         continue;
       }
 
-      printf("Got ack for %d\n", ack);
-      /* Verify this is even a sane ack */
+      //printf("Got ack for %d\n", ack);
+
+      /* TODO(sissel): Verify this is even a sane ack */
       struct str *frame;
       uint32_t cur_seq;
       /* Clear anything in the ring with a sequence less than the one just acked */
@@ -94,10 +96,11 @@ void *emitter(void *arg) {
         cur_seq = ntohl(cur_seq);
 
         if (cur_seq <= ack) {
-          printf("bulk ack: %d\n", cur_seq);
+          //printf("bulk ack: %d\n", cur_seq);
           ring_pop(ring, NULL); /* don't care to retrieve it */
+          str_free(frame);
         } else {
-          
+          break;
         }
       }
     } else {
@@ -123,22 +126,24 @@ void *emitter(void *arg) {
       //printf("seq: %d\n", sequence);
       /* Write a lumberjack frame, this will block until the full write
        * completes or errors. On error, it will disconnect. */
+
+      /* TODO(sissel): SIGPIPE here sometimes. need to avoid it. */
       rc = lumberjack_write(lumberjack, frame);
 
       zmq_msg_close(&message);
+
+
+      count++;
+      if (count == 10000) {
+        struct timespec now;
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        double s = (start.tv_sec + 0.0) + (start.tv_nsec / 1000000000.0);
+        double n = (now.tv_sec + 0.0) + (now.tv_nsec / 1000000000.0);
+        fprintf(stderr, "Rate: %f\n", (count + 0.0) / (n - s));
+        clock_gettime(CLOCK_MONOTONIC, &start);
+        count = 0;
+      }
     }
   } /* forever */
 } /* emitter */
 
-/*
-    count++;
-    if (count == 1000000) {
-      struct timespec now;
-      clock_gettime(CLOCK_MONOTONIC, &now);
-      double s = (start.tv_sec + 0.0) + (start.tv_nsec / 1000000000.0);
-      double n = (now.tv_sec + 0.0) + (now.tv_nsec / 1000000000.0);
-      fprintf(stderr, "Rate: %f\n", (count + 0.0) / (n - s));
-      clock_gettime(CLOCK_MONOTONIC, &start);
-      count = 0;
-    }
-*/
