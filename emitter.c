@@ -107,7 +107,7 @@ void *emitter(void *arg) {
 
       rc = zmq_msg_init(&message);
       insist(rc == 0, "zmq_msg_init failed");
-      printf("waiting for zmq\n");
+      //printf("waiting for zmq\n");
       rc = zmq_recv(socket, &message, 0);
       insist(rc == 0, "zmq_recv(%s) failed (returned %d): %s",
              config->zmq_endpoint, rc, zmq_strerror(errno));
@@ -120,7 +120,7 @@ void *emitter(void *arg) {
       insist(rc == RING_OK, "ring_push failed (returned %d, expected RING_OK(%d)",
              rc, RING_OK);
 
-      printf("seq: %d\n", sequence);
+      //printf("seq: %d\n", sequence);
       /* Write a lumberjack frame, this will block until the full write
        * completes or errors. On error, it will disconnect. */
       rc = lumberjack_write(lumberjack, frame);
