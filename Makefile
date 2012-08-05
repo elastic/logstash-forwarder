@@ -1,8 +1,8 @@
 VERSION=0.0.1
 
 CFLAGS+=-Ibuild/include 
-CFLAGS+=-D_POSIX_C_SOURCE=199309 -std=c99 -Wall -Wextra -Werror -pipe -g 
-#-O2
+CFLAGS+=-D_POSIX_C_SOURCE=199309 -std=c99 -Wall -Wextra -Werror -pipe
+CFLAGS+=-g
 CFLAGS+=-Wno-unused-function
 LDFLAGS+=-pthread
 LDFLAGS+=-Lbuild/lib -Wl,-rpath,'$$ORIGIN/../lib'
