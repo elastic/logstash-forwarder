@@ -2,25 +2,21 @@
 
 ## Goals
 
-* small cpu cost to encode/decode
-* easy deployment (simple and/or few dependencies)
-* small bandwidth cost to transmit
+* simple to code, light on cpu and bandwidth reading/writing the wire protocol
 * message-oriented
 * lossless transmission (application-level acknowledgements, retransmit, timeout+redirect)
 * protected (encryption, authentication)
 * ordered
 * scalable (load balance, etc)
 
-* needs to be easy to code into logstash and other projects
-
 ## Prior Art in network protocols
 
-* http://fabiensanglard.net/quake3/network.php
 * TCP, SCTP, WebSockets, HTTP, TLS, SSH
 * WebSockets are fail because almost no load loadbalancers support HTTP Upgrade.
+* Quake 3: http://fabiensanglard.net/quake3/network.php
 * SCTP is fail because most folks don't understand how to firewall it and it's
   not supported on (any?) cloud stuff.
-* HTTP is request/response with high overhead.
+* HTTP is request/response with high overhead for bidirectional communication.
 * TLS is a good framework to sit on to get encryption and authentication.
 * SSH v2 channels are pretty neat. Also solves encryption + authentication.
 
@@ -37,7 +33,7 @@
 
 I'd rather not invent my own serialization for the protocol, but everything
 else seems rather awkward to use. Protobufs are C++ (not C), msgpack may be
-awkward and/or slow in Java, thrift is C++, etc.
+awkward for distribution, thrift is C++, etc.
 
 ## Implementation Considerations
 
@@ -52,7 +48,8 @@ awkward and/or slow in Java, thrift is C++, etc.
 
 * Serialization and Framing should be cheap on cpu. This means avoiding
   serialization mechanisms that inspect and possibly modify every single byte
-  of a string (json's UTF-8 + escape code enforcement).
+  of a string (Example of expensive serialization: json's UTF-8 + escape code
+  enforcement).
 
 # Lumberjack Protocol (Still in development)
 
@@ -82,7 +79,7 @@ this protocol aims to provide reliable, application-level, message transport.
 
 ### 'data' frame type
 
-* SENT FROM PUBLISHER ONLY
+* SENT FROM WRITER ONLY
 * frame type value: ASCII 'D' aka byte value 0x44
 
 data is a map of string:string pairs. This is analogous to a Hash in Ruby, a
@@ -96,9 +93,12 @@ Payload:
 * 32bit unsigned value length followed by that many bytes for the value
 * repeat key/value 'count' times.
 
+* TODO(sissel): What happens when the sequence number rolls over?
+* TODO(sissel): Worth supporting numerical value items instead of just strings?
+
 ### 'ack' frame type
 
-* SENT FROM CONSUMER ONLY
+* SENT FROM READER ONLY
 * frame type value: ASCII 'A' aka byte value 0x41
 
 Payload:
@@ -106,17 +106,17 @@ Payload:
 * 32bit unsigned sequence number.
 
 Bulk acks are supported. If you receive data frames in sequence order
-1,2,3,4,5,6, you can send an ack for '6' and the publisher will take this to
+1,2,3,4,5,6, you can send an ack for '6' and the writer will take this to
 mean you are acknowledging all data frames before and including '6'.
 
 ### 'window size' frame type
 
-* SENT FROM PUBLISHER ONLY
+* SENT FROM WRITER ONLY
 * frame type value: ASCII 'W' aka byte value 0x57
 
 Payload:
 
 * 32bit unsigned window size value in units of whole data frames.
 
-This frame is used to tell the consumer the maximum number of unacknowledged
-data frames the publisher will send before blocking for acks.
+This frame is used to tell the reader the maximum number of unacknowledged
+data frames the writer will send before blocking for acks.
