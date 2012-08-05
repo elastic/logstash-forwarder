@@ -127,7 +127,6 @@ void *emitter(void *arg) {
       /* Write a lumberjack frame, this will block until the full write
        * completes or errors. On error, it will disconnect. */
 
-      /* TODO(sissel): SIGPIPE here sometimes. need to avoid it. */
       rc = lumberjack_write(lumberjack, frame);
 
       zmq_msg_close(&message);

@@ -35,7 +35,7 @@ static struct option options[] = {
 int main(int argc, char **argv) {
   int c, i;
   while (c = getopt_long_only(argc, argv, "+hv", options, &i), c != -1) {
-    /* handle args */
+    /* TODO(sissel): handle args */
   }
 
   argc -= optind;
