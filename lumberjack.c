@@ -8,6 +8,7 @@
 #include "harvester.h"
 #include "emitter.h"
 #include <jemalloc/jemalloc.h>
+#include <signal.h>
 
 typedef enum {
   opt_help = 'h',
@@ -39,6 +40,9 @@ int main(int argc, char **argv) {
 
   argc -= optind;
   argv += optind;
+
+  /* I'll handle write failures; no signals please */
+  signal(SIGPIPE, SIG_IGN);
 
   insist(argc > 0, "No arguments given. What log files do you want shipped?");
 
