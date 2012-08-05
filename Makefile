@@ -31,7 +31,7 @@ clean:
 
 rpm deb:
 	fpm -s dir -t $@ -n lumberjack -v $(VERSION) --prefix /opt/lumberjack \
-		bin/lumberjack build/lib
+		-C build bin/lumberjack lib
 
 #install: build/bin/lumberjack build/lib/libzmq.$(LIBEXT)
 # install -d -m 755 build/bin/* $(PREFIX)/bin/lumberjack
