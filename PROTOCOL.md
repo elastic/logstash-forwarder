@@ -17,8 +17,8 @@
 
 * http://fabiensanglard.net/quake3/network.php
 * TCP, SCTP, WebSockets, HTTP, TLS, SSH
-* WebSockets are fail, because almost no load loadbalancers support HTTP Upgrade.
-* SCTP is fail, because most folks don't understand how to firewall it and it's
+* WebSockets are fail because almost no load loadbalancers support HTTP Upgrade.
+* SCTP is fail because most folks don't understand how to firewall it and it's
   not supported on (any?) cloud stuff.
 * HTTP is request/response with high overhead.
 * TLS is a good framework to sit on to get encryption and authentication.
@@ -31,12 +31,9 @@
 
 ## Tentative Plan
 
-* Messaging: Length-known messages sent over an encrypted TLS channel. Messages
-  have a sequence id.
-* Serialization: versioned, minimal+documented map-like string:string serialization.
 * Authentication: ssl certs
 * Encryption: tls
-* Compression: gzip (most common)
+* Compression, maybe? gzip (most common)
 
 I'd rather not invent my own serialization for the protocol, but everything
 else seems rather awkward to use. Protobufs are C++ (not C), msgpack may be
@@ -85,10 +82,11 @@ this protocol aims to provide reliable, application-level, message transport.
 
 ### 'data' frame type
 
+* SENT FROM PUBLISHER ONLY
+* frame type value: ASCII 'D' aka byte value 0x44
+
 data is a map of string:string pairs. This is analogous to a Hash in Ruby, a
 JSON map, etc, but only strings are supported at this time.
-
-* frame type value: ASCII 'D' aka byte value 0x44
 
 Payload:
 
@@ -100,8 +98,25 @@ Payload:
 
 ### 'ack' frame type
 
+* SENT FROM CONSUMER ONLY
 * frame type value: ASCII 'A' aka byte value 0x41
 
 Payload:
 
 * 32bit unsigned sequence number.
+
+Bulk acks are supported. If you receive data frames in sequence order
+1,2,3,4,5,6, you can send an ack for '6' and the publisher will take this to
+mean you are acknowledging all data frames before and including '6'.
+
+### 'window size' frame type
+
+* SENT FROM PUBLISHER ONLY
+* frame type value: ASCII 'W' aka byte value 0x57
+
+Payload:
+
+* 32bit unsigned window size value in units of whole data frames.
+
+This frame is used to tell the consumer the maximum number of unacknowledged
+data frames the publisher will send before blocking for acks.
