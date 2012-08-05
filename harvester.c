@@ -110,7 +110,9 @@ void *harvest(void *arg) {
           memmove(buf + offset, buf, strlen(buf + offset));
         } else {
           /* emit line as an event */
-          size_t line_len = septok - start;
+
+          /* 'septok' points at the start of the next token, so subtract one. */
+          size_t line_len = septok - start - 1;
           struct str *serialized;
 
           /* Set the line */
