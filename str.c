@@ -56,3 +56,6 @@ inline void str_append_uint32(struct str *str, uint32_t value) {
   str_append(str, (char *)&value, sizeof(value));
 } /* str_append_uint32 */
 
+inline void str_append_char(struct str *str, char value) {
+  str_append(str, &value, sizeof(value));
+} /* str_append_char */

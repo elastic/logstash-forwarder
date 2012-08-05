@@ -23,5 +23,6 @@ size_t str_length(struct str *str);
 char *str_data(struct str *str);
 void str_append(struct str *str, const char *data, size_t length);
 void str_append_uint32(struct str *str, uint32_t value);
+void str_append_char(struct str *str, char value);
 
 #endif /* _STR_H_ */
