@@ -54,6 +54,7 @@ void *harvest(void *arg) {
 
   fd = open(config->path, O_RDONLY);
   insist(fd >= 0, "open(%s) failed: %s", config->path, strerror(errno));
+  lseek(fd, 0, SEEK_END);
 
   path_len = strlen(config->path);
 
