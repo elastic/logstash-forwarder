@@ -162,7 +162,7 @@ int lumberjack_write(struct lumberjack *lumberjack, struct str *payload) {
 
 void lumberjack_disconnect(struct lumberjack *lumberjack) {
   if (lumberjack->fd >= 0) {
-    printf("Disconnect requested");
+    printf("Disconnect requested\n");
     close(lumberjack->fd);
     lumberjack->fd = -1;
     insist(!lumberjack_connected(lumberjack), 
@@ -200,6 +200,7 @@ int lumberjack_read_ack(struct lumberjack *lumberjack, uint32_t *sequence_ret) {
     bytes = read(lumberjack->fd, buf + offset, remaining);
     if (bytes <= 0) {
       /* error(<0) or EOF(0) */
+      printf("bytes <= 0: %ld\n", bytes);
       return -1;
     }
     offset += bytes;
