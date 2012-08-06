@@ -12,7 +12,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 
-static int lumberjack_tcp_connect(struct lumberjack *lumberjack);
+static int _tcp_connect(const char *host, short port);
 
 struct str* lumberjack_kv_pack(struct kv *kv_list, size_t kv_count) {
   struct str *payload;
@@ -93,23 +93,29 @@ int lumberjack_connect(struct lumberjack *lumberjack) {
   insist(lumberjack != NULL, "lumberjack must not be NULL");
   insist(lumberjack->fd < 0, "already connected (fd %d > 0)", lumberjack->fd);
   insist(lumberjack->host != NULL, "lumberjack host must not be NULL");
-  int rc;
 
-  rc = lumberjack_tcp_connect(lumberjack);
-  if (rc != 0) return rc;
+  int fd = _tcp_connect(lumberjack->host, lumberjack->port);
+  if (fd < 0) {
+    return -1;
+  }
+
+  lumberjack->fd = fd;
 
   /* TODO(sissel): Now do SSL stuff */
 
   return 0;
 } /* lumberjack_connect */
 
-int lumberjack_tcp_connect(struct lumberjack *lumberjack) {
-  /* DNS lookup */
-  struct hostent *hostinfo = gethostbyname(lumberjack->host);
+/* Connect to a host:port. If 'host' resolves to multiple addresses, one is
+ * picked at random. */
+int _tcp_connect(const char *host, short port) {
+  int rc;
+  int fd;
+  struct hostent *hostinfo = gethostbyname(host);
 
   if (hostinfo == NULL) {
     /* DNS error, gethostbyname sets h_errno on failure */
-    printf("gethostbyname(%s) failed: %s\n", lumberjack->host,  strerror(h_errno));
+    printf("gethostbyname(%s) failed: %s\n", host, strerror(h_errno));
     return -1;
   }
 
@@ -120,28 +126,26 @@ int lumberjack_tcp_connect(struct lumberjack *lumberjack) {
   /* hostnames can resolve to multiple addresses, pick one at random. */
   char *address = hostinfo->h_addr_list[rand() % addr_count];
 
-  printf("Connecting to %s(%s):%hd\n",
-         lumberjack->host, inet_ntoa(*(struct in_addr *)address),
-         lumberjack->port);
-  lumberjack->fd = socket(PF_INET, SOCK_STREAM, 0);
-  insist(lumberjack->fd >= 0, "socket() failed: %s\n", strerror(errno));
+  printf("Connecting to %s(%s):%hd\n", host,
+         inet_ntoa(*(struct in_addr *)address), port);
+  fd = socket(PF_INET, SOCK_STREAM, 0);
+  insist(fd >= 0, "socket() failed: %s\n", strerror(errno));
 
   struct sockaddr_in sockaddr;
   sockaddr.sin_family = PF_INET,
-  sockaddr.sin_port = htons(lumberjack->port),
+  sockaddr.sin_port = htons(port),
   memcpy(&sockaddr.sin_addr, address, hostinfo->h_length);
 
-  rc = connect(lumberjack->fd, (struct sockaddr *)&sockaddr, sizeof(sockaddr));
+  rc = connect(fd, (struct sockaddr *)&sockaddr, sizeof(sockaddr));
   if (rc < 0) {
-    lumberjack_disconnect(lumberjack);
     return -1;
   }
 
-  printf("Connected successfully to %s(%s):%hd\n",
-         lumberjack->host, inet_ntoa(*(struct in_addr *)address),
-         lumberjack->port);
+  printf("Connected successfully to %s(%s):%hd\n", host,
+         inet_ntoa(*(struct in_addr *)address), port);
 
-}
+  return fd;
+} /* _tcp_connect */
 
 int lumberjack_write(struct lumberjack *lumberjack, struct str *payload) {
   insist(lumberjack != NULL, "lumberjack must not be NULL");
