@@ -12,6 +12,8 @@
 #include <arpa/inet.h>
 #include <errno.h>
 
+static int lumberjack_tcp_connect(struct lumberjack *lumberjack);
+
 struct str* lumberjack_kv_pack(struct kv *kv_list, size_t kv_count) {
   struct str *payload;
 
@@ -91,8 +93,18 @@ int lumberjack_connect(struct lumberjack *lumberjack) {
   insist(lumberjack != NULL, "lumberjack must not be NULL");
   insist(lumberjack->fd < 0, "already connected (fd %d > 0)", lumberjack->fd);
   insist(lumberjack->host != NULL, "lumberjack host must not be NULL");
-
   int rc;
+
+  rc = lumberjack_tcp_connect(lumberjack);
+  if (rc != 0) return rc;
+
+  /* TODO(sissel): Now do SSL stuff */
+
+  return 0;
+} /* lumberjack_connect */
+
+int lumberjack_tcp_connect(struct lumberjack *lumberjack) {
+  /* DNS lookup */
   struct hostent *hostinfo = gethostbyname(lumberjack->host);
 
   if (hostinfo == NULL) {
@@ -105,14 +117,12 @@ int lumberjack_connect(struct lumberjack *lumberjack) {
    * It's a null-terminated list, so count how many are there. */
   unsigned int addr_count;
   for (addr_count = 0; hostinfo->h_addr_list[addr_count] != NULL; addr_count++);
-
   /* hostnames can resolve to multiple addresses, pick one at random. */
   char *address = hostinfo->h_addr_list[rand() % addr_count];
 
   printf("Connecting to %s(%s):%hd\n",
          lumberjack->host, inet_ntoa(*(struct in_addr *)address),
          lumberjack->port);
-
   lumberjack->fd = socket(PF_INET, SOCK_STREAM, 0);
   insist(lumberjack->fd >= 0, "socket() failed: %s\n", strerror(errno));
 
@@ -131,8 +141,7 @@ int lumberjack_connect(struct lumberjack *lumberjack) {
          lumberjack->host, inet_ntoa(*(struct in_addr *)address),
          lumberjack->port);
 
-  return 0;
-} /* lumberjack_connect */
+}
 
 int lumberjack_write(struct lumberjack *lumberjack, struct str *payload) {
   insist(lumberjack != NULL, "lumberjack must not be NULL");
