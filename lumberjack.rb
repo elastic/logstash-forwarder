@@ -34,7 +34,7 @@ def handle(fd)
       value = fd.sysread(value_len);
       map[key] = value
     end
-    p sequence => map
+    #p sequence => map
 
     if sequence - last_ack >= window_size
       # ack this.
