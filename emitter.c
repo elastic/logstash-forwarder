@@ -44,6 +44,16 @@ void *emitter(void *arg) {
 
   long count = 0;
   for (;;) {
+    /* TODO(sissel): This loop should simply be:
+     *
+     *  - read an event from zmq/inproc
+     *  - lumberjack_write(data)
+     *
+     *  lumberjack_write should take care of
+     *    - being connected, reconnecting, etc
+     *    - maintenance/ack/flushing of the ring buffer
+     *    - etc..
+     */
     if (!lumberjack_connected(lumberjack)) {
       backoff(&sleeper);
 
