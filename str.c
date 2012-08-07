@@ -4,10 +4,6 @@
 #include "str.h"
 #include <jemalloc/jemalloc.h>
 
-inline struct str *str_new(void) {
-  return str_new_size(20); /* default small size */
-} /* str */
-
 inline struct str *str_new_size(size_t size) {
   struct str *str;
   str = malloc(sizeof(struct str));
@@ -18,6 +14,10 @@ inline struct str *str_new_size(size_t size) {
    * data in the same allocation. Needs benchmarking. */
   // Example: str->data = (char *)(str + sizeof(struct str));
   return str;
+} /* str */
+
+inline struct str *str_new(void) {
+  return str_new_size(20); /* default small size */
 } /* str */
 
 inline void str_free(struct str *str) {
