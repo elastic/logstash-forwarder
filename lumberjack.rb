@@ -2,6 +2,7 @@
 
 require "socket"
 require "thread"
+require "openssl"
 
 Thread.abort_on_exception = true
 
@@ -45,8 +46,12 @@ def handle(fd)
 end
 
 server = TCPServer.new(1234)
+sslContext = OpenSSL::SSL::SSLContext.new
+sslContext.cert = OpenSSL::X509::Certificate.new(File.read("/tmp/server.crt"))
+sslContext.key = OpenSSL::PKey::RSA.new(File.read("/tmp/server.key"), "asdf")
+sslServer = OpenSSL::SSL::SSLServer.new(server, sslContext)
 
 while true
-  Thread.new(server.accept) { |fd| handle(fd) }
+  Thread.new(sslServer.accept) { |fd| handle(fd) }
 end
 
