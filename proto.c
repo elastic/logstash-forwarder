@@ -28,6 +28,7 @@ static int lumberjack_connected(struct lumberjack *lumberjack);
 static int lumberjack_wait_for_ack(struct lumberjack *lumberjack);
 static int lumberjack_ensure_connected(struct lumberjack *lumberjack);
 static int lumberjack_retransmit_all(struct lumberjack *lumberjack);
+static int lumberjack_write_window_size(struct lumberjack *lumberjack);
 
 static int lumberjack_init_done = 0;
 
@@ -56,9 +57,19 @@ struct lumberjack *lumberjack_new(const char *host, unsigned short port) {
   lumberjack->host = host;
   lumberjack->port = port;
   lumberjack->fd = -1;
-  lumberjack->sequence = rand();
+  lumberjack->sequence = 0; //rand();
   lumberjack->ssl = NULL;
-  lumberjack->ring = ring_new_size(2048);
+  lumberjack->connected = 0;
+
+  /* I tried with 128, 256, 512, 1024, 2048, and 16384,
+   * in a local network, an ack size of 1024 seemed to have
+   * the best performance (equal to 2048 and 16384) for the
+   * least memory cost. */
+  lumberjack->ring_size = 1024;
+  lumberjack->ring = ring_new_size(lumberjack->ring_size);
+
+  /* Create this once. */
+  lumberjack->ssl_context = SSL_CTX_new(SSLv23_client_method());
   return lumberjack;
 } /* lumberjack_new */
 
@@ -77,21 +88,36 @@ int lumberjack_connect(struct lumberjack *lumberjack) {
 
   rc = lumberjack_ssl_handshake(lumberjack);
   if (rc < 0) {
+    printf("ssl handshake failed\n");
+    lumberjack_disconnect(lumberjack);
     return -1;
   }
 
   /* If we get here, tcp connect + ssl handshake has succeeded */
   lumberjack->connected = 1;
 
+  /* Send our window size */
+  rc = lumberjack_write_window_size(lumberjack);
+  if (rc < 0) {
+    lumberjack_disconnect(lumberjack);
+    return -1;
+  }
+
   /* Retransmit anything currently in the ring (unacknowledged data frames) 
    * This is a no-op if there's nothing in the ring. */
   rc = lumberjack_retransmit_all(lumberjack);
   if (rc < 0) {
+    printf("lumberjack_retransmit_all failed\n");
     /* Retransmit failed, which means a write failed during retransmit,
      * disconnect and claim a connection failure. */
     lumberjack_disconnect(lumberjack);
     return -1;
   }
+
+  insist(lumberjack->fd > 0,
+         "lumberjack->fd must be > 0 after a connect, was %d", lumberjack->fd);
+  insist(lumberjack->ssl != NULL,
+         "lumberjack->ssl must not be NULL after a connect");
   return 0;
 } /* lumberjack_connect */
 
@@ -111,6 +137,10 @@ static int lumberjack_ensure_connected(struct lumberjack *lumberjack) {
       backoff_clear(&sleeper);
     }
   }
+  insist(lumberjack->fd > 0,
+         "lumberjack->fd must be > 0 after a connect, was %d", lumberjack->fd);
+  insist(lumberjack->ssl != NULL,
+         "lumberjack->ssl must not be NULL after a connect");
   return 0;
 } /* lumberjack_connect_block */
 
@@ -159,15 +189,17 @@ static int lumberjack_tcp_connect(struct lumberjack *lumberjack) {
 
 static int lumberjack_ssl_handshake(struct lumberjack *lumberjack) {
   int rc;
-  SSL_CTX *ctx = SSL_CTX_new(SSLv23_client_method());
-
   BIO *bio = BIO_new_socket(lumberjack->fd, 0 /* don't close on free */);
   if (bio == NULL) {
     ERR_print_errors_fp(stderr);
     insist(bio != NULL, "BIO_new_socket failed");
   }
 
-  lumberjack->ssl = SSL_new(ctx);
+  //lumberjack->ssl_context = SSL_CTX_new(SSLv23_client_method());
+  //lumberjack->ssl = SSL_new(SSL_CTX_new(SSLv23_client_method()));
+  lumberjack->ssl = SSL_new(lumberjack->ssl_context);
+  insist(lumberjack->ssl != NULL, "SSL_new must not return NULL");
+
   SSL_set_connect_state(lumberjack->ssl); /* we're a client */
   SSL_set_mode(lumberjack->ssl, SSL_MODE_AUTO_RETRY); /* retry writes/reads that would block */
   SSL_set_bio(lumberjack->ssl, bio, bio);
@@ -183,18 +215,21 @@ static int lumberjack_ssl_handshake(struct lumberjack *lumberjack) {
         continue; /* retry */
       default:
         /* Some other SSL error */
-        BIO_free_all(bio);
-        lumberjack_disconnect(lumberjack);
+        printf("SSL_connect error vv\n");
         ERR_print_errors_fp(stderr);
+        printf("SSL_connect error ^^\n");
         return -1;
     }
   }
+  ERR_print_errors_fp(stderr);
+  printf("ssl handshake complete\n");
   return 0;
 } /* lumberjack_ssl_handshake */
 
 int lumberjack_write(struct lumberjack *lumberjack, struct str *payload) {
   insist(lumberjack != NULL, "lumberjack must not be NULL");
   insist(payload != NULL, "payload must not be NULL");
+  insist(lumberjack->ssl != NULL, "lumberjack->ssl must not be NULL");
 
   /* writing is an error if you are not connected */
   if (!lumberjack_connected(lumberjack)) {
@@ -220,21 +255,20 @@ int lumberjack_write(struct lumberjack *lumberjack, struct str *payload) {
 } /* lumberjack_write_v1 */
 
 void lumberjack_disconnect(struct lumberjack *lumberjack) {
-  if (lumberjack->connected) {
-    printf("Disconnect requested\n");
-    if (lumberjack->ssl) {
-      SSL_shutdown(lumberjack->ssl);
-      lumberjack->ssl = NULL;
-    }
-    if (lumberjack->fd >= 0) {
-      close(lumberjack->fd);
-      lumberjack->fd = -1;
-    }
-
-    lumberjack->connected = 0;
-    insist(!lumberjack_connected(lumberjack), 
-           "lumberjack_connected() must not return true after a disconnect");
+  printf("Disconnect requested\n");
+  if (lumberjack->ssl) {
+    SSL_shutdown(lumberjack->ssl);
+    SSL_free(lumberjack->ssl);
+    lumberjack->ssl = NULL;
   }
+  if (lumberjack->fd >= 0) {
+    close(lumberjack->fd);
+    lumberjack->fd = -1;
+  }
+
+  lumberjack->connected = 0;
+  insist(!lumberjack_connected(lumberjack), 
+         "lumberjack_connected() must not return true after a disconnect");
 } /* lumberjack_disconnect */
   
 int lumberjack_connected(struct lumberjack *lumberjack) {
@@ -254,11 +288,15 @@ static int lumberjack_read_ack(struct lumberjack *lumberjack, uint32_t *sequence
   ssize_t bytes;
   size_t remaining = 6; /* version + frame type + 32bit sequence value */
   size_t offset = 0;
+  struct backoff sleeper;
+  backoff_init(&sleeper, &MIN_SLEEP, &MAX_SLEEP);
+
   while (remaining > 0) {
     bytes = SSL_read(lumberjack->ssl, buf + offset, remaining);
     if (bytes <= 0) {
-      /* error(<0) or EOF(0) */
+      /* eof(0) or error(<0). */
       printf("bytes <= 0: %ld\n", bytes);
+      errno = EPIPE; /* close enough? */
       return -1;
     }
     offset += bytes;
@@ -372,6 +410,7 @@ static int lumberjack_retransmit_all(struct lumberjack *lumberjack) {
 
     if (rc != 0) {
       /* write failure, fail. */
+      printf("write failure\n");
       return -1;
     }
   } /* for each item in the ring */
@@ -423,3 +462,21 @@ struct str* lumberjack_kv_pack(struct kv *kv_list, size_t kv_count) {
 
   return payload;
 } /* lumberjack_kv_pack */
+
+int lumberjack_write_window_size(struct lumberjack *lumberjack) {
+  uint32_t size = lumberjack->ring_size;
+  char data[6];
+  data[0] = LUMBERJACK_VERSION_1;
+  data[1] = LUMBERJACK_WINDOW_SIZE_FRAME;
+  size = htonl(size);
+  memcpy(data + 2, &size, sizeof(uint32_t));
+
+  ssize_t bytes;
+  bytes = SSL_write(lumberjack->ssl, data, 6);
+  if (bytes < 0) {
+    printf("lumberjack_write_window_size\n");
+    ERR_print_errors_fp(stderr);
+    return -1;
+  }
+  return 0;
+} /* lumberjack_write_window_size */

@@ -24,6 +24,9 @@ struct lumberjack {
   uint32_t sequence; /* the current data frame sequence number */
   int fd; /* the socket conection (used by ssl) */
   SSL *ssl; /* the ssl connection */
+  SSL_CTX *ssl_context; /* ssl context */
+
+  size_t ring_size; /* the size of the ring */
   struct ring *ring; /* the ring buffer of things needing acknowledgement */
 };
 
