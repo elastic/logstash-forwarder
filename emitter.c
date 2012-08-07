@@ -52,6 +52,7 @@ void *emitter(void *arg) {
      * connection/reconnection/ack issues */
     lumberjack_send_data(lumberjack, zmq_msg_data(&message),
                          zmq_msg_size(&message));
+    zmq_msg_close(&message);
 
     /* Stats for debugging */
     count++;
