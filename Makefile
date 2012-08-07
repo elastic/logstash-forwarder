@@ -6,7 +6,7 @@ CFLAGS+=-g
 CFLAGS+=-Wno-unused-function
 LDFLAGS+=-pthread
 LDFLAGS+=-Lbuild/lib -Wl,-rpath,'$$ORIGIN/../lib'
-LIBS=-lzmq -ljemalloc
+LIBS=-lzmq -ljemalloc -lssl -lcrypto
 
 #-lmsgpack
 #-ljansson
