@@ -11,6 +11,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <sys/stat.h>
 #include "backoff.h"
 #include "insist.h"
 
@@ -70,8 +71,47 @@ struct lumberjack *lumberjack_new(const char *host, unsigned short port) {
 
   /* Create this once. */
   lumberjack->ssl_context = SSL_CTX_new(SSLv23_client_method());
+
+  /* Disable SSL's internal cert verification and verify it ourselves? */
+  //SSL_CTX_set_verify(lumberjack->ssl_ctx, SSL_VERIFY_NONE, NULL);
+  
+  /* trust a cert file or directory */
+  //SSL_CTX_load_verify_locations(ctx, file, directory);
+
   return lumberjack;
 } /* lumberjack_new */
+
+int lumberjack_set_ssl_ca(struct lumberjack *lumberjack, const char *path) {
+  insist(lumberjack != NULL, "lumberjack is NULL");
+  insist(path != NULL, "path is NULL");
+  insist(!lumberjack_connected(lumberjack),
+         "You cannot call lumberjack_set_ssl_ca while connected.");
+
+  int rc;
+  /* Check whether 'path' is a directory or not. */
+  struct stat path_stat;
+  rc = stat(path, &path_stat);
+  if (rc == -1) {
+    /* Failed to stat the file */
+    printf("lumberjack_set_ssl_ca: stat(%s) failed: %s\n",
+           path, strerror(errno));
+    return -1;
+  }
+
+  if (S_ISDIR(path_stat.st_mode)) {
+    rc = SSL_CTX_load_verify_locations(lumberjack->ssl_context, NULL, path);
+  } else {
+    /* assume a file */
+    rc = SSL_CTX_load_verify_locations(lumberjack->ssl_context, path, NULL);
+  }
+
+  if (rc == 0) {
+    ERR_print_errors_fp(stdout);
+    return -1;
+  }
+
+  return 0;
+} /* lumberjack_set_ssl_ca */
 
 int lumberjack_connect(struct lumberjack *lumberjack) {
   /* TODO(sissel): support ipv6, if anyone ever uses that in production ;) */
@@ -191,12 +231,10 @@ static int lumberjack_ssl_handshake(struct lumberjack *lumberjack) {
   int rc;
   BIO *bio = BIO_new_socket(lumberjack->fd, 0 /* don't close on free */);
   if (bio == NULL) {
-    ERR_print_errors_fp(stderr);
+    ERR_print_errors_fp(stdout);
     insist(bio != NULL, "BIO_new_socket failed");
   }
 
-  //lumberjack->ssl_context = SSL_CTX_new(SSLv23_client_method());
-  //lumberjack->ssl = SSL_new(SSL_CTX_new(SSLv23_client_method()));
   lumberjack->ssl = SSL_new(lumberjack->ssl_context);
   insist(lumberjack->ssl != NULL, "SSL_new must not return NULL");
 
@@ -216,13 +254,14 @@ static int lumberjack_ssl_handshake(struct lumberjack *lumberjack) {
       default:
         /* Some other SSL error */
         printf("SSL_connect error vv\n");
-        ERR_print_errors_fp(stderr);
+        ERR_print_errors_fp(stdout);
         printf("SSL_connect error ^^\n");
         return -1;
     }
   }
-  ERR_print_errors_fp(stderr);
-  printf("ssl handshake complete\n");
+  ERR_print_errors_fp(stdout);
+
+  /* TODO(sissel): Verify peer certificate */
   return 0;
 } /* lumberjack_ssl_handshake */
 
@@ -475,7 +514,7 @@ int lumberjack_write_window_size(struct lumberjack *lumberjack) {
   bytes = SSL_write(lumberjack->ssl, data, 6);
   if (bytes < 0) {
     printf("lumberjack_write_window_size\n");
-    ERR_print_errors_fp(stderr);
+    ERR_print_errors_fp(stdout);
     return -1;
   }
   return 0;
