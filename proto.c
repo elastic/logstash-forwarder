@@ -106,7 +106,6 @@ int lumberjack_connect(struct lumberjack *lumberjack) {
 
   ssl_init();
   
-  /* SSL v3 or TLS only, SSLv2 is bad. */
   SSL_CTX *ctx = SSL_CTX_new(SSLv23_client_method());
   lumberjack->ssl = SSL_new(ctx);
   BIO *bio = BIO_new_socket(lumberjack->fd, 0 /* don't close on free */);
