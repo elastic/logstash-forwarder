@@ -295,7 +295,7 @@ static int lumberjack_read_ack(struct lumberjack *lumberjack, uint32_t *sequence
     bytes = SSL_read(lumberjack->ssl, buf + offset, remaining);
     if (bytes <= 0) {
       /* eof(0) or error(<0). */
-      printf("bytes <= 0: %ld\n", bytes);
+      printf("bytes <= 0: %ld\n", (long int) bytes);
       errno = EPIPE; /* close enough? */
       return -1;
     }

@@ -24,6 +24,17 @@ inline int ring_is_full(struct ring *ring) {
   return ring->count == ring->size;
 } /* ring_is_full */
 
+inline int ring_peek(struct ring *ring, uint32_t i, void **object_ret) {
+  if (i >= ring->count) {
+    return RING_INDEX_OUT_OF_BOUNDS;
+  }
+  /* item 0 is the next one after the reader 
+   * we mask with 'size - 1' as a way of wrapping the value since we enforce
+   * power-of-two-ness */
+  *object_ret = ring->buffer[(ring->reader + i) & (ring->size - 1)];
+  return RING_OK;
+} /* ring_peek */
+
 inline int ring_pop(struct ring *ring, void **object_ret) {
   int rc;
   if (object_ret != NULL) {
@@ -55,14 +66,3 @@ inline int ring_push(struct ring *ring, void *object) {
 inline uint32_t ring_count(struct ring *ring) {
   return ring->count;
 } /* ring count */
-
-inline int ring_peek(struct ring *ring, uint32_t i, void **object_ret) {
-  if (i >= ring->count) {
-    return RING_INDEX_OUT_OF_BOUNDS;
-  }
-  /* item 0 is the next one after the reader 
-   * we mask with 'size - 1' as a way of wrapping the value since we enforce
-   * power-of-two-ness */
-  *object_ret = ring->buffer[(ring->reader + i) & (ring->size - 1)];
-  return RING_OK;
-} /* ring_peek */
