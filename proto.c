@@ -21,11 +21,13 @@
 static struct timespec MIN_SLEEP = { 0, 10000000 }; /* 10ms */
 static struct timespec MAX_SLEEP = { 15, 0 }; /* 15 */
 
+static void lumberjack_init(void);
 static int lumberjack_tcp_connect(struct lumberjack *lumberjack);
 static int lumberjack_ssl_handshake(struct lumberjack *lumberjack);
 static int lumberjack_connected(struct lumberjack *lumberjack);
 static int lumberjack_wait_for_ack(struct lumberjack *lumberjack);
-static void lumberjack_init(void);
+static int lumberjack_ensure_connected(struct lumberjack *lumberjack);
+static int lumberjack_retransmit_all(struct lumberjack *lumberjack);
 
 static int lumberjack_init_done = 0;
 
@@ -46,51 +48,6 @@ static void lumberjack_init(void) {
   lumberjack_init_done = 1;
 } /* lumberjack_init */
 
-struct str* lumberjack_kv_pack(struct kv *kv_list, size_t kv_count) {
-  struct str *payload;
-
-  /* I experimented with different values here.
-   *
-   * As this as input:
-   *     char log[] = "Aug  3 17:01:05 sandwich ReportCrash[38216]: Removing excessive log: file://localhost/Users/jsissel/Library/Logs/DiagnosticReports/a.out_2012-08-01-164517_sandwich.crash";
-   *     char file[] = "/var/log/system.log";
-   *     char hostname[] = "sandwich";
-   *     struct kv map[] = {
-   *       { "line", 4, log, strlen(log) },
-   *       { "file", 4, file, strlen(file) },
-   *       { "host", 4, hostname, strlen(hostname) }
-   *     };
-   *
-   * Looping doing this:
-   *      p = _kv_pack(map, 3);
-   *      str_free(p);
-   *
-   * Relative time spent (on 10,000,000 iterations):
-   *   - 768 bytes - 1.65
-   *   - 1008 bytes - 1.65
-   *   - 1009 bytes - 1.24
-   *   - 1010 bytes - 1.24
-   *   - 1024 bytes - 1.24
-   *
-   * Platform tested was OS X 10.7 with XCode's clang/cc
-   *   % cc -O4 ...
-   *
-   * Given that, I pick 1024 (nice round number) for the initial string size
-   * for the payload.
-   */
-  payload = str_new_size(1024);
-
-  str_append_uint32(payload, kv_count);
-  for (size_t i = 0; i < kv_count; i++) {
-    str_append_uint32(payload, kv_list[i].key_len);
-    str_append(payload, kv_list[i].key, kv_list[i].key_len);
-    str_append_uint32(payload, kv_list[i].value_len);
-    str_append(payload, kv_list[i].value, kv_list[i].value_len);
-  }
-
-  return payload;
-} /* lumberjack_kv_pack */
-
 struct lumberjack *lumberjack_new(const char *host, unsigned short port) {
   struct lumberjack *lumberjack;
   lumberjack_init(); /* global one-time init */
@@ -99,8 +56,9 @@ struct lumberjack *lumberjack_new(const char *host, unsigned short port) {
   lumberjack->host = host;
   lumberjack->port = port;
   lumberjack->fd = -1;
+  lumberjack->sequence = rand();
   lumberjack->ssl = NULL;
-  lumberjack->ring = ring_new_size(1024);
+  lumberjack->ring = ring_new_size(2048);
   return lumberjack;
 } /* lumberjack_new */
 
@@ -124,6 +82,16 @@ int lumberjack_connect(struct lumberjack *lumberjack) {
 
   /* If we get here, tcp connect + ssl handshake has succeeded */
   lumberjack->connected = 1;
+
+  /* Retransmit anything currently in the ring (unacknowledged data frames) 
+   * This is a no-op if there's nothing in the ring. */
+  rc = lumberjack_retransmit_all(lumberjack);
+  if (rc < 0) {
+    /* Retransmit failed, which means a write failed during retransmit,
+     * disconnect and claim a connection failure. */
+    lumberjack_disconnect(lumberjack);
+    return -1;
+  }
   return 0;
 } /* lumberjack_connect */
 
@@ -312,21 +280,16 @@ int lumberjack_send_data(struct lumberjack *lumberjack, const char *payload,
                          size_t payload_len) {
   /* TODO(sissel): support a 'free' function to free the payload when it's done */
                          //void (*free_func)(void *payload, void *hint()))
-  struct str *data = str_new_size(sizeof(uint32_t) + payload_len);
+  struct str *frame = str_new_size(sizeof(uint32_t) + payload_len);
   int rc;
 
   lumberjack->sequence++;
   /* TODO(sissel): How to handle sequence value overflow (MAX_INT -> 0) */
 
-  str_append_char(data, LUMBERJACK_VERSION_1);
-  str_append_char(data, LUMBERJACK_DATA_FRAME);
-  str_append_uint32(data, lumberjack->sequence);
-  str_append(data, payload, payload_len);
-
-  /* Push this into the ring buffer, indicating it needs to be acknowledged */
-  rc = ring_push(lumberjack->ring, data);
-  insist(rc == RING_OK, "ring_push failed (returned %d, expected RING_OK(%d)",
-         rc, RING_OK);
+  str_append_char(frame, LUMBERJACK_VERSION_1);
+  str_append_char(frame, LUMBERJACK_DATA_FRAME);
+  str_append_uint32(frame, lumberjack->sequence);
+  str_append(frame, payload, payload_len);
 
   lumberjack_ensure_connected(lumberjack);
   /* if the ring is currently full, we need to wait for acks. */
@@ -334,9 +297,19 @@ int lumberjack_send_data(struct lumberjack *lumberjack, const char *payload,
     /* read at least one ACK */
     lumberjack_wait_for_ack(lumberjack);
   }
-  /* TODO(sissel): put this data frame in the ring buffer */
-  /* TODO(sissel): if the ring buffer is full, wait for acks */
-  /* TODO(sissel): send this data frame on the wire */
+
+  /* Send this data frame on the wire */
+  rc = lumberjack_write(lumberjack, frame);
+  if (rc < 0) {
+    /* write failure, reconnect (which will resend) and such */
+    lumberjack_disconnect(lumberjack);
+    lumberjack_ensure_connected(lumberjack);
+  }
+
+  /* Push this into the ring buffer, indicating it needs to be acknowledged */
+  rc = ring_push(lumberjack->ring, frame);
+  insist(rc == RING_OK, "ring_push failed (returned %d, expected RING_OK(%d)",
+         rc, RING_OK);
 
   return 0; /* SUCCESS */
 } /* lumberjack_send_data */
@@ -389,9 +362,14 @@ static int lumberjack_retransmit_all(struct lumberjack *lumberjack) {
    * un-acknowledged. Send it. */
   for (int i = 0, count = ring_count(lumberjack->ring); i < count; i++) {
     struct str *frame;
+    //uint32_t seq;
     rc = ring_peek(lumberjack->ring, i, (void **)&frame);
     insist(rc == RING_OK, "ring_peek(%d) failed unexpectedly: %d\n", i, rc);
+    //memcpy(&seq, str_data(frame) + 2, sizeof(uint32_t));
+    //seq = ntohl(seq);
+    //printf("Retransmitting seq %d\n", seq);
     rc = lumberjack_write(lumberjack, frame);
+
     if (rc != 0) {
       /* write failure, fail. */
       return -1;
@@ -400,3 +378,48 @@ static int lumberjack_retransmit_all(struct lumberjack *lumberjack) {
 
   return 0;
 } /* lumberjack_retransmit_all */
+
+struct str* lumberjack_kv_pack(struct kv *kv_list, size_t kv_count) {
+  struct str *payload;
+
+  /* I experimented with different values here.
+   *
+   * As this as input:
+   *     char log[] = "Aug  3 17:01:05 sandwich ReportCrash[38216]: Removing excessive log: file://localhost/Users/jsissel/Library/Logs/DiagnosticReports/a.out_2012-08-01-164517_sandwich.crash";
+   *     char file[] = "/var/log/system.log";
+   *     char hostname[] = "sandwich";
+   *     struct kv map[] = {
+   *       { "line", 4, log, strlen(log) },
+   *       { "file", 4, file, strlen(file) },
+   *       { "host", 4, hostname, strlen(hostname) }
+   *     };
+   *
+   * Looping doing this:
+   *      p = _kv_pack(map, 3);
+   *      str_free(p);
+   *
+   * Relative time spent (on 10,000,000 iterations):
+   *   - 768 bytes - 1.65
+   *   - 1008 bytes - 1.65
+   *   - 1009 bytes - 1.24
+   *   - 1010 bytes - 1.24
+   *   - 1024 bytes - 1.24
+   *
+   * Platform tested was OS X 10.7 with XCode's clang/cc
+   *   % cc -O4 ...
+   *
+   * Given that, I pick 1024 (nice round number) for the initial string size
+   * for the payload.
+   */
+  payload = str_new_size(1024);
+
+  str_append_uint32(payload, kv_count);
+  for (size_t i = 0; i < kv_count; i++) {
+    str_append_uint32(payload, kv_list[i].key_len);
+    str_append(payload, kv_list[i].key, kv_list[i].key_len);
+    str_append_uint32(payload, kv_list[i].value_len);
+    str_append(payload, kv_list[i].value, kv_list[i].value_len);
+  }
+
+  return payload;
+} /* lumberjack_kv_pack */
