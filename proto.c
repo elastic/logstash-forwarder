@@ -248,7 +248,7 @@ int lumberjack_read_ack(struct lumberjack *lumberjack, uint32_t *sequence_ret) {
   size_t remaining = 6; /* version + frame type + 32bit sequence value */
   size_t offset = 0;
   while (remaining > 0) {
-    bytes = read(lumberjack->fd, buf + offset, remaining);
+    bytes = SSL_read(lumberjack->ssl, buf + offset, remaining);
     if (bytes <= 0) {
       /* error(<0) or EOF(0) */
       printf("bytes <= 0: %ld\n", bytes);
