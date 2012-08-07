@@ -12,6 +12,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include "backoff.h"
+#include "insist.h"
 
 #include <openssl/bio.h>
 #include <openssl/ssl.h>
@@ -20,21 +21,30 @@
 static struct timespec MIN_SLEEP = { 0, 10000000 }; /* 10ms */
 static struct timespec MAX_SLEEP = { 15, 0 }; /* 15 */
 
-static int _tcp_connect(const char *host, short port);
+static int lumberjack_tcp_connect(struct lumberjack *lumberjack);
+static int lumberjack_ssl_handshake(struct lumberjack *lumberjack);
+static int lumberjack_connected(struct lumberjack *lumberjack);
+static int lumberjack_wait_for_ack(struct lumberjack *lumberjack);
+static void lumberjack_init(void);
 
-static int ssl_init_done = 0;
-static void ssl_init(void) {
-  if (ssl_init_done) {
+static int lumberjack_init_done = 0;
+
+static void lumberjack_init(void) {
+  if (lumberjack_init_done) {
     return;
   }
 
+  /* Seed the RNG so we can pick a random starting sequence number */
+  srand(time(NULL));
+
+  /* ssl init */
   CRYPTO_malloc_init();
   SSL_library_init();
   SSL_load_error_strings();
   ERR_load_BIO_strings();
   OpenSSL_add_all_algorithms();
-  ssl_init_done = 1;
-} /* ssl_init */
+  lumberjack_init_done = 1;
+} /* lumberjack_init */
 
 struct str* lumberjack_kv_pack(struct kv *kv_list, size_t kv_count) {
   struct str *payload;
@@ -83,37 +93,113 @@ struct str* lumberjack_kv_pack(struct kv *kv_list, size_t kv_count) {
 
 struct lumberjack *lumberjack_new(const char *host, unsigned short port) {
   struct lumberjack *lumberjack;
+  lumberjack_init(); /* global one-time init */
 
   lumberjack = malloc(sizeof(struct lumberjack));
   lumberjack->host = host;
   lumberjack->port = port;
   lumberjack->fd = -1;
+  lumberjack->ssl = NULL;
+  lumberjack->ring = ring_new_size(1024);
   return lumberjack;
-}
+} /* lumberjack_new */
 
 int lumberjack_connect(struct lumberjack *lumberjack) {
   /* TODO(sissel): support ipv6, if anyone ever uses that in production ;) */
   insist(lumberjack != NULL, "lumberjack must not be NULL");
   insist(lumberjack->fd < 0, "already connected (fd %d > 0)", lumberjack->fd);
   insist(lumberjack->host != NULL, "lumberjack host must not be NULL");
+  insist(lumberjack->port > 0, "lumberjack port must be > 9 (is %hd)", lumberjack->port);
 
   int rc;
-  int fd = _tcp_connect(lumberjack->host, lumberjack->port);
-  if (fd < 0) {
+  rc = lumberjack_tcp_connect(lumberjack);
+  if (rc < 0) {
     return -1;
   }
-  lumberjack->fd = fd;
 
-  ssl_init();
-  
+  rc = lumberjack_ssl_handshake(lumberjack);
+  if (rc < 0) {
+    return -1;
+  }
+
+  /* If we get here, tcp connect + ssl handshake has succeeded */
+  lumberjack->connected = 1;
+  return 0;
+} /* lumberjack_connect */
+
+static int lumberjack_ensure_connected(struct lumberjack *lumberjack) {
+  int rc;
+  struct backoff sleeper;
+  backoff_init(&sleeper, &MIN_SLEEP, &MAX_SLEEP);
+
+  while (!lumberjack_connected(lumberjack)) {
+    backoff(&sleeper);
+    rc = lumberjack_connect(lumberjack);
+    if (rc != 0) {
+      printf("Connection attempt to %s:%hd failed: %s\n",
+             lumberjack->host, lumberjack->port, strerror(errno));
+    } else {
+      /* we're connected! */
+      backoff_clear(&sleeper);
+    }
+  }
+  return 0;
+} /* lumberjack_connect_block */
+
+/* Connect to a host:port. If 'host' resolves to multiple addresses, one is
+ * picked at random. */
+static int lumberjack_tcp_connect(struct lumberjack *lumberjack) {
+  int rc;
+  int fd;
+  struct hostent *hostinfo = gethostbyname(lumberjack->host);
+
+  if (hostinfo == NULL) {
+    /* DNS error, gethostbyname sets h_errno on failure */
+    printf("gethostbyname(%s) failed: %s\n", lumberjack->host,
+           strerror(h_errno));
+    return -1;
+  }
+
+  /* 'struct hostent' has the list of addresses resolved in 'h_addr_list'
+   * It's a null-terminated list, so count how many are there. */
+  unsigned int addr_count;
+  for (addr_count = 0; hostinfo->h_addr_list[addr_count] != NULL; addr_count++);
+  /* hostnames can resolve to multiple addresses, pick one at random. */
+  char *address = hostinfo->h_addr_list[rand() % addr_count];
+
+  printf("Connecting to %s(%s):%hd\n", lumberjack->host,
+         inet_ntoa(*(struct in_addr *)address), lumberjack->port);
+  fd = socket(PF_INET, SOCK_STREAM, 0);
+  insist(fd >= 0, "socket() failed: %s\n", strerror(errno));
+
+  struct sockaddr_in sockaddr;
+  sockaddr.sin_family = PF_INET,
+  sockaddr.sin_port = htons(lumberjack->port),
+  memcpy(&sockaddr.sin_addr, address, hostinfo->h_length);
+
+  rc = connect(fd, (struct sockaddr *)&sockaddr, sizeof(sockaddr));
+  if (rc < 0) {
+    return -1;
+  }
+
+  printf("Connected successfully to %s(%s):%hd\n", lumberjack->host,
+         inet_ntoa(*(struct in_addr *)address), lumberjack->port);
+
+  lumberjack->fd = fd;
+  return 0;
+} /* lumberjack_tcp_connect */
+
+static int lumberjack_ssl_handshake(struct lumberjack *lumberjack) {
+  int rc;
   SSL_CTX *ctx = SSL_CTX_new(SSLv23_client_method());
-  lumberjack->ssl = SSL_new(ctx);
+
   BIO *bio = BIO_new_socket(lumberjack->fd, 0 /* don't close on free */);
   if (bio == NULL) {
     ERR_print_errors_fp(stderr);
     insist(bio != NULL, "BIO_new_socket failed");
   }
 
+  lumberjack->ssl = SSL_new(ctx);
   SSL_set_connect_state(lumberjack->ssl); /* we're a client */
   SSL_set_mode(lumberjack->ssl, SSL_MODE_AUTO_RETRY); /* retry writes/reads that would block */
   SSL_set_bio(lumberjack->ssl, bio, bio);
@@ -135,54 +221,8 @@ int lumberjack_connect(struct lumberjack *lumberjack) {
         return -1;
     }
   }
-  printf("SSL HANDSHAKE OK:%d \n", rc);
-  sleep(1);
-
-  /* If we get here, ssl handshake has succeeded */
-
   return 0;
-} /* lumberjack_connect */
-
-/* Connect to a host:port. If 'host' resolves to multiple addresses, one is
- * picked at random. */
-int _tcp_connect(const char *host, short port) {
-  int rc;
-  int fd;
-  struct hostent *hostinfo = gethostbyname(host);
-
-  if (hostinfo == NULL) {
-    /* DNS error, gethostbyname sets h_errno on failure */
-    printf("gethostbyname(%s) failed: %s\n", host, strerror(h_errno));
-    return -1;
-  }
-
-  /* 'struct hostent' has the list of addresses resolved in 'h_addr_list'
-   * It's a null-terminated list, so count how many are there. */
-  unsigned int addr_count;
-  for (addr_count = 0; hostinfo->h_addr_list[addr_count] != NULL; addr_count++);
-  /* hostnames can resolve to multiple addresses, pick one at random. */
-  char *address = hostinfo->h_addr_list[rand() % addr_count];
-
-  printf("Connecting to %s(%s):%hd\n", host,
-         inet_ntoa(*(struct in_addr *)address), port);
-  fd = socket(PF_INET, SOCK_STREAM, 0);
-  insist(fd >= 0, "socket() failed: %s\n", strerror(errno));
-
-  struct sockaddr_in sockaddr;
-  sockaddr.sin_family = PF_INET,
-  sockaddr.sin_port = htons(port),
-  memcpy(&sockaddr.sin_addr, address, hostinfo->h_length);
-
-  rc = connect(fd, (struct sockaddr *)&sockaddr, sizeof(sockaddr));
-  if (rc < 0) {
-    return -1;
-  }
-
-  printf("Connected successfully to %s(%s):%hd\n", host,
-         inet_ntoa(*(struct in_addr *)address), port);
-
-  return fd;
-} /* _tcp_connect */
+} /* lumberjack_ssl_handshake */
 
 int lumberjack_write(struct lumberjack *lumberjack, struct str *payload) {
   insist(lumberjack != NULL, "lumberjack must not be NULL");
@@ -212,29 +252,28 @@ int lumberjack_write(struct lumberjack *lumberjack, struct str *payload) {
 } /* lumberjack_write_v1 */
 
 void lumberjack_disconnect(struct lumberjack *lumberjack) {
-  if (lumberjack->fd >= 0) {
+  if (lumberjack->connected) {
     printf("Disconnect requested\n");
-    close(lumberjack->fd);
-    lumberjack->fd = -1;
+    if (lumberjack->ssl) {
+      SSL_shutdown(lumberjack->ssl);
+      lumberjack->ssl = NULL;
+    }
+    if (lumberjack->fd >= 0) {
+      close(lumberjack->fd);
+      lumberjack->fd = -1;
+    }
+
+    lumberjack->connected = 0;
     insist(!lumberjack_connected(lumberjack), 
            "lumberjack_connected() must not return true after a disconnect");
   }
 } /* lumberjack_disconnect */
   
-struct str *lumberjack_encode_data(uint32_t sequence, const char *payload, size_t payload_len) {
-  struct str *data = str_new_size(sizeof(uint32_t) + payload_len);
-  str_append_char(data, LUMBERJACK_VERSION_1);
-  str_append_char(data, LUMBERJACK_DATA_FRAME);
-  str_append_uint32(data, sequence);
-  str_append(data, payload, payload_len);
-  return data;
-} /* lumberjack_data_v1 */
-
 int lumberjack_connected(struct lumberjack *lumberjack) {
-  return lumberjack->fd >= 0;
+  return lumberjack->connected;
 } /* lumberjack_connected */
 
-int lumberjack_read_ack(struct lumberjack *lumberjack, uint32_t *sequence_ret) {
+static int lumberjack_read_ack(struct lumberjack *lumberjack, uint32_t *sequence_ret) {
   if (!lumberjack_connected(lumberjack)) {
     printf("NOT CONNECTED\n");
     return -1;
@@ -268,3 +307,96 @@ int lumberjack_read_ack(struct lumberjack *lumberjack, uint32_t *sequence_ret) {
 
   return 0;
 } /* lumberjack_read_ack */
+
+int lumberjack_send_data(struct lumberjack *lumberjack, const char *payload,
+                         size_t payload_len) {
+  /* TODO(sissel): support a 'free' function to free the payload when it's done */
+                         //void (*free_func)(void *payload, void *hint()))
+  struct str *data = str_new_size(sizeof(uint32_t) + payload_len);
+  int rc;
+
+  lumberjack->sequence++;
+  /* TODO(sissel): How to handle sequence value overflow (MAX_INT -> 0) */
+
+  str_append_char(data, LUMBERJACK_VERSION_1);
+  str_append_char(data, LUMBERJACK_DATA_FRAME);
+  str_append_uint32(data, lumberjack->sequence);
+  str_append(data, payload, payload_len);
+
+  /* Push this into the ring buffer, indicating it needs to be acknowledged */
+  rc = ring_push(lumberjack->ring, data);
+  insist(rc == RING_OK, "ring_push failed (returned %d, expected RING_OK(%d)",
+         rc, RING_OK);
+
+  lumberjack_ensure_connected(lumberjack);
+  /* if the ring is currently full, we need to wait for acks. */
+  while (ring_is_full(lumberjack->ring)) {
+    /* read at least one ACK */
+    lumberjack_wait_for_ack(lumberjack);
+  }
+  /* TODO(sissel): put this data frame in the ring buffer */
+  /* TODO(sissel): if the ring buffer is full, wait for acks */
+  /* TODO(sissel): send this data frame on the wire */
+
+  return 0; /* SUCCESS */
+} /* lumberjack_send_data */
+
+static int lumberjack_wait_for_ack(struct lumberjack *lumberjack) {
+  uint32_t ack;
+  int rc;
+  struct backoff sleeper;
+  backoff_init(&sleeper, &MIN_SLEEP, &MAX_SLEEP);
+
+  while ((rc = lumberjack_read_ack(lumberjack, &ack)) < 0) {
+    /* read error. */
+    printf("lumberjack_read_ack failed: %s\n", strerror(errno));
+    lumberjack_disconnect(lumberjack);
+    backoff(&sleeper);
+    lumberjack_ensure_connected(lumberjack);
+  }
+
+  /* TODO(sissel): Verify this is even a sane ack */
+
+  /* Acknowledge anything in the ring that has a sequence number <= this ack */
+  /* Clear anything in the ring with a sequence less than the one just acked */
+  for (int i = 0, count = ring_count(lumberjack->ring); i < count; i++) {
+    struct str *frame;
+    uint32_t cur_seq;
+
+    /* look at, but don't remove, the first item in the ring */
+    ring_peek(lumberjack->ring, 0, (void **)&frame);
+
+    /* this is a silly way, but since the ring only stores strings right now */
+    memcpy(&cur_seq, str_data(frame) + 2, sizeof(uint32_t));
+    cur_seq = ntohl(cur_seq);
+
+    if (cur_seq <= ack) {
+      //printf("bulk ack: %d\n", cur_seq);
+      ring_pop(lumberjack->ring, NULL); /* destroy this item */
+      str_free(frame);
+    } else {
+      /* found a sequence number > this ack,
+       * we're done purging acknowledgements */
+    }
+  }
+
+  return 0;
+} /* lumberjack_wait_for_ack */
+
+static int lumberjack_retransmit_all(struct lumberjack *lumberjack) {
+  int rc;
+  /* New connection, anything in the ring buffer is assumed to be
+   * un-acknowledged. Send it. */
+  for (int i = 0, count = ring_count(lumberjack->ring); i < count; i++) {
+    struct str *frame;
+    rc = ring_peek(lumberjack->ring, i, (void **)&frame);
+    insist(rc == RING_OK, "ring_peek(%d) failed unexpectedly: %d\n", i, rc);
+    rc = lumberjack_write(lumberjack, frame);
+    if (rc != 0) {
+      /* write failure, fail. */
+      return -1;
+    }
+  } /* for each item in the ring */
+
+  return 0;
+} /* lumberjack_retransmit_all */

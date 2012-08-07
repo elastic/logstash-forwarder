@@ -1,12 +1,12 @@
 #ifndef _PROTO_H_
 #define _PROTO_H_
-#include "str.h"
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
-#include "insist.h"
 #include <openssl/ssl.h>
+#include "ring.h"
+#include "str.h"
 
 struct kv {
   char *key;
@@ -19,9 +19,12 @@ struct lumberjack {
   const char *host;
   unsigned short port;
 
-  /* stuff you don't need to access normally */
-  int fd;
-  SSL *ssl;
+  /* internal state you don't need to access normally */
+  int connected; /* are we connected? */
+  uint32_t sequence; /* the current data frame sequence number */
+  int fd; /* the socket conection (used by ssl) */
+  SSL *ssl; /* the ssl connection */
+  struct ring *ring; /* the ring buffer of things needing acknowledgement */
 };
 
 #define LUMBERJACK_VERSION_1 '1'
@@ -29,17 +32,37 @@ struct lumberjack {
 #define LUMBERJACK_ACK_FRAME 'A'
 #define LUMBERJACK_WINDOW_SIZE_FRAME 'W'
 
+/* Create a new lumberjack client.
+ *
+ * - host is a hostname or IP address.
+ * - port is the port to connect to.
+ *
+ * If the hostname resolves to multiple addresses, one address is picked at
+ * random each time a connection is made.
+ */
 struct lumberjack *lumberjack_new(const char *host, unsigned short port);
 
-struct str *lumberjack_kv_pack(struct kv *kv_list, size_t kv_count);
-struct str *lumberjack_encode_data(uint32_t sequence, const char *payload, size_t payload_len);
+/** PUBLIC API */
+/* Send a data frame with a given payload and length */
+int lumberjack_send_data(struct lumberjack *lumberjack, const char *payload,
+                         size_t payload_len);
+                         //void (*free_func)(void *payload, void *hint()));
 
-int lumberjack_connect(struct lumberjack *lumberjack);
-int lumberjack_connected(struct lumberjack *lumberjack);
+/* TODO(sissel): permit inspection of currently-unacknowledged events? */
+
+//int lumberjack_send_kv(struct *kv map);
+
+/* blocks until all messages in the ring have been acknowledged */
 void lumberjack_disconnect(struct lumberjack *lumberjack);
-int lumberjack_write(struct lumberjack *lumberjack, struct str *payload);
-int lumberjack_write_window_size(struct lumberjack *lumberjack, uint32_t window_size);
 
-int lumberjack_read_ack(struct lumberjack *lumberjack, uint32_t *sequence_ret);
+/* Pack a key-value list according to the lumberjack protocol */
+struct str *lumberjack_kv_pack(struct kv *kv_list, size_t kv_count);
+
+//struct str *lumberjack_encode_data(uint32_t sequence, const char *payload, size_t payload_len);
+//int lumberjack_connect(struct lumberjack *lumberjack);
+//int lumberjack_connected(struct lumberjack *lumberjack);
+//void lumberjack_disconnect(struct lumberjack *lumberjack);
+//int lumberjack_write(struct lumberjack *lumberjack, struct str *payload);
+//int lumberjack_read_ack(struct lumberjack *lumberjack, uint32_t *sequence_ret);
 
 #endif /* _PROTO_H_ */
