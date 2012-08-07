@@ -11,8 +11,30 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include "backoff.h"
+
+#include <openssl/bio.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+
+static struct timespec MIN_SLEEP = { 0, 10000000 }; /* 10ms */
+static struct timespec MAX_SLEEP = { 15, 0 }; /* 15 */
 
 static int _tcp_connect(const char *host, short port);
+
+static int ssl_init_done = 0;
+static void ssl_init(void) {
+  if (ssl_init_done) {
+    return;
+  }
+
+  CRYPTO_malloc_init();
+  SSL_library_init();
+  SSL_load_error_strings();
+  ERR_load_BIO_strings();
+  OpenSSL_add_all_algorithms();
+  ssl_init_done = 1;
+} /* ssl_init */
 
 struct str* lumberjack_kv_pack(struct kv *kv_list, size_t kv_count) {
   struct str *payload;
@@ -59,25 +81,6 @@ struct str* lumberjack_kv_pack(struct kv *kv_list, size_t kv_count) {
   return payload;
 } /* lumberjack_kv_pack */
 
-/* Example code */
-static void example(void) {
-  struct str *p;
-  char log[] = "Aug  3 17:01:05 sandwich ReportCrash[38216]: Removing excessive log: file://localhost/Users/jsissel/Library/Logs/DiagnosticReports/a.out_2012-08-01-164517_sandwich.crash";
-  char file[] = "/var/log/system.log";
-  char hostname[] = "sandwich";
-
-  struct kv map[] = {
-    { "line", 4, log, strlen(log) },
-    { "file", 4, file, strlen(file) },
-    { "host", 4, hostname, strlen(hostname) }
-  };
-
-  for (int i = 0; i < 1000000; i++) {
-    p = lumberjack_kv_pack(map, 3);
-    str_free(p);
-  }
-}
-
 struct lumberjack *lumberjack_new(const char *host, unsigned short port) {
   struct lumberjack *lumberjack;
 
@@ -94,14 +97,49 @@ int lumberjack_connect(struct lumberjack *lumberjack) {
   insist(lumberjack->fd < 0, "already connected (fd %d > 0)", lumberjack->fd);
   insist(lumberjack->host != NULL, "lumberjack host must not be NULL");
 
+  int rc;
   int fd = _tcp_connect(lumberjack->host, lumberjack->port);
   if (fd < 0) {
     return -1;
   }
-
   lumberjack->fd = fd;
 
-  /* TODO(sissel): Now do SSL stuff */
+  ssl_init();
+  
+  /* SSL v3 or TLS only, SSLv2 is bad. */
+  SSL_CTX *ctx = SSL_CTX_new(SSLv23_client_method());
+  lumberjack->ssl = SSL_new(ctx);
+  BIO *bio = BIO_new_socket(lumberjack->fd, 0 /* don't close on free */);
+  if (bio == NULL) {
+    ERR_print_errors_fp(stderr);
+    insist(bio != NULL, "BIO_new_socket failed");
+  }
+
+  SSL_set_connect_state(lumberjack->ssl); /* we're a client */
+  SSL_set_mode(lumberjack->ssl, SSL_MODE_AUTO_RETRY); /* retry writes/reads that would block */
+  SSL_set_bio(lumberjack->ssl, bio, bio);
+
+  struct backoff sleeper;
+  backoff_init(&sleeper, &MIN_SLEEP, &MAX_SLEEP);
+  for (rc = SSL_connect(lumberjack->ssl); rc < 0; rc = SSL_connect(lumberjack->ssl)) { 
+    /* loop until ssl handshake succeeds */
+    switch(SSL_get_error(lumberjack->ssl, rc)) {
+      case SSL_ERROR_WANT_READ:
+      case SSL_ERROR_WANT_WRITE:
+        backoff(&sleeper);
+        continue; /* retry */
+      default:
+        /* Some other SSL error */
+        BIO_free_all(bio);
+        lumberjack_disconnect(lumberjack);
+        ERR_print_errors_fp(stderr);
+        return -1;
+    }
+  }
+  printf("SSL HANDSHAKE OK:%d \n", rc);
+  sleep(1);
+
+  /* If we get here, ssl handshake has succeeded */
 
   return 0;
 } /* lumberjack_connect */
@@ -160,7 +198,8 @@ int lumberjack_write(struct lumberjack *lumberjack, struct str *payload) {
 
   ssize_t bytes;
   while (remaining > 0) {
-    bytes = write(lumberjack->fd, str_data(payload) + offset, remaining);
+    //bytes = write(lumberjack->fd, str_data(payload) + offset, remaining);
+    bytes = SSL_write(lumberjack->ssl, str_data(payload) + offset, remaining);
     if (bytes < 0) {
       /* error occurred while writing. */
       lumberjack_disconnect(lumberjack);

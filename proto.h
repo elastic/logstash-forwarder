@@ -6,6 +6,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include "insist.h"
+#include <openssl/ssl.h>
 
 struct kv {
   char *key;
@@ -18,8 +19,9 @@ struct lumberjack {
   const char *host;
   unsigned short port;
 
+  /* stuff you don't need to access normally */
   int fd;
-  /* TODO(sissel): Add openssl stuff */
+  SSL *ssl;
 };
 
 #define LUMBERJACK_VERSION_1 '1'
