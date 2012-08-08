@@ -45,6 +45,12 @@ struct lumberjack {
  */
 struct lumberjack *lumberjack_new(const char *host, unsigned short port);
 
+/* Tell lumberjack about an SSL cert/ca it should trust 
+ *
+ * - path is a string; can be a path to a file or directory.
+ */
+int lumberjack_set_ssl_ca(struct lumberjack *lumberjack, const char *path);
+
 /** PUBLIC API */
 /* Send a data frame with a given payload and length */
 int lumberjack_send_data(struct lumberjack *lumberjack, const char *payload,
