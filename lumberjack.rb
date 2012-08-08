@@ -54,7 +54,7 @@ def handle(fd)
   end
 end
 
-server = TCPServer.new(1234)
+server = TCPServer.new(5001)
 sslContext = OpenSSL::SSL::SSLContext.new
 sslContext.cert = OpenSSL::X509::Certificate.new(File.read("/tmp/server.crt"))
 sslContext.key = OpenSSL::PKey::RSA.new(File.read("/tmp/server.key"), "asdf")
