@@ -18,6 +18,8 @@ typedef enum {
   opt_version = 'v',
   opt_field,
   opt_ssl_ca_path,
+  opt_host,
+  opt_port,
 } optlist_t;
 
 struct option_doc {
@@ -50,6 +52,10 @@ static struct option_doc options[] = {
   { "ssl-ca-path", required_argument, opt_ssl_ca_path, 
     "Set the trusted cert/ca path for lumberjack's ssl client. " \
     "Can be a file or a directory." },
+  { "host", required_argument, opt_host,
+    "The hostname to send lumberjack messages to" },
+  { "port", required_argument, opt_port,
+    "The port to connect on" },
   { NULL, 0, 0, NULL },
 };
 
@@ -69,6 +75,10 @@ int main(int argc, char **argv) {
   int c, i;
   struct emitter_config emitter_config;
   struct option *getopt_options = NULL;
+
+  /* defaults */
+  memset(&emitter_config, 0, sizeof(struct emitter_config));
+  emitter_config.port = 5001;
   
   /* convert the 'option_doc' array into a 'struct option' array 
    * for use with getopt_long_only */
@@ -96,6 +106,12 @@ int main(int argc, char **argv) {
       case opt_help:
         usage(argv[0]);
         return 0;
+      case opt_host:
+        emitter_config.host = strdup(optarg);
+        break;
+      case opt_port:
+        emitter_config.port = (short)atoi(optarg);
+        break;
       default:
         insist(i == -1, "Flag (--%s%s%s) known, but someone forgot to " \
                "implement handling of it! This is certainly a bug.",
@@ -106,6 +122,18 @@ int main(int argc, char **argv) {
         usage(argv[0]);
         return 1;
     }
+  }
+
+  if (emitter_config.host == NULL) {
+    printf("Missing --host flag\n");
+    usage(argv[0]);
+    return 1;
+  }
+
+  if (emitter_config.port == 0) {
+    printf("Missing --port flag\n");
+    usage(argv[0]);
+    return 1;
   }
 
   argc -= optind;
@@ -133,11 +161,6 @@ int main(int argc, char **argv) {
   emitter_config.zmq_endpoint = ZMQ_EMITTER_ENDPOINT;
   emitter(&emitter_config);
 
-  /* Wait for the harvesters to die */
-  for (i = 0; i < argc; i++) {
-    pthread_join(harvesters[i], NULL);
-  }
-  exit(0);
-
-  return 0;
+  /* If we get here, the emitter failed. */
+  return 1;
 } /* main */
