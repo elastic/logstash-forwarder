@@ -72,12 +72,7 @@ struct lumberjack *lumberjack_new(const char *host, unsigned short port) {
   /* Create this once. */
   lumberjack->ssl_context = SSL_CTX_new(SSLv23_client_method());
 
-  /* Disable SSL's internal cert verification and verify it ourselves? */
-  //SSL_CTX_set_verify(lumberjack->ssl_ctx, SSL_VERIFY_NONE, NULL);
-  
-  /* trust a cert file or directory */
-  //SSL_CTX_load_verify_locations(ctx, file, directory);
-
+  SSL_CTX_set_verify(lumberjack->ssl_context, SSL_VERIFY_PEER, NULL);
   return lumberjack;
 } /* lumberjack_new */
 
