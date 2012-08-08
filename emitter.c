@@ -45,6 +45,7 @@ void *emitter(void *arg) {
   }
 
   long count = 0;
+  long bytes = 0;
   for (;;) {
     /* Receive an event from a harvester and put it in the queue */
     zmq_msg_t message;
@@ -60,17 +61,20 @@ void *emitter(void *arg) {
      * connection/reconnection/ack issues */
     lumberjack_send_data(lumberjack, zmq_msg_data(&message),
                          zmq_msg_size(&message));
-    zmq_msg_close(&message);
-
     /* Stats for debugging */
     count++;
+    bytes += zmq_msg_size(&message);
+
+    zmq_msg_close(&message);
+
     if (count == 10000) {
       struct timespec now;
       clock_gettime(CLOCK_MONOTONIC, &now);
       double s = (start.tv_sec + 0.0) + (start.tv_nsec / 1000000000.0);
       double n = (now.tv_sec + 0.0) + (now.tv_nsec / 1000000000.0);
-      fprintf(stderr, "Rate: %f\n", (count + 0.0) / (n - s));
+      fprintf(stderr, "Rate: %f (bytes: %f)\n", (count + 0.0) / (n - s), (bytes + 0.0) / (n - s));
       clock_gettime(CLOCK_MONOTONIC, &start);
+      bytes = 0;
       count = 0;
     }
   } /* forever */
