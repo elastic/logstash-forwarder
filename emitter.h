@@ -5,6 +5,9 @@ struct emitter_config {
   void *zmq; /* zmq context */
   char *zmq_endpoint; /* inproc://whatever */
   char *ssl_ca_path; /* path to trusted ssl ca, can be a directory or a file */
+
+  char *host;
+  short port;
 };
 
 void *emitter(void *arg);
