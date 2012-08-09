@@ -67,19 +67,19 @@ build/bin/lumberjack: lumberjack.o backoff.o harvester.o emitter.o str.o proto.o
 	@echo " => Run 'make rpm' to build an rpm (or deb or tarball)"
 
 build/include/insist.h: | build/include
-	$(FETCH) -o $@ https://raw.github.com/jordansissel/experiments/master/c/better-assert/insist.h
+	PATH=$$PWD:$$PATH fetch.sh -o $@ https://raw.github.com/jordansissel/experiments/master/c/better-assert/insist.h
 
 build/include/zmq.h build/lib/libzmq.$(LIBEXT): | build
-	$(MAKE) -C vendor/zeromq/ install PREFIX=$$PWD/build
+	PATH=$$PWD:$$PATH $(MAKE) -C vendor/zeromq/ install PREFIX=$$PWD/build
 
 #build/include/msgpack.h build/lib/libmsgpack.$(LIBEXT): | build
 #	$(MAKE) -C vendor/msgpack/ install PREFIX=$$PWD/build
 
 build/include/msgpack.h build/lib/libmsgpack.$(LIBEXT): | build
-	$(MAKE) -C vendor/msgpack/ install PREFIX=$$PWD/build
+	PATH=$$PWD:$$PATH $(MAKE) -C vendor/msgpack/ install PREFIX=$$PWD/build
 
 build/include/jemalloc/jemalloc.h build/lib/libjemalloc.$(LIBEXT): | build
-	$(MAKE) -C vendor/jemalloc/ install PREFIX=$$PWD/build
+	PATH=$$PWD:$$PATH $(MAKE) -C vendor/jemalloc/ install PREFIX=$$PWD/build
 
 build:
 	mkdir $@
