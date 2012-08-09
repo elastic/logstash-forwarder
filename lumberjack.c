@@ -1,7 +1,7 @@
 #define _BSD_SOURCE /* to get gethostname() under linux/gcc */
 #include <sys/types.h>
 #include <getopt.h>
-#include <insist.h>
+#include "insist.h"
 #include <pthread.h>
 #include <unistd.h> /* for gethostname */
 #include <zmq.h>
@@ -10,6 +10,8 @@
 #include <jemalloc/jemalloc.h>
 #include <signal.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #define ZMQ_EMITTER_ENDPOINT "inproc://emitter"
 
