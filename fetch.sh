@@ -18,6 +18,8 @@ if which wget > /dev/null 2>&1 ; then
   exec wget -q -O "$OUTPUT" "$URL"
 elif which curl > /dev/null 2>&1 ; then
   exec curl -s -o "$OUTPUT" "$URL"
+elif which GET > /dev/null 2>&1 ; then
+  exec GET "$URL" > "$OUTPUT"
 else
   echo "no http download tool found. cannot fetch."
   exit 1
