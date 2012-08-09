@@ -33,7 +33,7 @@ clean:
 
 rpm deb:
 	fpm -s dir -t $@ -n lumberjack -v $(VERSION) --prefix /opt/lumberjack \
-		-C build bin/lumberjack lib
+		--exclude '*.a' -C build bin/lumberjack lib
 
 #install: build/bin/lumberjack build/lib/libzmq.$(LIBEXT)
 # install -d -m 755 build/bin/* $(PREFIX)/bin/lumberjack
@@ -49,6 +49,10 @@ harvester.c lumberjack.c pushpull.c ring.c str.c: build/include/jemalloc/jemallo
 str.c: str.h
 proto.c: proto.h str.h
 ring.c: ring.h
+
+.PHONY: test
+test: | build/test/test_ring
+	build/test/test_ring
 
 # Tests
 test_ring.c: ring.h build/include/jemalloc/jemalloc.h build/include/insist.h
