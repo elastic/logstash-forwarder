@@ -125,6 +125,7 @@ int main(int argc, char **argv) {
         return 1;
     }
   }
+  free(getopt_options);
 
   if (emitter_config.host == NULL) {
     printf("Missing --host flag\n");
@@ -146,6 +147,9 @@ int main(int argc, char **argv) {
 
   insist(argc > 0, "No arguments given. What log files do you want shipped?");
 
+  /* TODO(sissel): Set resource (memory, open file, etc) limits based on the
+   * number of files being watched. */
+
   pthread_t *harvesters = calloc(argc, sizeof(pthread_t));
   /* no I/O threads needed since we use inproc:// only */
   void *zmq = zmq_init(0 /* IO threads */); 
@@ -163,6 +167,7 @@ int main(int argc, char **argv) {
   emitter_config.zmq_endpoint = ZMQ_EMITTER_ENDPOINT;
   emitter(&emitter_config);
 
+  free(harvesters);
   /* If we get here, the emitter failed. */
   return 1;
 } /* main */
