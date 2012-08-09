@@ -8,6 +8,8 @@ LDFLAGS+=-pthread
 LDFLAGS+=-Lbuild/lib -Wl,-rpath,'$$ORIGIN/../lib'
 LIBS=-lzmq -ljemalloc -lssl -lcrypto -luuid
 
+
+FETCH=sh fetch.sh
 #-lmsgpack
 #-ljansson
 
@@ -65,7 +67,7 @@ build/bin/lumberjack: lumberjack.o backoff.o harvester.o emitter.o str.o proto.o
 	@echo " => Run 'make rpm' to build an rpm (or deb or tarball)"
 
 build/include/insist.h: | build/include
-	curl -s -o $@ https://raw.github.com/jordansissel/experiments/master/c/better-assert/insist.h
+	$(FETCH) -o $@ https://raw.github.com/jordansissel/experiments/master/c/better-assert/insist.h
 
 build/include/zmq.h build/lib/libzmq.$(LIBEXT): | build
 	$(MAKE) -C vendor/zeromq/ install PREFIX=$$PWD/build
