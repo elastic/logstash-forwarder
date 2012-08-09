@@ -22,12 +22,14 @@ done
 URL="$1"
 echo "URL: $URL"
 
+# If you need to pass any specific flags to any specific fetcher, set
+# WGET_FLAGS, CURL_FLAGS, or GET_FLAGS in your environment accordingly.
 if which wget > /dev/null 2>&1 ; then
-  exec wget -O "$OUTPUT" "$URL"
+  exec wget $WGET_FLAGS -O "$OUTPUT" "$URL"
 elif which curl > /dev/null 2>&1 ; then
-  exec curl -s -o "$OUTPUT" "$URL"
+  exec curl $CURL_FLAGS -s -o "$OUTPUT" "$URL"
 elif which GET > /dev/null 2>&1 ; then
-  exec GET "$URL" > "$OUTPUT"
+  exec GET $GET_FLAGS "$URL" > "$OUTPUT"
 else
   echo "no http download tool found. cannot fetch."
   exit 1
