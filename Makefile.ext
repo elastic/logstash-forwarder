@@ -17,14 +17,13 @@ clean:
 distclean:
 	-rm -fr $(TARBALL)
 
+.PHONY: fetch
 fetch: $(TARBALL)
 $(TARBALL):
-	curl -s -o $@ "$(URL)"
-	@#wget -nv -O $@ $(URL)
+	fetch.sh -o $@ "$(URL)"
 
 $(PREFIX)/lib $(PREFIX)/include:
 	mkdir $@
-
 
 workdir: $(WORKDIR)
 $(WORKDIR): $(TARBALL)
