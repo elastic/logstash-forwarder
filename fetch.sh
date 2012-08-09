@@ -1,6 +1,8 @@
 #!/bin/sh
 
+echo "$@"
 set -- `getopt o: "$@"`
+echo "$@"
 
 while [ $# -gt 0 ] ; do
   case "$1" in
@@ -8,14 +10,20 @@ while [ $# -gt 0 ] ; do
       OUTPUT=$2
       shift
       ;;
+    --) 
+      shift
+      break
+      ;;
   esac
+
   shift
 done
 
 URL="$1"
+echo "URL: $URL"
 
 if which wget > /dev/null 2>&1 ; then
-  exec wget -q -O "$OUTPUT" "$URL"
+  exec wget -O "$OUTPUT" "$URL"
 elif which curl > /dev/null 2>&1 ; then
   exec curl -s -o "$OUTPUT" "$URL"
 elif which GET > /dev/null 2>&1 ; then
