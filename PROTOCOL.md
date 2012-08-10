@@ -12,7 +12,10 @@
 ## Prior Art in network protocols
 
 * TCP, SCTP, WebSockets, HTTP, TLS, SSH
-* WebSockets are fail because almost no load loadbalancers support HTTP Upgrade.
+* WebSockets are fail because almost no load loadbalancers support HTTP
+  Upgrade and additionally the landscape for websocket client and server
+  libraries is pretty dismal, even though websockets would get us SSL (https)
+  redirects (http) and other nice network properties for free.
 * Quake 3: http://fabiensanglard.net/quake3/network.php
 * SCTP is fail because most folks don't understand how to firewall it and it's
   not supported on (any?) cloud stuff.
@@ -66,6 +69,14 @@ Reliable, ordered byte transport is ensured by using TCP (or TLS on top), and
 this protocol aims to provide reliable, application-level, message transport.
 
 ## Wire Format
+
+### Layering
+
+This entire protocol is built to be layered on top of TCP or TLS. Preferrably TLS.
+
+At this time I do not intend to support unencrypted transport.
+
+TODO(sissel): Choose a compression method.
 
 ### Framing
 
