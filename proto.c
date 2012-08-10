@@ -505,11 +505,17 @@ int lumberjack_write_window_size(struct lumberjack *lumberjack) {
   size = htonl(size);
   memcpy(data + 2, &size, sizeof(uint32_t));
 
-  ssize_t bytes;
-  bytes = SSL_write(lumberjack->ssl, data, 6);
-  if (bytes < 0) {
-    printf("lumberjack_write_window_size\n");
-    ERR_print_errors_fp(stdout);
+  struct str payload = {
+    .data_len = 6,
+    .data_size = 6,
+    .data = data
+  };
+
+  int rc;
+  rc = lumberjack_write(lumberjack, &payload);
+  if (rc != 0) {
+    /* write failure, fail. */
+    printf("write failure while writing the window size\n");
     return -1;
   }
   return 0;
