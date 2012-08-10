@@ -1,5 +1,6 @@
 #define _BSD_SOURCE /* to get gethostname() under linux/gcc */
 #include <sys/types.h>
+#include <sys/resource.h> /* for setrlimit */
 #include <getopt.h>
 #include "insist.h"
 #include <pthread.h>
@@ -72,6 +73,37 @@ void usage(const char *prog) {
            options[i].documentation);
   }
 } /* usage */
+
+void set_resource_limits(int file_count) {
+  struct rlimit limits;
+  int rc;
+
+  rc = nice(1); /* ask for less priority in the scheduler */
+  insist(rc != -1, "nice(1) failed: %s\n", strerror(errno));
+
+  /* Set open file limit */
+  limits.rlim_cur = limits.rlim_max = file_count + 100;
+  rc = setrlimit(RLIMIT_NOFILE, &limits);
+  insist(rc != -1, "setrlimit(RLIMIT_NOFILE, ... %d) failed: %s\n",
+         (int)limits.rlim_max, strerror(errno));
+
+  /* I'd like to set RLIMIT_NPROC, but that setting applies to the entire user
+   * for all processes, not just subprocesses or threads belonging to this
+   * process. */
+  //limits.rlim_cur = limits.rlim_max = file_count + 10;
+  //rc = setrlimit(RLIMIT_NPROC, &limits);
+  //insist(rc != -1, "setrlimit(RLIMIT_NPROC, ... %d) failed: %s\n",
+         //(int)limits.rlim_max, strerror(errno));
+
+  /* Set resident memory limit */
+  long pagesize = sysconf(_SC_PAGESIZE);
+  /* Allow 1mb per file opened, convert to 'pages' */
+  int bytes = (1<<20 * file_count);
+  limits.rlim_cur = limits.rlim_max = (int)(bytes / pagesize);
+  rc = setrlimit(RLIMIT_RSS, &limits);
+  insist(rc != -1, "setrlimit(RLIMIT_RSS, %d pages (%d bytes)) failed: %s\n",
+         (int)limits.rlim_max, bytes, strerror(errno));
+} /* set_resource_limits */
 
 int main(int argc, char **argv) {
   int c, i;
@@ -147,8 +179,9 @@ int main(int argc, char **argv) {
 
   insist(argc > 0, "No arguments given. What log files do you want shipped?");
 
-  /* TODO(sissel): Set resource (memory, open file, etc) limits based on the
+  /* Set resource (memory, open file, etc) limits based on the
    * number of files being watched. */
+  set_resource_limits(argc);
 
   pthread_t *harvesters = calloc(argc, sizeof(pthread_t));
   /* no I/O threads needed since we use inproc:// only */
