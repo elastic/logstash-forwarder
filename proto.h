@@ -61,12 +61,14 @@ int lumberjack_send_data(struct lumberjack *lumberjack, const char *payload,
                          size_t payload_len);
                          //void (*free_func)(void *payload, void *hint()));
 
+int lumberjack_flush(struct lumberjack *lumberjack);
 /* TODO(sissel): permit inspection of currently-unacknowledged events? */
 
 //int lumberjack_send_kv(struct *kv map);
 
 /* blocks until all messages in the ring have been acknowledged */
 void lumberjack_disconnect(struct lumberjack *lumberjack);
+int lumberjack_ensure_connected(struct lumberjack *lumberjack);
 
 /* Pack a key-value list according to the lumberjack protocol */
 struct str *lumberjack_kv_pack(struct kv *kv_list, size_t kv_count);

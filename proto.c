@@ -29,10 +29,8 @@ static int lumberjack_tcp_connect(struct lumberjack *lumberjack);
 static int lumberjack_ssl_handshake(struct lumberjack *lumberjack);
 static int lumberjack_connected(struct lumberjack *lumberjack);
 static int lumberjack_wait_for_ack(struct lumberjack *lumberjack);
-static int lumberjack_ensure_connected(struct lumberjack *lumberjack);
 static int lumberjack_retransmit_all(struct lumberjack *lumberjack);
 static int lumberjack_write_window_size(struct lumberjack *lumberjack);
-static int lumberjack_flush(struct lumberjack *lumberjack);
 
 static int lumberjack_init_done = 0;
 
@@ -161,7 +159,7 @@ int lumberjack_connect(struct lumberjack *lumberjack) {
   return 0;
 } /* lumberjack_connect */
 
-static int lumberjack_ensure_connected(struct lumberjack *lumberjack) {
+int lumberjack_ensure_connected(struct lumberjack *lumberjack) {
   int rc;
   struct backoff sleeper;
   backoff_init(&sleeper, &MIN_SLEEP, &MAX_SLEEP);
@@ -301,6 +299,15 @@ int lumberjack_flush(struct lumberjack *lumberjack) {
   size_t length = str_length(lumberjack->io_buffer);
   /* Zlib */
   int rc;
+
+  if (length == 0) {
+    return 0; /* nothing to do */
+  }
+
+  if (!lumberjack_connected(lumberjack)) {
+    return -1;
+  }
+
   size_t compressed_length = lumberjack->compression_buffer->data_size;
   rc = compress2((Bytef *)str_data(lumberjack->compression_buffer), &compressed_length,
                  (Bytef *)str_data(lumberjack->io_buffer), length, 1);
@@ -436,6 +443,9 @@ int lumberjack_send_data(struct lumberjack *lumberjack, const char *payload,
   lumberjack_ensure_connected(lumberjack);
   /* if the ring is currently full, we need to wait for acks. */
   while (ring_is_full(lumberjack->ring)) {
+    /* flush any writes waiting for buffering/compression */
+    lumberjack_flush(lumberjack);
+
     /* read at least one ACK */
     lumberjack_wait_for_ack(lumberjack);
   }
