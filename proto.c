@@ -71,8 +71,8 @@ struct lumberjack *lumberjack_new(const char *host, unsigned short port) {
 
   /* Create this once. */
   lumberjack->ssl_context = SSL_CTX_new(SSLv23_client_method());
-
   SSL_CTX_set_verify(lumberjack->ssl_context, SSL_VERIFY_PEER, NULL);
+
   return lumberjack;
 } /* lumberjack_new */
 
@@ -286,7 +286,7 @@ int lumberjack_write(struct lumberjack *lumberjack, struct str *payload) {
   }
 
   return 0;
-} /* lumberjack_write_v1 */
+} /* lumberjack_write */
 
 void lumberjack_disconnect(struct lumberjack *lumberjack) {
   printf("Disconnect requested\n");
