@@ -34,6 +34,10 @@ inline size_t str_length(struct str *str) {
   return str->data_len;
 } /* str_length */
 
+inline size_t str_size(struct str *str) {
+  return str->data_size;
+} /* str_size */
+
 inline char *str_data(struct str *str) {
   return str->data;
 } /* str_data */
