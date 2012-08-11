@@ -32,9 +32,9 @@ clean:
 	-@make -C vendor/libuuid/ clean
 	-@make -C vendor/zeromq/ clean
 
-rpm deb:
+rpm deb: | build/bin/lumberjack
 	fpm -s dir -t $@ -n lumberjack -v $(VERSION) --prefix /opt/lumberjack \
-		--exclude '*.a' -C build bin/lumberjack lib
+		--exclude '*.a' --exclude 'lib/pkgconfig/zlib.pc' -C build bin/lumberjack lib
 
 #install: build/bin/lumberjack build/lib/libzmq.$(LIBEXT)
 # install -d -m 755 build/bin/* $(PREFIX)/bin/lumberjack
@@ -51,7 +51,7 @@ str.c: str.h
 proto.c: proto.h str.h
 ring.c: ring.h
 
-proto.c: build/include/lz4.h
+#proto.c: build/include/lz4.h
 
 .PHONY: test
 test: | build/test/test_ring
@@ -69,7 +69,7 @@ build/test/test_ring: test_ring.o ring.o  | build/test
 build/bin/lumberjack: | build/bin build/lib/libzmq.$(LIBEXT)
 build/bin/lumberjack: | build/lib/libjemalloc.$(LIBEXT)
 build/bin/lumberjack: | build/lib/libz.$(LIBEXT)
-build/bin/lumberjack: | build/lib/liblz4.$(LIBEXT)
+#build/bin/lumberjack: | build/lib/liblz4.$(LIBEXT)
 build/bin/lumberjack: lumberjack.o backoff.o harvester.o emitter.o str.o proto.o ring.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 	@echo " => Build complete: $@"
@@ -79,18 +79,23 @@ build/include/insist.h: | build/include
 	PATH=$$PWD:$$PATH fetch.sh -o $@ https://raw.github.com/jordansissel/experiments/master/c/better-assert/insist.h
 
 build/include/zmq.h build/lib/libzmq.$(LIBEXT): | build
+	@echo " => Building zeromq"
 	PATH=$$PWD:$$PATH $(MAKE) -C vendor/zeromq/ install PREFIX=$$PWD/build
 
 build/include/msgpack.h build/lib/libmsgpack.$(LIBEXT): | build
+	@echo " => Building msgpack"
 	PATH=$$PWD:$$PATH $(MAKE) -C vendor/msgpack/ install PREFIX=$$PWD/build
 
 build/include/jemalloc/jemalloc.h build/lib/libjemalloc.$(LIBEXT): | build
+	@echo " => Building jemalloc"
 	PATH=$$PWD:$$PATH $(MAKE) -C vendor/jemalloc/ install PREFIX=$$PWD/build
 
 build/include/lz4.h build/lib/liblz4.$(LIBEXT): | build
+	@echo " => Building lz4"
 	PATH=$$PWD:$$PATH $(MAKE) -C vendor/lz4/ install PREFIX=$$PWD/build
 
 build/include/zlib.h build/lib/libz.$(LIBEXT): | build
+	@echo " => Building lz4"
 	PATH=$$PWD:$$PATH $(MAKE) -C vendor/zlib/ install PREFIX=$$PWD/build
 
 build:
