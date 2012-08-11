@@ -65,5 +65,5 @@ inline void str_truncate(struct str *str) {
 } /* str_zero */
 
 inline void str_append_str(struct str *dst, struct str *src) {
-  str_append(dst, str_data(src), str_length(str));
+  str_append(dst, str_data(src), str_length(src));
 } /* str_append_str */
