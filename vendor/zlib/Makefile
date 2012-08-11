@@ -7,7 +7,7 @@ default: install
 include ../Makefile.ext
 
 configure: | $(WORKDIR)/configure.log
-$(WORKDIR)/config.log: | $(WORKDIR)
+$(WORKDIR)/configure.log: | $(WORKDIR)
 	cd $(WORKDIR); ./configure --prefix=$(PREFIX)
 
 compile: | $(WORKDIR)/libz.$(LIBEXT).$(VERSION)
