@@ -15,9 +15,11 @@ $(WORKDIR)/libz.$(LIBEXT).$(VERSION): | configure
 	$(MAKE) -C $(WORKDIR)
 
 install: | compile $(PREFIX)/lib $(PREFIX)/include
-install: | $(PREFIX)/lib/libz.$(LIBEXT).$(VERSION)
-install: | $(PREFIX)/lib/libz.$(LIBEXT)
-install: | $(PREFIX)/include/zlib.h
+#install: | $(PREFIX)/lib/libz.$(LIBEXT).$(VERSION)
+#install: | $(PREFIX)/lib/libz.$(LIBEXT)
+#install: | $(PREFIX)/include/zlib.h
+install:
+	$(MAKE) -C $(WORKDIR) install  DESTDIR=$(PREFIX)
 
 $(PREFIX)/lib/libz.$(LIBEXT).$(VERSION): $(WORKDIR)/libz.$(LIBEXT).$(VERSION)
 	cp $^ $@
