@@ -6,7 +6,7 @@ CFLAGS+=-g
 CFLAGS+=-Wno-unused-function
 LDFLAGS+=-pthread
 LDFLAGS+=-Lbuild/lib -Wl,-rpath,'$$ORIGIN/../lib'
-LIBS=-lzmq -ljemalloc -lssl -lcrypto -luuid
+LIBS=-lzmq -ljemalloc -lssl -lcrypto -luuid -lz
 
 
 FETCH=sh fetch.sh
@@ -42,7 +42,7 @@ rpm deb:
 #unixsock.c: build/include/insist.h
 backoff.c: backoff.h
 harvester.c: harvester.h proto.h str.h build/include/insist.h build/include/zmq.h
-emitter.c: emitter.h ring.h build/include/zmq.h
+emitter.c: emitter.h ring.h build/include/zmq.h build/include/zlib.h
 lumberjack.c: build/include/insist.h build/include/zmq.h 
 lumberjack.c: backoff.h harvester.h emitter.h
 harvester.c lumberjack.c pushpull.c ring.c str.c: build/include/jemalloc/jemalloc.h
@@ -65,6 +65,7 @@ build/test/test_ring: test_ring.o ring.o  | build/test
 
 build/bin/lumberjack: | build/bin build/lib/libzmq.$(LIBEXT)
 build/bin/lumberjack: | build/lib/libjemalloc.$(LIBEXT)
+build/bin/lumberjack: | build/lib/libz.$(LIBEXT)
 build/bin/lumberjack: lumberjack.o backoff.o harvester.o emitter.o str.o proto.o ring.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 	@echo " => Build complete: $@"
@@ -77,13 +78,16 @@ build/include/zmq.h build/lib/libzmq.$(LIBEXT): | build
 	PATH=$$PWD:$$PATH $(MAKE) -C vendor/zeromq/ install PREFIX=$$PWD/build
 
 #build/include/msgpack.h build/lib/libmsgpack.$(LIBEXT): | build
-#	$(MAKE) -C vendor/msgpack/ install PREFIX=$$PWD/build
-
-build/include/msgpack.h build/lib/libmsgpack.$(LIBEXT): | build
-	PATH=$$PWD:$$PATH $(MAKE) -C vendor/msgpack/ install PREFIX=$$PWD/build
+#	PATH=$$PWD:$$PATH $(MAKE) -C vendor/msgpack/ install PREFIX=$$PWD/build
 
 build/include/jemalloc/jemalloc.h build/lib/libjemalloc.$(LIBEXT): | build
 	PATH=$$PWD:$$PATH $(MAKE) -C vendor/jemalloc/ install PREFIX=$$PWD/build
+
+#build/include/lz4.h build/lib/liblz4.$(LIBEXT): | build
+#	PATH=$$PWD:$$PATH $(MAKE) -C vendor/lz4/ install PREFIX=$$PWD/build
+
+build/include/zlib.h build/lib/libz.$(LIBEXT): | build
+	PATH=$$PWD:$$PATH $(MAKE) -C vendor/zlib/ install PREFIX=$$PWD/build
 
 build:
 	mkdir $@
