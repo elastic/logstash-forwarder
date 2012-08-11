@@ -119,9 +119,6 @@ int lumberjack_set_ssl_ca(struct lumberjack *lumberjack, const char *path) {
 int lumberjack_connect(struct lumberjack *lumberjack) {
   /* TODO(sissel): support ipv6, if anyone ever uses that in production ;) */
   insist(lumberjack != NULL, "lumberjack must not be NULL");
-  insist(lumberjack->fd < 0, "already connected (fd %d > 0)", lumberjack->fd);
-  insist(lumberjack->host != NULL, "lumberjack host must not be NULL");
-  insist(lumberjack->port > 0, "lumberjack port must be > 9 (is %hd)", lumberjack->port);
 
   int rc;
   rc = lumberjack_tcp_connect(lumberjack);
@@ -190,6 +187,10 @@ static int lumberjack_ensure_connected(struct lumberjack *lumberjack) {
 /* Connect to a host:port. If 'host' resolves to multiple addresses, one is
  * picked at random. */
 static int lumberjack_tcp_connect(struct lumberjack *lumberjack) {
+  insist(lumberjack->fd < 0, "already connected (fd %d > 0)", lumberjack->fd);
+  insist(lumberjack->host != NULL, "lumberjack host must not be NULL");
+  insist(lumberjack->port > 0, "lumberjack port must be > 9 (is %hd)", lumberjack->port);
+  insist(lumberjack != NULL, "lumberjack must not be NULL");
   int rc;
   int fd;
   struct hostent *hostinfo = gethostbyname(lumberjack->host);
@@ -231,6 +232,9 @@ static int lumberjack_tcp_connect(struct lumberjack *lumberjack) {
 } /* lumberjack_tcp_connect */
 
 static int lumberjack_ssl_handshake(struct lumberjack *lumberjack) {
+  insist(lumberjack != NULL, "lumberjack must not be NULL");
+  insist(lumberjack->ssl == NULL, "ssl already established, cannot handshake");
+
   int rc;
   BIO *bio = BIO_new_socket(lumberjack->fd, 0 /* don't close on free */);
   if (bio == NULL) {
