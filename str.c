@@ -59,3 +59,7 @@ inline void str_append_uint32(struct str *str, uint32_t value) {
 inline void str_append_char(struct str *str, char value) {
   str_append(str, &value, sizeof(value));
 } /* str_append_char */
+
+inline void str_truncate(struct str *str) {
+  str->data_len = 0;
+} /* str_zero */
