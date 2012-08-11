@@ -63,3 +63,7 @@ inline void str_append_char(struct str *str, char value) {
 inline void str_truncate(struct str *str) {
   str->data_len = 0;
 } /* str_zero */
+
+inline void str_append_str(struct str *dst, struct str *src) {
+  str_append(dst, str_data(src), str_length(str));
+} /* str_append_str */
