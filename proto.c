@@ -12,6 +12,8 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <sys/stat.h>
+//#include <lz4.h>
+#include <zlib.h>
 #include "backoff.h"
 #include "insist.h"
 
@@ -30,6 +32,7 @@ static int lumberjack_wait_for_ack(struct lumberjack *lumberjack);
 static int lumberjack_ensure_connected(struct lumberjack *lumberjack);
 static int lumberjack_retransmit_all(struct lumberjack *lumberjack);
 static int lumberjack_write_window_size(struct lumberjack *lumberjack);
+static int lumberjack_flush(struct lumberjack *lumberjack);
 
 static int lumberjack_init_done = 0;
 
@@ -66,6 +69,7 @@ struct lumberjack *lumberjack_new(const char *host, unsigned short port) {
    * in a local network, an ack size of 1024 seemed to have
    * the best performance (equal to 2048 and 16384) for the
    * least memory cost. */
+  /* TODO(sissel): Make this tunable */
   lumberjack->ring_size = 1024;
   lumberjack->ring = ring_new_size(lumberjack->ring_size);
 
@@ -73,6 +77,10 @@ struct lumberjack *lumberjack_new(const char *host, unsigned short port) {
   lumberjack->ssl_context = SSL_CTX_new(SSLv23_client_method());
   SSL_CTX_set_verify(lumberjack->ssl_context, SSL_VERIFY_PEER, NULL);
 
+  lumberjack->io_buffer = str_new_size(16384);
+  /* Zlib*/
+  lumberjack->compression_buffer = str_new_size(compressBound(16384));
+  //lumberjack->compression_buffer = str_new_size(LZ4_compressBound(16384));
   return lumberjack;
 } /* lumberjack_new */
 
@@ -269,24 +277,82 @@ int lumberjack_write(struct lumberjack *lumberjack, struct str *payload) {
   if (!lumberjack_connected(lumberjack)) {
     return -1;
   }
-  size_t remaining = str_length(payload);
-  size_t offset = 0;
 
+  /* TODO(sissel): For compression
+   * - append payload to the buffer
+   * - if the buffer is longer than BUFFER_FLUSH_SIZE
+   *   - lumberjack_flush()
+   * - else continue, do not write on the wire.
+   */
+  str_append_str(lumberjack->io_buffer, payload);
+
+  if (str_length(lumberjack->io_buffer) > 16384) {
+    return lumberjack_flush(lumberjack);
+  }
+  return 0;
+} /* lumberjack_write */
+
+int lumberjack_flush(struct lumberjack *lumberjack) {
   ssize_t bytes;
+  size_t length = str_length(lumberjack->io_buffer);
+  /* Zlib */
+  int rc;
+  size_t compressed_length = lumberjack->compression_buffer->data_size;
+  rc = compress2((Bytef *)str_data(lumberjack->compression_buffer), &compressed_length,
+                 (Bytef *)str_data(lumberjack->io_buffer), length, 1);
+  insist(rc == Z_OK, "compress2(..., %ld, ..., %ld) failed; returned %d",
+         compressed_length, length, rc);
+
+  //int compressed_length = LZ4_compress(str_data(lumberjack->io_buffer),
+                                       //str_data(lumberjack->compression_buffer),
+                                       //length) ;
+  //int rc;
+  //char blah[65536];
+  //rc = LZ4_uncompress_unknownOutputSize(str_data(lumberjack->compression_buffer), blah, compressed_length, 65535);
+  //insist(rc >= 0, "LZ4_uncompress failed: %d\n", rc);
+
+  str_truncate(lumberjack->io_buffer);
+  //printf("Compressed %d bytes to %d\n", (int)length, (int)compressed_length);
+  //bytes = write(lumberjack->fd, str_data(payload) + offset, remaining);
+  //bytes = SSL_write(lumberjack->ssl, str_data(lumberjack->io_buffer) + offset,
+                    //chunk_size);
+  struct str *header = str_new_size(6);
+  str_append_char(header, LUMBERJACK_VERSION_1);
+  str_append_char(header, LUMBERJACK_COMPRESSED_BLOCK_FRAME);
+  str_append_uint32(header, compressed_length);
+  bytes = SSL_write(lumberjack->ssl, str_data(header), str_length(header));
+  str_free(header);
+
+  if (bytes < 0) {
+    /* error occurred while writing. */
+    lumberjack_disconnect(lumberjack);
+    //str_free(header);
+    return -1;
+  }
+
+  ssize_t remaining = compressed_length;
+  size_t offset = 0;
+  //printf("Start of compressed stuff: ");
+  //fwrite(lumberjack->compression_buffer->data, 15, 1, stdout);
+  //fwrite("\n", 1, 1, stdout);
+  //fflush(stdout);
   while (remaining > 0) {
-    //bytes = write(lumberjack->fd, str_data(payload) + offset, remaining);
-    bytes = SSL_write(lumberjack->ssl, str_data(payload) + offset, remaining);
+    bytes = SSL_write(lumberjack->ssl,
+                      str_data(lumberjack->compression_buffer) + offset,
+                      remaining);
+    /* TODO(sissel): if bytes != chunk_size? */
     if (bytes < 0) {
       /* error occurred while writing. */
       lumberjack_disconnect(lumberjack);
+      str_free(header);
       return -1;
     }
+
     remaining -= bytes;
     offset += bytes;
   }
-
   return 0;
-} /* lumberjack_write */
+} /* lumberjack_flush */
 
 void lumberjack_disconnect(struct lumberjack *lumberjack) {
   printf("Disconnect requested\n");
@@ -372,7 +438,7 @@ int lumberjack_send_data(struct lumberjack *lumberjack, const char *payload,
 
   /* Send this data frame on the wire */
   rc = lumberjack_write(lumberjack, frame);
-  if (rc < 0) {
+  if (rc != 0) {
     /* write failure, reconnect (which will resend) and such */
     lumberjack_disconnect(lumberjack);
     lumberjack_ensure_connected(lumberjack);

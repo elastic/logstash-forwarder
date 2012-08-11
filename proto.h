@@ -28,12 +28,16 @@ struct lumberjack {
 
   size_t ring_size; /* the size of the ring */
   struct ring *ring; /* the ring buffer of things needing acknowledgement */
+
+  struct str *io_buffer;
+  struct str *compression_buffer;
 };
 
 #define LUMBERJACK_VERSION_1 '1'
 #define LUMBERJACK_DATA_FRAME 'D'
 #define LUMBERJACK_ACK_FRAME 'A'
 #define LUMBERJACK_WINDOW_SIZE_FRAME 'W'
+#define LUMBERJACK_COMPRESSED_BLOCK_FRAME 'C'
 
 /* Create a new lumberjack client.
  *
