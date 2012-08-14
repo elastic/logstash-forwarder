@@ -1,60 +1,11 @@
 # Protocol
 
-## Goals
-
-* simple to code, light on cpu and bandwidth reading/writing the wire protocol
-* message-oriented
-* lossless transmission (application-level acknowledgements, retransmit, timeout+redirect)
-* protected (encryption, authentication)
-* ordered
-* scalable (load balance, etc)
-
-## Prior Art in network protocols
-
-* TCP, SCTP, WebSockets, HTTP, TLS, SSH
-* WebSockets are fail because almost no load loadbalancers support HTTP
-  Upgrade and additionally the landscape for websocket client and server
-  libraries is pretty dismal, even though websockets would get us SSL (https)
-  redirects (http) and other nice network properties for free.
-* Quake 3: http://fabiensanglard.net/quake3/network.php
-* SCTP is fail because most folks don't understand how to firewall it and it's
-  not supported on (any?) cloud stuff.
-* HTTP is request/response with high overhead for bidirectional communication.
-* TLS is a good framework to sit on to get encryption and authentication.
-* SSH v2 channels are pretty neat. Also solves encryption + authentication.
-
-## Questions:
-
-* Permit bulk acknowlegements? Like TCP, perhaps.
-* Should authentication be channel- or message-based?
-
-## Tentative Plan
-
-* Authentication: ssl certs
-* Encryption: tls
-* Compression, maybe? gzip (most common)
-
-I'd rather not invent my own serialization for the protocol, but everything
-else seems rather awkward to use. Protobufs are C++ (not C), msgpack may be
-awkward for distribution, thrift is C++, etc.
+* TLS Encryption: optional, channel
+* Compression: optional, frame-based
 
 ## Implementation Considerations
 
-### Simple/Few/Fast Dependencies
-
-* Serialization: msgpack, json, thrift, and protobufs are all too hard to
-  integrate/deploy or are too slow/complex to generate (json).
-* Encryption: openssl is fairly ubiquitous and nontrivial to reimplement.
-* Framing: version, frame type, payload.
-
-### Small CPU-cost
-
-* Serialization and Framing should be cheap on cpu. This means avoiding
-  serialization mechanisms that inspect and possibly modify every single byte
-  of a string (Example of expensive serialization: json's UTF-8 + escape code
-  enforcement).
-
-# Lumberjack Protocol (Still in development)
+# Lumberjack Protocol v1
 
 ## Behavior
 
@@ -72,18 +23,14 @@ this protocol aims to provide reliable, application-level, message transport.
 
 ### Layering
 
-This entire protocol is built to be layered on top of TCP or TLS. Preferrably TLS.
-
-At this time I do not intend to support unencrypted transport.
-
-TODO(sissel): Choose a compression method.
+This entire protocol is built to be layered on top of TCP or TLS.
 
 ### Framing
 
       0                   1                   2                   3
       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
      +---------------+---------------+-------------------------------+
-     |   version     |   frame type  |     payload ...               |
+     |   version(1)  |   frame type  |     payload ...               |
      +---------------------------------------------------------------+
      |   payload continued...                                        |
      +---------------------------------------------------------------+
@@ -104,8 +51,8 @@ Payload:
 * 32bit unsigned value length followed by that many bytes for the value
 * repeat key/value 'count' times.
 
-* TODO(sissel): What happens when the sequence number rolls over?
-* TODO(sissel): Worth supporting numerical value items instead of just strings?
+Sequence number roll-over: If you receive a sequence number less than the
+previous value, this signals that the sequence number has rolled over.
 
 ### 'ack' frame type
 
@@ -131,3 +78,27 @@ Payload:
 
 This frame is used to tell the reader the maximum number of unacknowledged
 data frames the writer will send before blocking for acks.
+
+### 'compressed' frame type
+
+* SENT FROM WRITER ONLY
+* frame type value: ASCII 'C' aka byte value 0x43
+
+Payload:
+
+* 32bit unsigned payload length 
+* 'length' bytes of compressed payload
+
+This frame type allows you to compress many frames into a single compressed
+envelope and is useful for efficiently compressing many small data frames.
+
+The compressed payload MUST contain full frames only, not partial frames.
+The uncompressed payload MUST be a valid frame stream by itself. As an example,
+you could have 3 data frames compressed into a single 'compressed' frame type:
+1D{k,v}{k,v}1D{k,v}{k,v}1D{k,v}{k,v} - when uncompressed, you should process
+the uncompressed payload as you would reading uncompressed frames from the
+network.
+
+TODO(sissel): It's likely this model is suboptimal, instead choose to
+use whole-stream compression z_stream in zlib (Zlib::ZStream in ruby) might be
+preferable.
