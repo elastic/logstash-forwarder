@@ -52,18 +52,21 @@ void *harvest(void *arg) {
   gethostname(hostname, sizeof(hostname));
   hostname_len = strlen(hostname);
 
-  fd = open(config->path, O_RDONLY);
+  if (strcmp(config->path, "-") == 0) {
+    /* path is '-', use stdin */
+    fd = 0;
+  } else {
+    fd = open(config->path, O_RDONLY);
+    /* Start at the end of the file */
+    //lseek(fd, 0, SEEK_END);
+  }
   insist(fd >= 0, "open(%s) failed: %s", config->path, strerror(errno));
-
-  /* Start at the end of the file */
-  //lseek(fd, 0, SEEK_END);
-
   path_len = strlen(config->path);
 
   struct kv event[] = {
     { "file", 4, config->path, path_len },
     { "host", 4, hostname, hostname_len },
-    { "line", 4, NULL, 0 }, /* will fill this in later */
+    { "line", 4, NULL, 0 }, /* will fill this in later for each line read */
   };
 
   char *buf;
@@ -95,9 +98,15 @@ void *harvest(void *arg) {
     bytes = read(fd, buf + offset, BUFFERSIZE - offset - 1);
     if (bytes < 0) {
       /* error, maybe indicate a failure of some kind. */
+      printf("read(%d '%s') failed: %s\n", fd,
+             config->path, strerror(errno));
       break;
     } else if (bytes == 0) {
       backoff(&sleeper);
+      if (strcmp(config->path, "-") == 0) {
+        /* stdin gave EOF, close out. */
+        break;
+      }
       track_rotation(&fd, config->path);
     } else {
       /* Data read, handle it! */
@@ -140,7 +149,6 @@ void *harvest(void *arg) {
 
   return NULL;
 } /* harvest */
-
 
 void track_rotation(int *fd, const char *path) {
   struct stat pathstat, fdstat;

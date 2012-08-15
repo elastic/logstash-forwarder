@@ -81,6 +81,16 @@ void set_resource_limits(int file_count) {
   rc = nice(1); /* ask for less priority in the scheduler */
   insist(rc != -1, "nice(1) failed: %s\n", strerror(errno));
 
+  /* Only set resource limits if not running under valgrind.
+   * If we set limits under valgrind, it crashes due to exceeding said limits
+   */
+
+  if ((getenv("LD_PRELOAD") != NULL) \
+      && (strstr(getenv("LD_PRELOAD"), "/vgpreload_") != NULL)) {
+    printf("Valgrind detected, skipping self-resource limitations\n");
+    return;
+  }
+
   /* Set open file limit */
   limits.rlim_cur = limits.rlim_max = file_count + 100;
   rc = setrlimit(RLIMIT_NOFILE, &limits);
@@ -196,9 +206,16 @@ int main(int argc, char **argv) {
     pthread_create(&harvesters[i], NULL, harvest, harvester);
   }
 
+  pthread_t emitter_thread;
   emitter_config.zmq = zmq;
   emitter_config.zmq_endpoint = ZMQ_EMITTER_ENDPOINT;
-  emitter(&emitter_config);
+  pthread_create(&emitter_thread, NULL, emitter, &emitter_config);
+
+  for (i = 0; i < argc; i++) {
+    pthread_join(harvesters[i], NULL);
+  }
+
+  printf("All harvesters completed. Exiting.\n");
 
   free(harvesters);
   /* If we get here, the emitter failed. */
