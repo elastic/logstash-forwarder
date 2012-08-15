@@ -10,6 +10,8 @@
 #include "backoff.h"
 #include "clock_gettime.h"
 
+#include <sys/resource.h>
+
 static struct timespec MIN_SLEEP = { 0, 10000000 }; /* 10ms */
 static struct timespec MAX_SLEEP = { 15, 0 }; /* 15 */
 
@@ -88,6 +90,12 @@ void *emitter(void *arg) {
       double s = (start.tv_sec + 0.0) + (start.tv_nsec / 1000000000.0);
       double n = (now.tv_sec + 0.0) + (now.tv_nsec / 1000000000.0);
       fprintf(stderr, "Rate: %f (bytes: %f)\n", (count + 0.0) / (n - s), (bytes + 0.0) / (n - s));
+      struct rusage rusage;
+      rc = getrusage(RUSAGE_SELF, &rusage);
+      insist(rc == 0, "getrusage failed: %s\n", strerror(errno));
+      printf("cpu user/system: %d.%06d / %d.%06d\n",
+             (int)rusage.ru_utime.tv_sec, (int)rusage.ru_utime.tv_usec,
+             (int)rusage.ru_stime.tv_sec, (int)rusage.ru_stime.tv_usec);
       clock_gettime(CLOCK_MONOTONIC, &start);
       bytes = 0;
       count = 0;
