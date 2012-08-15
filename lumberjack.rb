@@ -6,38 +6,6 @@ require "openssl"
 require "zlib"
 #require "lz4-ruby"
 
-class IOWrap
-  def initialize(io)
-    @io = io
-    @buffer = ""
-  end
-
-  def read(bytes)
-    if @buffer.empty?
-      #puts "reading direct from @io"
-      return @io.read(bytes)
-    elsif @buffer.length > bytes
-      #puts "reading buffered"
-      data = @buffer[0...bytes]
-      @buffer[0...bytes] = ""
-      return data
-    else
-      data = @buffer.clone
-      @buffer.clear
-      return data + @io.read(bytes - data.length)
-    end
-  end
-
-  def pushback(data)
-    #puts "Pushback: #{data[0..30].inspect}..."
-    @buffer += data
-  end
-
-  def method_missing(method, *args)
-    @io.send(method, *args)
-  end
-
-end
 
 def handle(fd)
   last_ack = 0

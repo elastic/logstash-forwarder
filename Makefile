@@ -1,4 +1,4 @@
-VERSION=0.0.1
+VERSION=0.0.2
 
 CFLAGS+=-Ibuild/include 
 CFLAGS+=-D_POSIX_C_SOURCE=199309 -std=c99 -Wall -Wextra -Werror -pipe
@@ -26,11 +26,11 @@ endif
 
 clean:
 	-@rm -fr lumberjack unixsock *.o build
-	-@make -C vendor/msgpack/ clean
-	-@make -C vendor/jansson/ clean
-	-@make -C vendor/jemalloc/ clean
-	-@make -C vendor/libuuid/ clean
-	-@make -C vendor/zeromq/ clean
+	-@#make -C vendor/msgpack/ clean
+	-@#make -C vendor/jansson/ clean
+	-@#make -C vendor/jemalloc/ clean
+	-@#make -C vendor/libuuid/ clean
+	-@#make -C vendor/zeromq/ clean
 
 rpm deb: | build/bin/lumberjack
 	fpm -s dir -t $@ -n lumberjack -v $(VERSION) --prefix /opt/lumberjack \
