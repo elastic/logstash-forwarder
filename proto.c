@@ -12,7 +12,6 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <sys/stat.h>
-//#include <lz4.h>
 #include <zlib.h>
 #include "backoff.h"
 #include "insist.h"
@@ -73,9 +72,15 @@ struct lumberjack *lumberjack_new(const char *host, unsigned short port) {
   lumberjack->ssl_context = SSL_CTX_new(SSLv23_client_method());
   SSL_CTX_set_verify(lumberjack->ssl_context, SSL_VERIFY_PEER, NULL);
 
-  lumberjack->io_buffer = str_new_size(16384); /* TODO(sissel): tunable */
+  //lumberjack->io_buffer = str_new_size(16384); /* TODO(sissel): tunable */
 
-  /* zlib provides compressBound() */
+  /* get ready for zlib/deflate compression */
+  memset(&lumberjack->zstream, 0, sizeof(lumberjack->zstream));
+  /* zlib provides deflateInit */
+  /* TODO(sissel): make compression level tunable */
+  deflateInit(&lumberjack->zstream, 3);
+
+  /* fyi, zlib provides compressBound() */
   lumberjack->compression_buffer = str_new_size(compressBound(16384));
   return lumberjack;
 } /* lumberjack_new */
@@ -278,23 +283,65 @@ int lumberjack_write(struct lumberjack *lumberjack, struct str *payload) {
     return -1;
   }
 
-  /* TODO(sissel): For compression
-   * - append payload to the buffer
-   * - if the buffer is longer than BUFFER_FLUSH_SIZE
-   *   - lumberjack_flush()
-   * - else continue, do not write on the wire.
-   */
-  str_append_str(lumberjack->io_buffer, payload);
+  lumberjack->zstream.next_in = (Bytef *)str_data(payload);
+  lumberjack->zstream.avail_in = str_length(payload);
 
-  if (str_length(lumberjack->io_buffer) > 16384) {
-    return lumberjack_flush(lumberjack);
-  }
+  int rc;
+  while (lumberjack->zstream.avail_in > 0) {
+    lumberjack->zstream.avail_out = str_size(lumberjack->compression_buffer);
+    lumberjack->zstream.next_out = (Bytef *)str_data(lumberjack->compression_buffer);
+    rc = deflate(&lumberjack->zstream, Z_SYNC_FLUSH);
+    insist(rc == Z_OK, "deflate(..., Z_NO_FLUSH) failed, returned %d", rc);
+    //bytes = SSL_write(lumberjack->ssl, str_data(lumberjack->io_buffer) + offset,
+                      //chunk_size);
+    int compressed_length = str_size(lumberjack->compression_buffer) \
+                            - lumberjack->zstream.avail_out;
+    if (compressed_length > 0) {
+      /* SSL_write promises to write all the bytes unless
+       * SSL_MODE_ENABLE_PARTIAL_WRITE is set, and we don't use that mode. */
+      rc = SSL_write(lumberjack->ssl, str_data(lumberjack->compression_buffer),
+                     compressed_length);
+      if (rc <= 0) {
+        fprintf(stderr, "SSL_write failed, returned %d on a write of size %d: %s\n",
+                rc, compressed_length, strerror(errno));
+        ERR_print_errors_fp(stderr);
+        return -1;
+      }
+    } /* write only if there's non-zero compressed bytes to send! */
+  } /* wait for deflate() to do the whole input buffer */
+
   return 0;
 } /* lumberjack_write */
 
 int lumberjack_flush(struct lumberjack *lumberjack) {
+  lumberjack->zstream.next_in = NULL;
+  lumberjack->zstream.avail_in = 0;
+
+  int rc;
+  while (lumberjack->zstream.avail_in > 0) {
+    lumberjack->zstream.avail_out = str_size(lumberjack->compression_buffer);
+    lumberjack->zstream.next_out = (Bytef *)str_data(lumberjack->compression_buffer);
+    rc = deflate(&lumberjack->zstream, Z_SYNC_FLUSH);
+    insist(rc == Z_OK, "deflate(..., Z_SYNC_FLUSH) failed, returned %d", rc);
+    int compressed_length = str_size(lumberjack->compression_buffer) \
+                            - lumberjack->zstream.avail_out;
+    /* SSL_write promises to write all the bytes unless
+     * SSL_MODE_ENABLE_PARTIAL_WRITE is set, and we don't use that mode. */
+    rc = SSL_write(lumberjack->ssl, lumberjack->zstream.next_out,
+                   compressed_length);
+    if (rc <= 0) {
+      fprintf(stderr, "SSL_write failed\n");
+      ERR_print_errors_fp(stderr);
+      return -1;
+    }
+  } /* wait for deflate() to do the whole input buffer */
+  return 0;
+} /* lumberjack_flush */
+
+#if 0
+int lumberjack_flush_old(struct lumberjack *lumberjack) {
   ssize_t bytes;
-  size_t length = str_length(lumberjack->io_buffer);
+  //size_t length = str_length(lumberjack->io_buffer);
   /* Zlib */
   int rc;
 
@@ -355,6 +402,7 @@ int lumberjack_flush(struct lumberjack *lumberjack) {
   }
   return 0;
 } /* lumberjack_flush */
+#endif
 
 void lumberjack_disconnect(struct lumberjack *lumberjack) {
   printf("Disconnect requested\n");

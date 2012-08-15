@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <openssl/ssl.h>
+#include <zlib.h>
 #include "ring.h"
 #include "str.h"
 
@@ -29,7 +30,8 @@ struct lumberjack {
   size_t ring_size; /* the size of the ring */
   struct ring *ring; /* the ring buffer of things needing acknowledgement */
 
-  struct str *io_buffer;
+  //struct str *io_buffer;
+  z_stream zstream;
   struct str *compression_buffer;
 };
 
