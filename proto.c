@@ -78,7 +78,7 @@ struct lumberjack *lumberjack_new(const char *host, unsigned short port) {
   memset(&lumberjack->zstream, 0, sizeof(lumberjack->zstream));
   /* zlib provides deflateInit */
   /* TODO(sissel): make compression level tunable */
-  deflateInit(&lumberjack->zstream, 3);
+  deflateInit(&lumberjack->zstream, 7);
 
   /* fyi, zlib provides compressBound() */
   lumberjack->compression_buffer = str_new_size(compressBound(16384));
@@ -290,7 +290,7 @@ int lumberjack_write(struct lumberjack *lumberjack, struct str *payload) {
   while (lumberjack->zstream.avail_in > 0) {
     lumberjack->zstream.avail_out = str_size(lumberjack->compression_buffer);
     lumberjack->zstream.next_out = (Bytef *)str_data(lumberjack->compression_buffer);
-    rc = deflate(&lumberjack->zstream, Z_SYNC_FLUSH);
+    rc = deflate(&lumberjack->zstream, Z_NO_FLUSH);
     insist(rc == Z_OK, "deflate(..., Z_NO_FLUSH) failed, returned %d", rc);
     //bytes = SSL_write(lumberjack->ssl, str_data(lumberjack->io_buffer) + offset,
                       //chunk_size);
@@ -317,24 +317,27 @@ int lumberjack_flush(struct lumberjack *lumberjack) {
   lumberjack->zstream.next_in = NULL;
   lumberjack->zstream.avail_in = 0;
 
+  //printf("flush requested\n");
   int rc;
-  while (lumberjack->zstream.avail_in > 0) {
-    lumberjack->zstream.avail_out = str_size(lumberjack->compression_buffer);
-    lumberjack->zstream.next_out = (Bytef *)str_data(lumberjack->compression_buffer);
-    rc = deflate(&lumberjack->zstream, Z_SYNC_FLUSH);
-    insist(rc == Z_OK, "deflate(..., Z_SYNC_FLUSH) failed, returned %d", rc);
-    int compressed_length = str_size(lumberjack->compression_buffer) \
-                            - lumberjack->zstream.avail_out;
-    /* SSL_write promises to write all the bytes unless
-     * SSL_MODE_ENABLE_PARTIAL_WRITE is set, and we don't use that mode. */
-    rc = SSL_write(lumberjack->ssl, lumberjack->zstream.next_out,
-                   compressed_length);
-    if (rc <= 0) {
-      fprintf(stderr, "SSL_write failed\n");
-      ERR_print_errors_fp(stderr);
-      return -1;
-    }
-  } /* wait for deflate() to do the whole input buffer */
+
+  lumberjack->zstream.avail_out = str_size(lumberjack->compression_buffer);
+  lumberjack->zstream.next_out = (Bytef *)str_data(lumberjack->compression_buffer);
+  rc = deflate(&lumberjack->zstream, Z_BLOCK);
+  //printf("deflate returned %d\n", rc);
+  insist(rc == Z_OK, "deflate(..., Z_SYNC_FLUSH) failed, returned %d", rc);
+  int compressed_length = str_size(lumberjack->compression_buffer) \
+                          - lumberjack->zstream.avail_out;
+  /* SSL_write promises to write all the bytes unless
+   * SSL_MODE_ENABLE_PARTIAL_WRITE is set, and we don't use that mode. */
+  //printf("flush write start: %d bytes\n", compressed_length);
+  rc = SSL_write(lumberjack->ssl, (Bytef *)str_data(lumberjack->compression_buffer),
+                 compressed_length);
+  //printf("flush write done \n");
+  if (rc <= 0) {
+    fprintf(stderr, "SSL_write failed\n");
+    ERR_print_errors_fp(stderr);
+    return -1;
+  }
   return 0;
 } /* lumberjack_flush */
 

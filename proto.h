@@ -39,7 +39,6 @@ struct lumberjack {
 #define LUMBERJACK_DATA_FRAME 'D'
 #define LUMBERJACK_ACK_FRAME 'A'
 #define LUMBERJACK_WINDOW_SIZE_FRAME 'W'
-#define LUMBERJACK_COMPRESSED_BLOCK_FRAME 'C'
 
 /* Create a new lumberjack client.
  *
