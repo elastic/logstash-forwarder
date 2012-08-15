@@ -64,21 +64,19 @@ struct lumberjack *lumberjack_new(const char *host, unsigned short port) {
   lumberjack->connected = 0;
 
   /* I tried with 128, 256, 512, 1024, 2048, and 16384,
-   * in a local network, an ack size of 1024 seemed to have
-   * the best performance (equal to 2048 and 16384) for the
-   * least memory cost. */
-  /* TODO(sissel): Make this tunable */
-  lumberjack->ring_size = 1024;
+   * in a local network, an window size of 1024 seemed to have the best
+   * performance (equal to 2048 and 16384) for the least memory cost. */
+  lumberjack->ring_size = 1024; /* TODO(sissel): tunable */
   lumberjack->ring = ring_new_size(lumberjack->ring_size);
 
   /* Create this once. */
   lumberjack->ssl_context = SSL_CTX_new(SSLv23_client_method());
   SSL_CTX_set_verify(lumberjack->ssl_context, SSL_VERIFY_PEER, NULL);
 
-  lumberjack->io_buffer = str_new_size(16384);
-  /* Zlib*/
+  lumberjack->io_buffer = str_new_size(16384); /* TODO(sissel): tunable */
+
+  /* zlib provides compressBound() */
   lumberjack->compression_buffer = str_new_size(compressBound(16384));
-  //lumberjack->compression_buffer = str_new_size(LZ4_compressBound(16384));
   return lumberjack;
 } /* lumberjack_new */
 
@@ -309,18 +307,11 @@ int lumberjack_flush(struct lumberjack *lumberjack) {
   }
 
   size_t compressed_length = lumberjack->compression_buffer->data_size;
+  /* compress2 is provided by zlib */
   rc = compress2((Bytef *)str_data(lumberjack->compression_buffer), &compressed_length,
                  (Bytef *)str_data(lumberjack->io_buffer), length, 1);
   insist(rc == Z_OK, "compress2(..., %ld, ..., %ld) failed; returned %d",
          compressed_length, length, rc);
-
-  //int compressed_length = LZ4_compress(str_data(lumberjack->io_buffer),
-                                       //str_data(lumberjack->compression_buffer),
-                                       //length) ;
-  //int rc;
-  //char blah[65536];
-  //rc = LZ4_uncompress_unknownOutputSize(str_data(lumberjack->compression_buffer), blah, compressed_length, 65535);
-  //insist(rc >= 0, "LZ4_uncompress failed: %d\n", rc);
 
   str_truncate(lumberjack->io_buffer);
   //printf("Compressed %d bytes to %d\n", (int)length, (int)compressed_length);
