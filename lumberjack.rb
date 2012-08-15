@@ -10,12 +10,13 @@ class IOWrap
   def initialize(io)
     @io = io
     @buffer = ""
+    @z = Zlib::Inflate.new
   end
 
   def read(bytes)
     if @buffer.empty?
       #puts "reading direct from @io"
-      return @io.read(bytes)
+      return compressed_read(bytes)
     elsif @buffer.length > bytes
       #puts "reading buffered"
       data = @buffer[0...bytes]
@@ -24,9 +25,29 @@ class IOWrap
     else
       data = @buffer.clone
       @buffer.clear
-      return data + @io.read(bytes - data.length)
+      return data + compressed_read(bytes - data.length)
     end
   end
+
+  def compressed_read(want)
+    have = 0
+    while have < want
+      block = @io.readpartial(4096)
+      raw = @z.inflate(block)
+      next if raw.empty?
+      have += raw.length
+      @buffer += raw
+    end
+
+    if @buffer.length > want
+      ret, @buffer = @buffer[0...want], @buffer[want..-1]
+      return ret
+    else
+      ret = @buffer
+      @buffer.clear
+      return ret
+    end
+  end # def compressed_read
 
   def pushback(data)
     #puts "Pushback: #{data[0..30].inspect}..."
@@ -53,7 +74,7 @@ def handle(fd)
     #puts "frame: #{frame.inspect}"
 
     if frame == "W" # window size
-      window_size = io.read(4).unpack("N").first / 2
+      window_size = io.read(4).unpack("N").first
       #puts "Window size: #{window_size}"
       next
     elsif frame == "C" # compressed data
@@ -89,7 +110,7 @@ def handle(fd)
     data_frames += 1
     if data_frames % 10000 == 0
       p :data_frames => data_frames 
-      p map
+      #p map
     end
 
 
