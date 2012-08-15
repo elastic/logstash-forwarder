@@ -13,6 +13,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "proto.h"
 
 #define ZMQ_EMITTER_ENDPOINT "inproc://emitter"
 
@@ -120,6 +121,9 @@ int main(int argc, char **argv) {
   struct emitter_config emitter_config;
   struct option *getopt_options = NULL;
 
+  struct kv *extra_fields = NULL;
+  size_t extra_fields_len = 0;
+
   /* defaults */
   memset(&emitter_config, 0, sizeof(struct emitter_config));
   emitter_config.port = 5001;
@@ -138,6 +142,7 @@ int main(int argc, char **argv) {
   getopt_options = realloc(getopt_options, (i+1) * sizeof(struct option));
   getopt_options[i].name = NULL;
 
+  char *tmp;
   while (i = -1, c = getopt_long_only(argc, argv, "+hv", getopt_options, &i), c != -1) {
     /* TODO(sissel): handle args */
     switch (c) {
@@ -155,6 +160,23 @@ int main(int argc, char **argv) {
         break;
       case opt_port:
         emitter_config.port = (short)atoi(optarg);
+        break;
+      case opt_field:
+        tmp = strchr(optarg, '=');
+        if (tmp == NULL) {
+          printf("Invalid --field setting, expected 'foo=bar' form, " \
+                 "didn't see '=' in '%s'", optarg);
+          usage(argv[0]);
+          exit(1);
+        }
+        extra_fields_len += 1;
+        extra_fields = realloc(extra_fields, extra_fields_len * sizeof(struct kv));
+        *tmp = '\0'; // turn '=' into null terminator
+        tmp++; /* skip to first char of value */
+        extra_fields[extra_fields_len - 1].key = strdup(optarg);
+        extra_fields[extra_fields_len - 1].key_len = strlen(optarg);
+        extra_fields[extra_fields_len - 1].value = strdup(tmp);
+        extra_fields[extra_fields_len - 1].value_len = strlen(tmp);
         break;
       default:
         insist(i == -1, "Flag (--%s%s%s) known, but someone forgot to " \
@@ -203,6 +225,8 @@ int main(int argc, char **argv) {
     harvester->zmq = zmq;
     harvester->zmq_endpoint = ZMQ_EMITTER_ENDPOINT;
     harvester->path = argv[i];
+    harvester->fields = extra_fields;
+    harvester->fields_len = extra_fields_len;
     pthread_create(&harvesters[i], NULL, harvest, harvester);
   }
 

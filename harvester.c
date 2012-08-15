@@ -63,11 +63,18 @@ void *harvest(void *arg) {
   insist(fd >= 0, "open(%s) failed: %s", config->path, strerror(errno));
   path_len = strlen(config->path);
 
-  struct kv event[] = {
-    { "file", 4, config->path, path_len },
-    { "host", 4, hostname, hostname_len },
-    { "line", 4, NULL, 0 }, /* will fill this in later for each line read */
-  };
+  struct kv *event = calloc(3 + config->fields_len, sizeof(struct kv));
+
+  /* will fill the 'line' value in later for each line read */
+  event[0].key = "line"; event[0].key_len = 4;
+  event[0].value = NULL; event[0].value_len = 0;
+  event[1].key = "file"; event[1].key_len = 4;
+  event[1].value = config->path; event[1].value_len = path_len;
+  event[2].key = "host"; event[2].key_len = 4;
+  event[2].value = hostname; event[2].value_len = hostname_len;
+  for (size_t i = 0; i < config->fields_len; i++) {
+    memcpy(&event[i + 3], &config->fields[i], sizeof(struct kv));
+  }
 
   char *buf;
   ssize_t bytes;
@@ -128,11 +135,11 @@ void *harvest(void *arg) {
           struct str *serialized;
 
           /* Set the line */
-          event[2].value = line;
-          event[2].value_len = line_len;
+          event[0].value = line;
+          event[0].value_len = line_len;
 
           /* pack using lumberjack data payload */
-          serialized = lumberjack_kv_pack(event, 3);
+          serialized = lumberjack_kv_pack(event, 3 + config->fields_len);
 
           zmq_msg_t event;
           zmq_msg_init_data(&event, str_data(serialized), str_length(serialized), my_str_free, serialized);
