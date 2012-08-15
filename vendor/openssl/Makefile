@@ -10,7 +10,10 @@ include ../Makefile.ext
 
 default: configure
 
-configure: configure-autoconf
+#configure: #configure-autoconf
+configure:
+	(cd $(WORKDIR); ./config no-zlib no-krb5 enable-tlsext enable-camellia enable-mdc2 shared threads --prefix=$(PREFIX)--openssldir=$(PREFIX)/etc/ssl)
+
 
 ifeq ($(UNAME),Darwin)
 # Use --disable-dependency-tracking otherwise llvm/clang crashes
