@@ -51,7 +51,7 @@ static void lumberjack_init(void) {
   lumberjack_init_done = 1;
 } /* lumberjack_init */
 
-struct lumberjack *lumberjack_new(const char *host, unsigned short port) {
+struct lumberjack *lumberjack_new(const char *host, unsigned short port, short verify) {
   struct lumberjack *lumberjack;
   lumberjack_init(); /* global one-time init */
 
@@ -71,7 +71,12 @@ struct lumberjack *lumberjack_new(const char *host, unsigned short port) {
 
   /* Create this once. */
   lumberjack->ssl_context = SSL_CTX_new(SSLv23_client_method());
-  SSL_CTX_set_verify(lumberjack->ssl_context, SSL_VERIFY_PEER, NULL);
+  if (verify) {
+    SSL_CTX_set_verify(lumberjack->ssl_context, SSL_VERIFY_PEER, NULL);
+  } else {
+    SSL_CTX_set_verify(lumberjack->ssl_context, SSL_VERIFY_NONE, NULL);
+  }
+    
 
   lumberjack->io_buffer = str_new_size(16384); /* TODO(sissel): tunable */
 

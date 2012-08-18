@@ -20,6 +20,7 @@
 typedef enum {
   opt_help = 'h',
   opt_version = 'v',
+  opt_noverify,
   opt_field,
   opt_ssl_ca_path,
   opt_host,
@@ -60,6 +61,8 @@ static struct option_doc options[] = {
     "The hostname to send lumberjack messages to" },
   { "port", required_argument, opt_port,
     "The port to connect on" },
+  { "noverify", no_argument, opt_noverify,
+    "Do not verify the SSL certificate" },
   { NULL, 0, 0, NULL },
 };
 
@@ -127,6 +130,7 @@ int main(int argc, char **argv) {
   /* defaults */
   memset(&emitter_config, 0, sizeof(struct emitter_config));
   emitter_config.port = 5001;
+  emitter_config.verify = 1;
   
   /* convert the 'option_doc' array into a 'struct option' array 
    * for use with getopt_long_only */
@@ -161,6 +165,9 @@ int main(int argc, char **argv) {
       case opt_port:
         emitter_config.port = (short)atoi(optarg);
         break;
+      case opt_noverify:
+        emitter_config.verify = 0;
+        break; 
       case opt_field:
         tmp = strchr(optarg, '=');
         if (tmp == NULL) {
