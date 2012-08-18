@@ -51,7 +51,7 @@ static void lumberjack_init(void) {
   lumberjack_init_done = 1;
 } /* lumberjack_init */
 
-struct lumberjack *lumberjack_new(const char *host, unsigned short port) {
+struct lumberjack *lumberjack_new(const char *host, unsigned short port, short verify) {
   struct lumberjack *lumberjack;
   lumberjack_init(); /* global one-time init */
 
@@ -71,7 +71,12 @@ struct lumberjack *lumberjack_new(const char *host, unsigned short port) {
 
   /* Create this once. */
   lumberjack->ssl_context = SSL_CTX_new(SSLv23_client_method());
-  SSL_CTX_set_verify(lumberjack->ssl_context, SSL_VERIFY_PEER, NULL);
+  if (verify) {
+    SSL_CTX_set_verify(lumberjack->ssl_context, SSL_VERIFY_PEER, NULL);
+  } else {
+    SSL_CTX_set_verify(lumberjack->ssl_context, SSL_VERIFY_NONE, NULL);
+  }
+    
 
   lumberjack->io_buffer = str_new_size(16384); /* TODO(sissel): tunable */
 
@@ -308,9 +313,9 @@ int lumberjack_flush(struct lumberjack *lumberjack) {
 
   size_t compressed_length = lumberjack->compression_buffer->data_size;
   /* compress2 is provided by zlib */
-  rc = compress2((Bytef *)str_data(lumberjack->compression_buffer), &compressed_length,
+  rc = compress2((Bytef *)str_data(lumberjack->compression_buffer), (unsigned long *)&compressed_length,
                  (Bytef *)str_data(lumberjack->io_buffer), length, 1);
-  insist(rc == Z_OK, "compress2(..., %ld, ..., %ld) failed; returned %d",
+  insist(rc == Z_OK, "compress2(..., %zd, ..., %zd) failed; returned %d",
          compressed_length, length, rc);
 
   str_truncate(lumberjack->io_buffer);
@@ -397,7 +402,7 @@ static int lumberjack_read_ack(struct lumberjack *lumberjack, uint32_t *sequence
     bytes = SSL_read(lumberjack->ssl, buf + offset, remaining);
     if (bytes <= 0) {
       /* eof(0) or error(<0). */
-      printf("bytes <= 0: %ld\n", (long int) bytes);
+      printf("bytes <= 0: %zd\n", bytes);
       errno = EPIPE; /* close enough? */
       return -1;
     }

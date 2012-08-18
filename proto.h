@@ -47,7 +47,7 @@ struct lumberjack {
  * If the hostname resolves to multiple addresses, one address is picked at
  * random each time a connection is made.
  */
-struct lumberjack *lumberjack_new(const char *host, unsigned short port);
+struct lumberjack *lumberjack_new(const char *host, unsigned short port, short verify);
 
 /* Tell lumberjack about an SSL cert/ca it should trust 
  *

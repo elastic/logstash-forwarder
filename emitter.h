@@ -8,6 +8,7 @@ struct emitter_config {
 
   char *host;
   short port;
+  short verify; 
 };
 
 void *emitter(void *arg);
