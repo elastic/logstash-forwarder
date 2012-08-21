@@ -11,9 +11,8 @@ include ../Makefile.ext
 default: configure
 
 #configure: #configure-autoconf
-configure:
-	(cd $(WORKDIR); ./config no-zlib no-krb5 enable-tlsext enable-camellia enable-mdc2 shared threads --prefix=$(PREFIX)--openssldir=$(PREFIX)/etc/ssl)
-
+configure: | $(WORKDIR)
+	(cd $(WORKDIR); ./config no-zlib no-krb5 enable-tlsext enable-camellia enable-mdc2 shared threads --prefix=$(PREFIX) --openssldir=$(PREFIX)/etc/ssl)
 
 ifeq ($(UNAME),Darwin)
 # Use --disable-dependency-tracking otherwise llvm/clang crashes
@@ -27,4 +26,7 @@ $(WORKDIR)/src/.libs/libopenssl.$(LIBEXT): configure
 	$(MAKE) -C $(WORKDIR)
 
 install: build
-	$(MAKE) -C $(WORKDIR) install
+	@# make 'all' and 'install_sw' because 'make install' installs the docs,
+	@#which I don't want.
+	$(MAKE) -C $(WORKDIR) all install_sw
+
