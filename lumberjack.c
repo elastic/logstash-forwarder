@@ -92,8 +92,14 @@ void set_resource_limits(int file_count) {
     return;
   }
 
-  /* Set open file limit */
-  limits.rlim_cur = limits.rlim_max = file_count + 100;
+  /* Set open file limit 
+   * 3 'open files' per log file watched:
+   *   - one for the file itself
+   *   - two for the socketpair in zeromq
+   * */
+  limits.rlim_cur = limits.rlim_max = (file_count * 3 ) + 100;
+  printf("Watching %d files, setting open file limit to %ld\n",
+         file_count, limits.rlim_max);
   rc = setrlimit(RLIMIT_NOFILE, &limits);
   insist(rc != -1, "setrlimit(RLIMIT_NOFILE, ... %d) failed: %s\n",
          (int)limits.rlim_max, strerror(errno));
@@ -107,10 +113,12 @@ void set_resource_limits(int file_count) {
          //(int)limits.rlim_max, strerror(errno));
 
   /* Set resident memory limit */
-  long pagesize = sysconf(_SC_PAGESIZE);
-  /* Allow 1mb per file opened, convert to 'pages' */
+  /* Allow 1mb per file opened */
   int bytes = (1<<20 * file_count);
-  limits.rlim_cur = limits.rlim_max = (int)(bytes / pagesize);
+  /* RLIMIT_RSS uses 'pages' as the unit, convert bytes to pages. */
+  limits.rlim_cur = limits.rlim_max = (int)(bytes / sysconf(_SC_PAGESIZE));
+  printf("Watching %d files, setting memory usagelimit to %d bytes\n",
+         file_count, bytes); 
   rc = setrlimit(RLIMIT_RSS, &limits);
   insist(rc != -1, "setrlimit(RLIMIT_RSS, %d pages (%d bytes)) failed: %s\n",
          (int)limits.rlim_max, bytes, strerror(errno));
