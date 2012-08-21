@@ -26,15 +26,20 @@ endif
 
 clean:
 	-@rm -fr lumberjack unixsock *.o build
-	-@#make -C vendor/msgpack/ clean
-	-@#make -C vendor/jansson/ clean
-	-@#make -C vendor/jemalloc/ clean
-	-@#make -C vendor/libuuid/ clean
-	-@#make -C vendor/zeromq/ clean
+
+vendor-clean:
+	-make -C vendor/msgpack/ clean
+	-make -C vendor/jansson/ clean
+	-make -C vendor/jemalloc/ clean
+	-make -C vendor/libuuid/ clean
+	-make -C vendor/zeromq/ clean
 
 rpm deb: | build/bin/lumberjack
 	fpm -s dir -t $@ -n lumberjack -v $(VERSION) --prefix /opt/lumberjack \
-		--exclude '*.a' --exclude 'lib/pkgconfig/zlib.pc' -C build bin/lumberjack lib
+		--exclude '*.a' --exclude 'lib/pkgconfig/zlib.pc' -C build \
+		--description "a log shipping tool" \
+		--url "https://github.com/jordansissel/lumberjack" \
+		bin/lumberjack lib
 
 #install: build/bin/lumberjack build/lib/libzmq.$(LIBEXT)
 # install -d -m 755 build/bin/* $(PREFIX)/bin/lumberjack
@@ -48,7 +53,7 @@ lumberjack.c: build/include/insist.h build/include/zmq.h
 lumberjack.c: backoff.h harvester.h emitter.h
 harvester.c lumberjack.c pushpull.c ring.c str.c: build/include/jemalloc/jemalloc.h
 str.c: str.h
-proto.c: proto.h str.h
+proto.c: proto.h str.h build/include/openssl/ssl.h
 ring.c: ring.h
 
 #proto.c: build/include/lz4.h
@@ -69,6 +74,8 @@ build/test/test_ring: test_ring.o ring.o  | build/test
 build/bin/lumberjack: | build/bin build/lib/libzmq.$(LIBEXT)
 build/bin/lumberjack: | build/lib/libjemalloc.$(LIBEXT)
 build/bin/lumberjack: | build/lib/libz.$(LIBEXT)
+build/bin/lumberjack: | build/lib/libssl.$(LIBEXT)
+build/bin/lumberjack: | build/lib/libcrypto.$(LIBEXT)
 #build/bin/lumberjack: | build/lib/liblz4.$(LIBEXT)
 build/bin/lumberjack: lumberjack.o backoff.o harvester.o emitter.o str.o proto.o ring.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -97,6 +104,10 @@ build/include/lz4.h build/lib/liblz4.$(LIBEXT): | build
 build/include/zlib.h build/lib/libz.$(LIBEXT): | build
 	@echo " => Building lz4"
 	PATH=$$PWD:$$PATH $(MAKE) -C vendor/zlib/ install PREFIX=$$PWD/build
+
+build/include/openssl/ssl.h build/lib/libssl.$(LIBEXT) build/lib/libcrypto.$(LIBEXT): | build
+	@echo " => Building openssl"
+	PATH=$$PWD:$$PATH $(MAKE) -C vendor/openssl install PREFIX=$$PWD/build
 
 build:
 	mkdir $@
