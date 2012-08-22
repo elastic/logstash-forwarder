@@ -142,7 +142,8 @@ void *harvest(void *arg) {
           serialized = lumberjack_kv_pack(event, 3 + config->fields_len);
 
           zmq_msg_t event;
-          zmq_msg_init_data(&event, str_data(serialized), str_length(serialized), my_str_free, serialized);
+          zmq_msg_init_data(&event, str_data(serialized), str_length(serialized),
+                            my_str_free, serialized);
           rc = zmq_send(socket, &event, 0);
           insist(rc == 0, "zmq_send(event) failed: %s", zmq_strerror(rc));
           zmq_msg_close(&event);
