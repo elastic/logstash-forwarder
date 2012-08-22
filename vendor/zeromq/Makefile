@@ -3,6 +3,10 @@ URL=http://download.zeromq.org/zeromq-$(VERSION).tar.gz
 TARBALL=$(shell basename $(URL))
 WORKDIR=zeromq-$(VERSION)
 
+ifeq ($(DEBUG),1)
+CONFIGURE_FLAGS=--enable-debug
+endif
+
 default: install
 include ../Makefile.ext
 
@@ -16,7 +20,7 @@ CXXFLAGS=-I$(PREFIX)/include
 
 configure: | $(WORKDIR)/Makefile
 $(WORKDIR)/Makefile: | $(WORKDIR) $(PREFIX)/lib/libuuid.$(LIBEXT) $(PREFIX)/include/uuid/uuid.h
-	cd $(WORKDIR); CFLAGS=$(CFLAGS) CXXFLAGS=$(CXXFLAGS) LDFLAGS=$(LDFLAGS) ./configure --prefix=$(PREFIX)
+	cd $(WORKDIR); CFLAGS=$(CFLAGS) CXXFLAGS=$(CXXFLAGS) LDFLAGS=$(LDFLAGS) ./configure --prefix=$(PREFIX) $(CONFIGURE_FLAGS)
 
 compile: | $(WORKDIR)/src/.libs/libzmq.$(LIBEXT)
 $(WORKDIR)/src/.libs/libzmq.$(LIBEXT): | configure
