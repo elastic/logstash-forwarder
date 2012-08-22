@@ -328,7 +328,6 @@ int lumberjack_flush(struct lumberjack *lumberjack) {
   if (bytes < 0) {
     /* error occurred while writing. */
     lumberjack_disconnect(lumberjack);
-    //str_free(header);
     return -1;
   }
 
@@ -346,7 +345,6 @@ int lumberjack_flush(struct lumberjack *lumberjack) {
     if (bytes < 0) {
       /* error occurred while writing. */
       lumberjack_disconnect(lumberjack);
-      str_free(header);
       return -1;
     }
 
