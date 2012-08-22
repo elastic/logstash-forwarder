@@ -58,7 +58,7 @@ void *harvest(void *arg) {
   } else {
     fd = open(config->path, O_RDONLY);
     /* Start at the end of the file */
-    //lseek(fd, 0, SEEK_END);
+    lseek(fd, 0, SEEK_END);
   }
   insist(fd >= 0, "open(%s) failed: %s", config->path, strerror(errno));
   path_len = strlen(config->path);
