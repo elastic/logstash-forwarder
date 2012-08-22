@@ -87,27 +87,27 @@ build/include/insist.h: | build/include
 
 build/include/zmq.h build/lib/libzmq.$(LIBEXT): | build
 	@echo " => Building zeromq"
-	PATH=$$PWD:$$PATH $(MAKE) -C vendor/zeromq/ install PREFIX=$$PWD/build
+	PATH=$$PWD:$$PATH $(MAKE) -C vendor/zeromq/ install PREFIX=$$PWD/build DEBUG=$(DEBUG)
 
 build/include/msgpack.h build/lib/libmsgpack.$(LIBEXT): | build
 	@echo " => Building msgpack"
-	PATH=$$PWD:$$PATH $(MAKE) -C vendor/msgpack/ install PREFIX=$$PWD/build
+	PATH=$$PWD:$$PATH $(MAKE) -C vendor/msgpack/ install PREFIX=$$PWD/build DEBUG=$(DEBUG)
 
 build/include/jemalloc/jemalloc.h build/lib/libjemalloc.$(LIBEXT): | build
 	@echo " => Building jemalloc"
-	PATH=$$PWD:$$PATH $(MAKE) -C vendor/jemalloc/ install PREFIX=$$PWD/build
+	PATH=$$PWD:$$PATH $(MAKE) -C vendor/jemalloc/ install PREFIX=$$PWD/build DEBUG=$(DEBUG)
 
 build/include/lz4.h build/lib/liblz4.$(LIBEXT): | build
 	@echo " => Building lz4"
-	PATH=$$PWD:$$PATH $(MAKE) -C vendor/lz4/ install PREFIX=$$PWD/build
+	PATH=$$PWD:$$PATH $(MAKE) -C vendor/lz4/ install PREFIX=$$PWD/build DEBUG=$(DEBUG)
 
 build/include/zlib.h build/lib/libz.$(LIBEXT): | build
 	@echo " => Building lz4"
-	PATH=$$PWD:$$PATH $(MAKE) -C vendor/zlib/ install PREFIX=$$PWD/build
+	PATH=$$PWD:$$PATH $(MAKE) -C vendor/zlib/ install PREFIX=$$PWD/build DEBUG=$(DEBUG)
 
 build/include/openssl/ssl.h build/lib/libssl.$(LIBEXT) build/lib/libcrypto.$(LIBEXT): | build
 	@echo " => Building openssl"
-	PATH=$$PWD:$$PATH $(MAKE) -C vendor/openssl install PREFIX=$$PWD/build
+	PATH=$$PWD:$$PATH $(MAKE) -C vendor/openssl install PREFIX=$$PWD/build DEBUG=$(DEBUG)
 
 build:
 	mkdir $@
