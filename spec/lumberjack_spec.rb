@@ -4,7 +4,7 @@ require "insist"
 require "stud/try"
 
 describe "lumberjack" do
-  before :all do
+  before :each do
     # TODO(sissel): Generate a self-signed SSL cert
     @file = Tempfile.new("lumberjack-test-file")
     @ssl_cert = Tempfile.new("lumberjack-test-file")
@@ -31,9 +31,9 @@ describe "lumberjack" do
         @event_queue << event
       end
     end
-  end # before all
+  end # before each
 
-  after :all do
+  after :each do
     @file.close
     @ssl_cert.close
     @ssl_key.close
@@ -44,18 +44,43 @@ describe "lumberjack" do
 
   it "should follow a file and emit lines as events" do
     sleep 1 # let lumberjack start up.
-    count = rand(5000) + 5000
+    count = rand(5000) + 25000
     count.times do |i|
       @file.puts("hello #{i}")
     end
-    @file.flush
-    system("wc -l #{@file.path}")
     @file.close
 
-    Stud::try(10.times) do
+    # Wait for lumberjack to finish publishing data to us.
+    Stud::try(20.times) do
       raise "have #{@event_queue.size}, want #{count}" if @event_queue.size < count
     end
 
+    # Now verify that we have all the data and in the correct order.
+    insist { @event_queue.size } == count
+    host = Socket.gethostname
+    count.times do |i|
+      event = @event_queue.pop
+      insist { event["line"] } == "hello #{i}"
+      insist { event["file"] } == @file.path
+      insist { event["host"] } == host
+    end
+  end
+
+  it "should follow a slowly-updating file and emit lines as events" do
+    sleep 1 # let lumberjack start up.
+    count = rand(50) + 100
+    count.times do |i|
+      @file.puts("hello #{i}")
+      sleep(rand * 0.200) # sleep up to 200ms
+    end
+    @file.close
+
+    # Wait for lumberjack to finish publishing data to us.
+    Stud::try(20.times) do
+      raise "have #{@event_queue.size}, want #{count}" if @event_queue.size < count
+    end
+
+    # Now verify that we have all the data and in the correct order.
     insist { @event_queue.size } == count
     host = Socket.gethostname
     count.times do |i|
