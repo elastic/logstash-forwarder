@@ -103,6 +103,7 @@ void *harvest(void *arg) {
   int offset = 0;
   for (;;) {
     bytes = read(fd, buf + offset, BUFFERSIZE - offset - 1);
+    offset += bytes;
     if (bytes < 0) {
       /* error, maybe indicate a failure of some kind. */
       printf("read(%d '%s') failed: %s\n", fd,
@@ -125,11 +126,10 @@ void *harvest(void *arg) {
       while (start = septok, (line = strsep(&septok, "\n")) != NULL) {
         if (septok == NULL) {
           /* last token found, no terminator though */
-          offset = start - line;
-          memmove(buf + offset, buf, strlen(buf + offset));
+          offset = offset - (line - buf);
+          memmove(buf, line, strlen(line));
         } else {
           /* emit line as an event */
-
           /* 'septok' points at the start of the next token, so subtract one. */
           size_t line_len = septok - start - 1;
           struct str *serialized;
