@@ -47,14 +47,19 @@ rpm deb: | build/bin/lumberjack
 
 #unixsock.c: build/include/insist.h
 backoff.c: backoff.h
-harvester.c: harvester.h proto.h str.h build/include/insist.h build/include/zmq.h
+harvester.c: harvester.h proto.h str.h
 emitter.c: emitter.h ring.h build/include/zmq.h 
-lumberjack.c: build/include/insist.h build/include/zmq.h 
 lumberjack.c: backoff.h harvester.h emitter.h
-harvester.c lumberjack.c pushpull.c ring.c str.c: build/include/jemalloc/jemalloc.h
 str.c: str.h
-proto.c: proto.h str.h build/include/openssl/ssl.h
+proto.c: proto.h str.h 
 ring.c: ring.h
+
+# Vendor'd dependencies
+harvester.c: build/include/insist.h build/include/zmq.h
+harvester.c lumberjack.c pushpull.c ring.c str.c: build/include/jemalloc/jemalloc.h
+lumberjack.c: build/include/insist.h build/include/zmq.h 
+proto.c: build/include/openssl/ssl.h
+proto.c: build/include/zlib.h
 
 #proto.c: build/include/lz4.h
 
