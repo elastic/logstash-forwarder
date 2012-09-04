@@ -64,14 +64,19 @@ describe "lumberjack" do
       insist { event["file"] } == @file.path
       insist { event["host"] } == host
     end
+    insist { @event_queue }.empty?
   end
 
   it "should follow a slowly-updating file and emit lines as events" do
-    sleep 1 # let lumberjack start up.
-    count = rand(50) + 100
+    sleep 5 # let lumberjack start up.
+    count = rand(50) + 1000
     count.times do |i|
-      @file.puts("hello #{i}")
-      sleep(rand * 0.200) # sleep up to 200ms
+      @file.puts("fizzle #{i}")
+
+      # Start fast, then go slower after 80% of the events
+      if i > (count * 0.8)
+        sleep(rand * 0.200) # sleep up to 200ms
+      end
     end
     @file.close
 
@@ -85,9 +90,10 @@ describe "lumberjack" do
     host = Socket.gethostname
     count.times do |i|
       event = @event_queue.pop
-      insist { event["line"] } == "hello #{i}"
+      insist { event["line"] } == "fizzle #{i}"
       insist { event["file"] } == @file.path
       insist { event["host"] } == host
     end
+    insist { @event_queue }.empty?
   end
 end
