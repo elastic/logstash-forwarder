@@ -4,7 +4,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
-#include <openssl/ssl.h>
+#include "openssl/ssl.h"
 #include "ring.h"
 #include "str.h"
 

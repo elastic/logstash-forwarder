@@ -2,7 +2,7 @@
 #include <stdint.h> /* C99 for int64_t */
 #include <string.h>
 #include <unistd.h>
-#include <zmq.h>
+#include "zmq.h"
 #include "ring.h"
 #include "emitter.h"
 #include "insist.h"

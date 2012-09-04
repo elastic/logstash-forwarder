@@ -5,11 +5,11 @@
 #include <unistd.h> /* for close, etc */
 #include <arpa/inet.h> /* for ntohl */
 #include <stdio.h> /* printf and friends */
-#include <zmq.h> /* zeromq messaging library */
+#include "zmq.h" /* zeromq messaging library */
 #include "str.h" /* dynamic string library */
 #include "proto.h" /* lumberjack wire format serialization */
 #include <sys/stat.h>
-#include <jemalloc/jemalloc.h>
+#include "jemalloc/jemalloc.h"
 
 #include "harvester.h"
 #include "backoff.h"

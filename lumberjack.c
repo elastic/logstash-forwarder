@@ -5,10 +5,10 @@
 #include "insist.h"
 #include <pthread.h>
 #include <unistd.h> /* for gethostname */
-#include <zmq.h>
+#include "zmq.h"
 #include "harvester.h"
 #include "emitter.h"
-#include <jemalloc/jemalloc.h>
+#include "jemalloc/jemalloc.h"
 #include <signal.h>
 #include <string.h>
 #include <stdio.h>

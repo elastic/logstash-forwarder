@@ -1,7 +1,7 @@
 #define _BSD_SOURCE
 #include <pthread.h>
 #include <string.h>
-#include <zmq.h>
+#include "zmq.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>

@@ -12,14 +12,13 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <sys/stat.h>
-//#include <lz4.h>
-#include <zlib.h>
+
+#include "zlib.h"
 #include "backoff.h"
 #include "insist.h"
-
-#include <openssl/bio.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
+#include "openssl/bio.h"
+#include "openssl/ssl.h"
+#include "openssl/err.h"
 
 static struct timespec MIN_SLEEP = { 0, 10000000 }; /* 10ms */
 static struct timespec MAX_SLEEP = { 15, 0 }; /* 15 */
