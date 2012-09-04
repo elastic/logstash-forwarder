@@ -3,3 +3,10 @@ build
 *.tar.gz
 *.rpm
 *.deb
+vendor/jemalloc/jemalloc-3.0.0.tar.bz2
+vendor/jemalloc/jemalloc-3.0.0/
+vendor/libuuid/util-linux-ng-2.17.2/
+vendor/lz4/lz4-r74/
+vendor/openssl/openssl-1.0.1c/
+vendor/zeromq/zeromq-2.2.0/
+vendor/zlib/zlib-1.2.7/
