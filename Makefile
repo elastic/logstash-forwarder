@@ -121,7 +121,7 @@ build/include/lz4.h build/lib/liblz4.$(LIBEXT): | build
 	PATH=$$PWD:$$PATH $(MAKE) -C vendor/lz4/ install PREFIX=$$PWD/build DEBUG=$(DEBUG)
 
 build/include/zlib.h build/lib/libz.$(LIBEXT): | build
-	@echo " => Building lz4"
+	@echo " => Building zlib"
 	PATH=$$PWD:$$PATH $(MAKE) -C vendor/zlib/ install PREFIX=$$PWD/build DEBUG=$(DEBUG)
 
 build/include/openssl/ssl.h build/lib/libssl.$(LIBEXT) build/lib/libcrypto.$(LIBEXT): | build
