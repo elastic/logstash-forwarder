@@ -67,7 +67,7 @@ build/bin/lumberjack: | build/bin build/lib/libzmq.$(LIBEXT)
 endif # zeromq
 
 ifeq ($(filter jemalloc,$(VENDOR)),jemalloc)
-harvester.c lumberjack.c pushpull.c ring.c str.c: build/include/jemalloc/jemalloc.h
+harvester.c lumberjack.c ring.c str.c: build/include/jemalloc/jemalloc.h
 build/bin/lumberjack: | build/lib/libjemalloc.$(LIBEXT)
 endif # jemalloc
 
