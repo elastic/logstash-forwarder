@@ -1,20 +1,22 @@
 VERSION=0.0.2
 
-CFLAGS+=-Ibuild/include 
+# By default, all dependencies (zeromq, etc) will be downloaded and installed
+# locally. You can change this if you are deploying your own.
+VENDOR?=zeromq jemalloc openssl zlib
+
+# Where to install to.
+PREFIX?=/opt/lumberjack
+
+FETCH=sh fetch.sh
+
 CFLAGS+=-D_POSIX_C_SOURCE=199309 -std=c99 -Wall -Wextra -Werror -pipe
 CFLAGS+=-g
 CFLAGS+=-Wno-unused-function
 LDFLAGS+=-pthread
-LDFLAGS+=-Lbuild/lib -Wl,-rpath,'$$ORIGIN/../lib'
 LIBS=-lzmq -ljemalloc -lssl -lcrypto -luuid -lz
-#-llz4
 
-
-FETCH=sh fetch.sh
-#-lmsgpack
-#-ljansson
-
-PREFIX?=/opt/lumberjack
+CFLAGS+=-Ibuild/include 
+LDFLAGS+=-Lbuild/lib -Wl,-rpath,'$$ORIGIN/../lib'
 
 default: build/bin/lumberjack
 include Makefile.ext
@@ -45,23 +47,40 @@ rpm deb: | build/bin/lumberjack
 # install -d -m 755 build/bin/* $(PREFIX)/bin/lumberjack
 # install -d build/lib/* $(PREFIX)/lib
 
-#unixsock.c: build/include/insist.h
 backoff.c: backoff.h
 harvester.c: harvester.h proto.h str.h
-emitter.c: emitter.h ring.h build/include/zmq.h 
+emitter.c: emitter.h ring.h
 lumberjack.c: backoff.h harvester.h emitter.h
 str.c: str.h
 proto.c: proto.h str.h 
 ring.c: ring.h
+harvester.c: build/include/insist.h 
+lumberjack.c: build/include/insist.h 
 
 # Vendor'd dependencies
-harvester.c: build/include/insist.h build/include/zmq.h
-harvester.c lumberjack.c pushpull.c ring.c str.c: build/include/jemalloc/jemalloc.h
-lumberjack.c: build/include/insist.h build/include/zmq.h 
-proto.c: build/include/openssl/ssl.h
-proto.c: build/include/zlib.h
+# If VENDOR contains 'zeromq' download and build it.
+ifeq ($(filter zeromq,$(VENDOR)),zeromq)
+emitter.c: build/include/zmq.h 
+harvester.c: build/include/zmq.h
+lumberjack.c:  build/include/zmq.h 
+build/bin/lumberjack: | build/bin build/lib/libzmq.$(LIBEXT)
+endif # zeromq
 
-#proto.c: build/include/lz4.h
+ifeq ($(filter jemalloc,$(VENDOR)),jemalloc)
+harvester.c lumberjack.c pushpull.c ring.c str.c: build/include/jemalloc/jemalloc.h
+build/bin/lumberjack: | build/lib/libjemalloc.$(LIBEXT)
+endif # jemalloc
+
+ifeq ($(filter openssl,$(VENDOR)),openssl)
+proto.c: build/include/openssl/ssl.h
+build/bin/lumberjack: | build/lib/libssl.$(LIBEXT)
+build/bin/lumberjack: | build/lib/libcrypto.$(LIBEXT)
+endif # openssl
+
+ifeq ($(filter zlib,$(VENDOR)),zlib)
+proto.c: build/include/zlib.h
+build/bin/lumberjack: | build/lib/libz.$(LIBEXT)
+endif # zlib
 
 .PHONY: test
 test: | build/test/test_ring
@@ -72,16 +91,7 @@ test_ring.c: ring.h build/include/jemalloc/jemalloc.h build/include/insist.h
 build/test/test_ring: test_ring.o ring.o  | build/test
 	$(CC) $(LDFLAGS) -o $@ $^ -ljemalloc
 
-#build/bin/pushpull: | build/lib/libzmq.$(LIBEXT) build/lib/libmsgpack.$(LIBEXT) build/bin
-#build/bin/pushpull: pushpull.o
-#	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
-
-build/bin/lumberjack: | build/bin build/lib/libzmq.$(LIBEXT)
-build/bin/lumberjack: | build/lib/libjemalloc.$(LIBEXT)
-build/bin/lumberjack: | build/lib/libz.$(LIBEXT)
-build/bin/lumberjack: | build/lib/libssl.$(LIBEXT)
-build/bin/lumberjack: | build/lib/libcrypto.$(LIBEXT)
-#build/bin/lumberjack: | build/lib/liblz4.$(LIBEXT)
+build/bin/lumberjack: | build/bin
 build/bin/lumberjack: lumberjack.o backoff.o harvester.o emitter.o str.o proto.o ring.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 	@echo " => Build complete: $@"
