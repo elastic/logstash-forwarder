@@ -73,6 +73,7 @@ endif # jemalloc
 
 ifeq ($(filter openssl,$(VENDOR)),openssl)
 proto.c: build/include/openssl/ssl.h
+lumberjack.c:  build/include/openssl/ssl.h
 build/bin/lumberjack: | build/lib/libssl.$(LIBEXT)
 build/bin/lumberjack: | build/lib/libcrypto.$(LIBEXT)
 endif # openssl
@@ -90,6 +91,9 @@ test: | build/test/test_ring
 test_ring.c: ring.h build/include/jemalloc/jemalloc.h build/include/insist.h
 build/test/test_ring: test_ring.o ring.o  | build/test
 	$(CC) $(LDFLAGS) -o $@ $^ -ljemalloc
+
+proto.o: proto.c
+	$(CC) $(CFLAGS) -c -o $@ $^
 
 build/bin/lumberjack: | build/bin
 build/bin/lumberjack: lumberjack.o backoff.o harvester.o emitter.o str.o proto.o ring.o
