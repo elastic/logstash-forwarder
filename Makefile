@@ -35,6 +35,7 @@ vendor-clean:
 	-make -C vendor/jemalloc/ clean
 	-make -C vendor/libuuid/ clean
 	-make -C vendor/zeromq/ clean
+	-make -C vendor/zlib/ clean
 
 rpm deb: | build/bin/lumberjack
 	fpm -s dir -t $@ -n lumberjack -v $(VERSION) --prefix /opt/lumberjack \
