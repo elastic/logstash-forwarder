@@ -19,7 +19,7 @@ install: | compile $(PREFIX)/lib $(PREFIX)/include
 #install: | $(PREFIX)/lib/libz.$(LIBEXT)
 #install: | $(PREFIX)/include/zlib.h
 install:
-	$(MAKE) -C $(WORKDIR) install  DESTDIR=$(PREFIX)
+	$(MAKE) -C $(WORKDIR) install
 
 $(PREFIX)/lib/libz.$(LIBEXT).$(VERSION): $(WORKDIR)/libz.$(LIBEXT).$(VERSION)
 	cp $^ $@
