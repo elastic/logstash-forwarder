@@ -6,6 +6,7 @@ import (
   "fmt"
   "time"
   "backoff"
+  "crypto/tls"
 )
 
 func fileReader(path string) (*os.File, *bufio.Reader) {
@@ -95,6 +96,16 @@ func main() {
     os.Exit(1)
   }
 
+  tlsconf := new(tls.Config)
+  /* TODO(sissel): Until I implement certificate loading... */
+  tlsconf.InsecureSkipVerify = true
+  conn, err := Dial("tls", "localhost:5111", tlsconf)
+
+  if err != nil {
+    fmt.Printf("dial failure: %s\n", err)
+    os.Exit(1)
+  }
+
   events := make(chan FileEvent)
   for _, path := range os.Args[1:] {
     go Harvest(path, events)
@@ -102,5 +113,6 @@ func main() {
 
   for event := range events {
     fmt.Printf("%s: %s\n", event.path, string(event.line))
+    conn.WriteFileEvent(event)
   }
 } /* main */
