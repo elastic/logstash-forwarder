@@ -18,9 +18,8 @@ LIBS=-lzmq -ljemalloc -lssl -lcrypto -luuid -lz
 CFLAGS+=-Ibuild/include 
 LDFLAGS+=-Lbuild/lib -Wl,-rpath,'$$ORIGIN/../lib'
 
-default: all 
-all: build/bin/lumberjack build/bin/lumberjack.sh
-
+default: build-all
+build-all: build/bin/lumberjack build/bin/lumberjack.sh
 include Makefile.ext
 
 ifeq ($(UNAME),Linux)
@@ -39,7 +38,7 @@ vendor-clean:
 	-make -C vendor/zeromq/ clean
 	-make -C vendor/zlib/ clean
 
-rpm deb: | all
+rpm deb: | build-all
 	fpm -s dir -t $@ -n lumberjack -v $(VERSION) --prefix /opt/lumberjack \
 		--exclude '*.a' --exclude 'lib/pkgconfig/zlib.pc' -C build \
 		--description "a log shipping tool" \
