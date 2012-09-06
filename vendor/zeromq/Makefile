@@ -34,18 +34,11 @@ install: $(PREFIX)/lib/libzmq.$(LIBEXT).1 $(PREFIX)/lib/libzmq.$(LIBEXT)
 endif
 install: $(PREFIX)/include/zmq.h $(PREFIX)/include/zmq_utils.h
 
-$(PREFIX)/lib/libzmq.1.$(LIBEXT): $(WORKDIR)/src/.libs/libzmq.$(LIBEXT)
-	cp $(WORKDIR)/src/.libs/libzmq.1.$(LIBEXT) $@
 $(PREFIX)/lib/libzmq.$(LIBEXT).1: $(WORKDIR)/src/.libs/libzmq.$(LIBEXT)
 	cp $(WORKDIR)/src/.libs/libzmq.$(LIBEXT).1 $@
 
-ifeq ($(UNAME),Darwin)
-$(PREFIX)/lib/libzmq.$(LIBEXT): $(PREFIX)/lib/libzmq.1.$(LIBEXT) 
-	ln -sf libzmq.1.$(LIBEXT) $(PREFIX)/lib/libzmq.$(LIBEXT)
-else
 $(PREFIX)/lib/libzmq.$(LIBEXT): $(PREFIX)/lib/libzmq.$(LIBEXT).1
-	ln -sf libzmq.$(LIBEXT).1 $(PREFIX)/lib/libzmq.$(LIBEXT)
-endif
+	ln -sf libzmq.$(LIBEXT).1 $@
 
 $(PREFIX)/include/zmq.h:
 	cp $(WORKDIR)/include/zmq.h $(PREFIX)/include
@@ -53,5 +46,5 @@ $(PREFIX)/include/zmq.h:
 $(PREFIX)/include/zmq_utils.h:
 	cp $(WORKDIR)/include/zmq_utils.h $(PREFIX)/include
 
-$(PREFIX)/lib/libuuid.$(LIBEXT) $(PREFIX)/include/uuid/uuid.h:
+$(PREFIX)/lib/libuuid.$(LIBEXT) $(PREFIX)/lib/libuuid.$(LIBEXT).1 $(PREFIX)/include/uuid/uuid.h:
 	$(MAKE) -C ../libuuid PREFIX=$(PREFIX) $@

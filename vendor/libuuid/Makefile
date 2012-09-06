@@ -33,7 +33,7 @@ $(PREFIX)/lib/libuuid.so.1: | build $(PREFIX)/lib
 	cp $(UUID_DIR)/src/.libs/$(shell basename $@) $@
 
 $(PREFIX)/lib/libuuid.so: | $(PREFIX)/lib/libuuid.so.1
-	ln -s $(PREFIX)/lib/libuuid.so.1 libuuid.so
+	ln -sf libuuid.so.1 $@
 
 $(PREFIX)/include/uuid/%.h: | build $(PREFIX)/include
 	@if [ -z "$(PREFIX)" ] ; then \
