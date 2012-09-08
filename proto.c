@@ -20,8 +20,7 @@
 #include "openssl/ssl.h"
 #include "openssl/err.h"
 
-static struct timespec MIN_SLEEP = { 0, 10000000 }; /* 10ms */
-static struct timespec MAX_SLEEP = { 15, 0 }; /* 15 */
+#include "sleepdefs.h"
 
 static void lumberjack_init(void);
 static int lumberjack_tcp_connect(struct lumberjack *lumberjack);

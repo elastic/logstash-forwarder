@@ -49,39 +49,40 @@ rpm deb: | build-all
 # install -d -m 755 build/bin/* $(PREFIX)/bin/lumberjack
 # install -d build/lib/* $(PREFIX)/lib
 
-backoff.c: backoff.h
-harvester.c: harvester.h proto.h str.h
-emitter.c: emitter.h ring.h
-lumberjack.c: backoff.h harvester.h emitter.h
-str.c: str.h
-proto.c: proto.h str.h 
-ring.c: ring.h
-harvester.c: build/include/insist.h 
-lumberjack.c: build/include/insist.h 
+backoff.o: backoff.c backoff.h
+harvester.o: harvester.c harvester.h proto.h str.h sleepdefs.h
+emitter.o: emitter.c emitter.h ring.h sleepdefs.h
+lumberjack.o: lumberjack.c backoff.h harvester.h emitter.h
+str.o: str.c str.h
+proto.o: proto.c proto.h str.h sleepdefs.h
+ring.o: ring.c ring.h
+
+harvester.o: build/include/insist.h 
+lumberjack.o: build/include/insist.h 
 
 # Vendor'd dependencies
 # If VENDOR contains 'zeromq' download and build it.
 ifeq ($(filter zeromq,$(VENDOR)),zeromq)
-emitter.c: build/include/zmq.h 
-harvester.c: build/include/zmq.h
-lumberjack.c:  build/include/zmq.h 
+emitter.o: build/include/zmq.h 
+harvester.o: build/include/zmq.h
+lumberjack.o:  build/include/zmq.h 
 build/bin/lumberjack: | build/bin build/lib/libzmq.$(LIBEXT)
 endif # zeromq
 
 ifeq ($(filter jemalloc,$(VENDOR)),jemalloc)
-harvester.c lumberjack.c ring.c str.c: build/include/jemalloc/jemalloc.h
+harvester.o lumberjack.o ring.o str.o: build/include/jemalloc/jemalloc.h
 build/bin/lumberjack: | build/lib/libjemalloc.$(LIBEXT)
 endif # jemalloc
 
 ifeq ($(filter openssl,$(VENDOR)),openssl)
-proto.c: build/include/openssl/ssl.h
-lumberjack.c:  build/include/openssl/ssl.h
+proto.o: build/include/openssl/ssl.h
+lumberjack.o:  build/include/openssl/ssl.h
 build/bin/lumberjack: | build/lib/libssl.$(LIBEXT)
 build/bin/lumberjack: | build/lib/libcrypto.$(LIBEXT)
 endif # openssl
 
 ifeq ($(filter zlib,$(VENDOR)),zlib)
-proto.c: build/include/zlib.h
+proto.o: build/include/zlib.h
 build/bin/lumberjack: | build/lib/libz.$(LIBEXT)
 endif # zlib
 
@@ -90,12 +91,9 @@ test: | build/test/test_ring
 	build/test/test_ring
 
 # Tests
-test_ring.c: ring.h build/include/jemalloc/jemalloc.h build/include/insist.h
+test_ring.o: ring.h build/include/jemalloc/jemalloc.h build/include/insist.h
 build/test/test_ring: test_ring.o ring.o  | build/test
 	$(CC) $(LDFLAGS) -o $@ $^ -ljemalloc
-
-proto.o: proto.c
-	$(CC) $(CFLAGS) -c -o $@ $^
 
 build/bin/lumberjack.sh: lumberjack.sh | build/bin
 	install -m 755 $^ $@

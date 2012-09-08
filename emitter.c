@@ -12,8 +12,7 @@
 
 #include <sys/resource.h>
 
-static struct timespec MIN_SLEEP = { 0, 10000000 }; /* 10ms */
-static struct timespec MAX_SLEEP = { 15, 0 }; /* 15 */
+#include "sleepdefs.h"
 
 void *emitter(void *arg) {
   struct emitter_config *config = arg;

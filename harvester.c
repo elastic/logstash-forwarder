@@ -14,6 +14,7 @@
 #include "harvester.h"
 #include "backoff.h"
 #include "insist.h"
+#include "sleepdefs.h"
 
 #ifdef __MACH__
 /* OS X is dumb, or I am dumb, or we are both dumb. I don't know anymore,
@@ -25,9 +26,6 @@ extern int gethostname(char *name, size_t namelen);
 
 #define EMITTER_SOCKET "inproc://emitter"
 #define BUFFERSIZE 16384
-
-static struct timespec MIN_SLEEP = { 0, 10000000 }; /* 10ms */
-static struct timespec MAX_SLEEP = { 15, 0 }; /* 15 */
 
 /* A free function that simply calls free(3) for zmq_msg */
 //static inline void free2(void *data, void __attribute__((__unused__)) *hint) {
