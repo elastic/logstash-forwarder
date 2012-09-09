@@ -215,6 +215,7 @@ static int lumberjack_tcp_connect(struct lumberjack *lumberjack) {
 
   rc = connect(fd, (struct sockaddr *)&sockaddr, sizeof(sockaddr));
   if (rc < 0) {
+    close(fd);
     return -1;
   }
 
