@@ -26,13 +26,12 @@ $(WORKDIR)/Makefile: | $(WORKDIR)
 	cd $(WORKDIR); ./configure --prefix=$(PREFIX) --disable-dependency-tracking
 endif
 
-build: $(WORKDIR)/src/.libs/libopenssl.$(LIBEXT)
-$(WORKDIR)/src/.libs/libopenssl.$(LIBEXT): configure
-	$(MAKE) -C $(WORKDIR)
+compile: $(WORKDIR)/libssl.so.1.0.0
+$(WORKDIR)/libssl.so.1.0.0: | configure
+	$(MAKE) -C $(WORKDIR) all
 
-install: build
+install: compile
 	@# make 'all' and 'install_sw' because 'make install' installs the docs,
 	@#which I don't want.
-	#$(MAKE) -C $(WORKDIR) all install_sw
-	$(MAKE) -C $(WORKDIR) install
+	$(MAKE) -C $(WORKDIR) install_sw
 
