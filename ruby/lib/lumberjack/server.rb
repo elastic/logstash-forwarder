@@ -7,6 +7,15 @@ module Lumberjack
   class Server
     attr_reader :port
 
+    # Create a new Lumberjack server.
+    #
+    # - options is a hash. Valid options are:
+    #
+    # * :port - the port to listen on
+    # * :address - the host/address to bind to
+    # * :ssl_certificate - the path to the ssl cert to use
+    # * :ssl_key - the path to the ssl key to use
+    # * :ssl_key_passphrase - the key passphrase (optional)
     def initialize(options={})
       @options = {
         :port => 0,
