@@ -1,3 +1,4 @@
+#define _BSD_SOURCE /* for hstrerror */
 #include <stdint.h>
 #include <sys/types.h>
 #include <string.h>
@@ -12,6 +13,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include <netdb.h>
 
 #include "zlib.h"
 #include "backoff.h"
@@ -20,6 +22,7 @@
 #include "openssl/ssl.h"
 #include "openssl/err.h"
 
+#include "strlist.h"
 #include "sleepdefs.h"
 
 static void lumberjack_init(void);
@@ -178,6 +181,29 @@ int lumberjack_ensure_connected(struct lumberjack *lumberjack) {
   return 0;
 } /* lumberjack_connect_block */
 
+static struct hostent *lumberjack_choose_address(const char *host) {
+  strlist_t *hostlist;
+  split(&hostlist, host, ",");
+  insist(hostlist->nitems > 0, "host string must not be empty");
+
+  struct backoff sleeper;
+  backoff_init(&sleeper, &MIN_SLEEP, &MAX_SLEEP);
+
+  struct hostent *hostinfo = NULL;
+  while (hostinfo == NULL) {
+    int item = rand() % hostlist->nitems;
+    char *chosen = hostlist->items[item];
+    hostinfo = gethostbyname(chosen);
+    if (hostinfo == NULL) {
+      printf("gethostbyname(%s) failed: %s\n", chosen,
+             hstrerror(h_errno));
+      backoff(&sleeper);
+    }
+  }
+  strlist_free(hostlist);
+  return hostinfo;
+} /* lumberjack_choose_address */
+
 /* Connect to a host:port. If 'host' resolves to multiple addresses, one is
  * picked at random. */
 static int lumberjack_tcp_connect(struct lumberjack *lumberjack) {
@@ -187,14 +213,8 @@ static int lumberjack_tcp_connect(struct lumberjack *lumberjack) {
   insist(lumberjack != NULL, "lumberjack must not be NULL");
   int rc;
   int fd;
-  struct hostent *hostinfo = gethostbyname(lumberjack->host);
 
-  if (hostinfo == NULL) {
-    /* DNS error, gethostbyname sets h_errno on failure */
-    printf("gethostbyname(%s) failed: %s\n", lumberjack->host,
-           strerror(h_errno));
-    return -1;
-  }
+  struct hostent *hostinfo = lumberjack_choose_address(lumberjack->host);
 
   /* 'struct hostent' has the list of addresses resolved in 'h_addr_list'
    * It's a null-terminated list, so count how many are there. */
