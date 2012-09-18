@@ -21,10 +21,10 @@ describe "lumberjack" do
       :ssl_certificate => @ssl_cert.path,
       :ssl_key => @ssl_key.path
     )
-    @lumberjack_pid = fork do
-      exec("build/bin/lumberjack --host localhost --port #{@server.port} " \
-           "--ssl-ca-path #{@ssl_cert.path} #{@file.path}")
-    end
+    @lumberjack = IO.popen("build/bin/lumberjack --host localhost " \
+                           "--port #{@server.port} " \
+                           "--ssl-ca-path #{@ssl_cert.path} #{@file.path}",
+                           "r")
 
     @event_queue = Queue.new
     @server_thread = Thread.new do
@@ -39,8 +39,8 @@ describe "lumberjack" do
     @ssl_cert.close
     @ssl_key.close
     @ssl_csr.close
-    Process::kill("KILL", @lumberjack_pid)
-    Process::wait(@lumberjack_pid)
+    Process::kill("KILL", @lumberjack.pid)
+    Process::wait(@lumberjack.pid)
   end
 
   it "should follow a file and emit lines as events" do
