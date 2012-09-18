@@ -1,4 +1,4 @@
-$: << File.realpath(File.join(File.dirname(__FILE__), "..", "ruby", "lib"))
+$: << File.realpath(File.join(File.dirname(__FILE__), "..", "lib"))
 require "tempfile"
 require "lumberjack/server"
 require "insist"
