@@ -324,11 +324,12 @@ int lumberjack_flush(struct lumberjack *lumberjack) {
     return -1;
   }
 
-  size_t compressed_length = lumberjack->compression_buffer->data_size;
+  uLongf compressed_length = (uLongf) lumberjack->compression_buffer->data_size;
   /* compress2 is provided by zlib */
-  rc = compress2((Bytef *)str_data(lumberjack->compression_buffer), &compressed_length,
+  rc = compress2((Bytef *)str_data(lumberjack->compression_buffer), 
+                 &compressed_length,
                  (Bytef *)str_data(lumberjack->io_buffer), length, 1);
-  insist(rc == Z_OK, "compress2(..., %ld, ..., %ld) failed; returned %d",
+  insist(rc == Z_OK, "compress2(..., %zd, ..., %zd) failed; returned %d",
          compressed_length, length, rc);
 
   str_truncate(lumberjack->io_buffer);
