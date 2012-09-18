@@ -57,9 +57,10 @@ static struct option_doc options[] = {
     "Set the trusted cert/ca path for lumberjack's ssl client. " \
     "Can be a file or a directory." },
   { "host", required_argument, opt_host,
-    "The hostname to send lumberjack messages to" },
+    "The hostname to send lumberjack messages to. You can specify multiple " \
+    "by separating hosts with a comma." },
   { "port", required_argument, opt_port,
-    "The port to connect on" },
+    "The port to connect on the lumberjack server" },
   { NULL, 0, 0, NULL },
 };
 

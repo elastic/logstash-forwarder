@@ -1,4 +1,4 @@
-VERSION=0.0.6
+VERSION=0.0.8
 
 # By default, all dependencies (zeromq, etc) will be downloaded and installed
 # locally. You can change this if you are deploying your own.
@@ -49,6 +49,8 @@ rpm deb: | build-all
 # install -d -m 755 build/bin/* $(PREFIX)/bin/lumberjack
 # install -d build/lib/* $(PREFIX)/lib
 
+strlist.o: strlist.h
+emitter.o: strlist.h
 backoff.o: backoff.c backoff.h
 harvester.o: harvester.c harvester.h proto.h str.h sleepdefs.h
 emitter.o: emitter.c emitter.h ring.h sleepdefs.h
@@ -99,7 +101,7 @@ build/bin/lumberjack.sh: lumberjack.sh | build/bin
 	install -m 755 $^ $@
 
 build/bin/lumberjack: | build/bin
-build/bin/lumberjack: lumberjack.o backoff.o harvester.o emitter.o str.o proto.o ring.o
+build/bin/lumberjack: lumberjack.o backoff.o harvester.o emitter.o str.o proto.o ring.o strlist.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 	@echo " => Build complete: $@"
 	@echo " => Run 'make rpm' to build an rpm (or deb or tarball)"

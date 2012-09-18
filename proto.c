@@ -1,3 +1,4 @@
+#define _BSD_SOURCE /* for hstrerror */
 #include <stdint.h>
 #include <sys/types.h>
 #include <string.h>
@@ -12,6 +13,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include <netdb.h>
 
 #include "zlib.h"
 #include "backoff.h"
@@ -20,6 +22,7 @@
 #include "openssl/ssl.h"
 #include "openssl/err.h"
 
+#include "strlist.h"
 #include "sleepdefs.h"
 
 static void lumberjack_init(void);
@@ -178,6 +181,29 @@ int lumberjack_ensure_connected(struct lumberjack *lumberjack) {
   return 0;
 } /* lumberjack_connect_block */
 
+static struct hostent *lumberjack_choose_address(const char *host) {
+  strlist_t *hostlist;
+  split(&hostlist, host, ",");
+  insist(hostlist->nitems > 0, "host string must not be empty");
+
+  struct backoff sleeper;
+  backoff_init(&sleeper, &MIN_SLEEP, &MAX_SLEEP);
+
+  struct hostent *hostinfo = NULL;
+  while (hostinfo == NULL) {
+    int item = rand() % hostlist->nitems;
+    char *chosen = hostlist->items[item];
+    hostinfo = gethostbyname(chosen);
+    if (hostinfo == NULL) {
+      printf("gethostbyname(%s) failed: %s\n", chosen,
+             hstrerror(h_errno));
+      backoff(&sleeper);
+    }
+  }
+  strlist_free(hostlist);
+  return hostinfo;
+} /* lumberjack_choose_address */
+
 /* Connect to a host:port. If 'host' resolves to multiple addresses, one is
  * picked at random. */
 static int lumberjack_tcp_connect(struct lumberjack *lumberjack) {
@@ -187,14 +213,8 @@ static int lumberjack_tcp_connect(struct lumberjack *lumberjack) {
   insist(lumberjack != NULL, "lumberjack must not be NULL");
   int rc;
   int fd;
-  struct hostent *hostinfo = gethostbyname(lumberjack->host);
 
-  if (hostinfo == NULL) {
-    /* DNS error, gethostbyname sets h_errno on failure */
-    printf("gethostbyname(%s) failed: %s\n", lumberjack->host,
-           strerror(h_errno));
-    return -1;
-  }
+  struct hostent *hostinfo = lumberjack_choose_address(lumberjack->host);
 
   /* 'struct hostent' has the list of addresses resolved in 'h_addr_list'
    * It's a null-terminated list, so count how many are there. */
@@ -305,18 +325,19 @@ int lumberjack_flush(struct lumberjack *lumberjack) {
     return -1;
   }
 
-  size_t compressed_length = lumberjack->compression_buffer->data_size;
+  uLongf compressed_length = (uLongf) lumberjack->compression_buffer->data_size;
   /* compress2 is provided by zlib */
-  rc = compress2((Bytef *)str_data(lumberjack->compression_buffer), &compressed_length,
+  rc = compress2((Bytef *)str_data(lumberjack->compression_buffer), 
+                 &compressed_length,
                  (Bytef *)str_data(lumberjack->io_buffer), length, 1);
-  insist(rc == Z_OK, "compress2(..., %ld, ..., %ld) failed; returned %d",
+  insist(rc == Z_OK, "compress2(..., %lu, ..., %zd) failed; returned %d",
          compressed_length, length, rc);
 
   str_truncate(lumberjack->io_buffer);
-  //printf("Compressed %d bytes to %d\n", (int)length, (int)compressed_length);
-  //bytes = write(lumberjack->fd, str_data(payload) + offset, remaining);
-  //bytes = SSL_write(lumberjack->ssl, str_data(lumberjack->io_buffer) + offset,
-                    //chunk_size);
+  printf("lumberjack_flush: flushing %d bytes (compressed to %d bytes)\n",
+         (int)length, (int)compressed_length);
+
+  /* Write the 'compressed block' frame header */
   struct str *header = str_new_size(6);
   str_append_char(header, LUMBERJACK_VERSION_1);
   str_append_char(header, LUMBERJACK_COMPRESSED_BLOCK_FRAME);
@@ -330,12 +351,9 @@ int lumberjack_flush(struct lumberjack *lumberjack) {
     return -1;
   }
 
+  /* write the compressed payload */
   ssize_t remaining = compressed_length;
   size_t offset = 0;
-  //printf("Start of compressed stuff: ");
-  //fwrite(lumberjack->compression_buffer->data, 15, 1, stdout);
-  //fwrite("\n", 1, 1, stdout);
-  //fflush(stdout);
   while (remaining > 0) {
     bytes = SSL_write(lumberjack->ssl,
                       str_data(lumberjack->compression_buffer) + offset,
@@ -459,6 +477,8 @@ static int lumberjack_wait_for_ack(struct lumberjack *lumberjack) {
   int rc;
   struct backoff sleeper;
   backoff_init(&sleeper, &MIN_SLEEP, &MAX_SLEEP);
+
+  printf("lumberjack_wait_for_ack: waiting for ack\n");
 
   while ((rc = lumberjack_read_ack(lumberjack, &ack)) < 0) {
     /* read error. */

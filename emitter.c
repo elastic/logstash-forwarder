@@ -71,6 +71,8 @@ void *emitter(void *arg) {
       backoff(&sleeper);
       continue;
     } 
+
+    /* when we get here here, we received an event. Ship it over lumberjack */
     backoff_clear(&sleeper);
 
     /* Write the data over lumberjack. This will handle any
