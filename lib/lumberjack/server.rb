@@ -27,13 +27,14 @@ module Lumberjack
 
       [:ssl_certificate, :ssl_key].each do |k|
         if @options[k].nil?
-          raise "You must specify #{k} in Lumberjack::Server options"
+          raise "You must specify #{k} in Lumberjack::Server.new(...)"
         end
       end
 
       @tcp_server = TCPServer.new(@options[:port])
       # Query the port in case the port number is '0'
-      @port = @tcp_server.local_address.ip_port
+      # TCPServer#addr == [ address_family, port, address, address ]
+      @port = @tcp_server.addr[1]
       @ssl = OpenSSL::SSL::SSLContext.new
       @ssl.cert = OpenSSL::X509::Certificate.new(File.read(@options[:ssl_certificate]))
       @ssl.key = OpenSSL::PKey::RSA.new(File.read(@options[:ssl_key]),
