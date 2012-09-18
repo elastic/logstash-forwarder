@@ -21,8 +21,8 @@ func(err DialError) Error() (string) {
 }
 
 func Dial(network string, address string, config *tls.Config) (*Conn, error) {
-  conn := new(Conn)
   var err error
+  conn := new(Conn)
   switch network {
     case "tls":
       conn.tls, err = tls.Dial("tcp", address, config)
@@ -37,7 +37,7 @@ func Dial(network string, address string, config *tls.Config) (*Conn, error) {
   }
 
   return conn, nil
-}
+} /* Dial */
 
 func (conn *Conn) WriteFileEvent(event FileEvent) (error) {
   // V1 Data Frame
@@ -46,13 +46,16 @@ func (conn *Conn) WriteFileEvent(event FileEvent) (error) {
   // How many fields in this data frame
   binary.Write(conn.tls, binary.BigEndian, uint32(2))
 
+  /* write the 'path' field */
   binary.Write(conn.tls, binary.BigEndian, uint32(4))
   conn.tls.Write([]byte("path"))
   conn.tls.Write([]byte(event.path))
 
+  /* write the 'line' field */
   binary.Write(conn.tls, binary.BigEndian, uint32(4))
   conn.tls.Write([]byte("line"))
   binary.Write(conn.tls, binary.BigEndian, uint32(len(event.line)))
   conn.tls.Write(event.line)
+
   return nil
-}
+} /* WriteFileEvent */
