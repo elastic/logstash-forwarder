@@ -329,7 +329,7 @@ int lumberjack_flush(struct lumberjack *lumberjack) {
   rc = compress2((Bytef *)str_data(lumberjack->compression_buffer), 
                  &compressed_length,
                  (Bytef *)str_data(lumberjack->io_buffer), length, 1);
-  insist(rc == Z_OK, "compress2(..., %zd, ..., %zd) failed; returned %d",
+  insist(rc == Z_OK, "compress2(..., %lu, ..., %zd) failed; returned %d",
          compressed_length, length, rc);
 
   str_truncate(lumberjack->io_buffer);
