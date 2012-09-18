@@ -2,4 +2,4 @@ language: ruby
 rvm:
   - 1.9.3
 install: bundle install
-script: "make VENDOR='zeromq jemalloc zlib' && bundle exec rspec"
+script: "make VENDOR='zeromq jemalloc zlib' && bundle exec rspec spec/lumberjack_spec.rb"
