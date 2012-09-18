@@ -312,10 +312,10 @@ int lumberjack_flush(struct lumberjack *lumberjack) {
          compressed_length, length, rc);
 
   str_truncate(lumberjack->io_buffer);
-  //printf("Compressed %d bytes to %d\n", (int)length, (int)compressed_length);
-  //bytes = write(lumberjack->fd, str_data(payload) + offset, remaining);
-  //bytes = SSL_write(lumberjack->ssl, str_data(lumberjack->io_buffer) + offset,
-                    //chunk_size);
+  printf("lumberjack_flush: flushing %d bytes (compressed to %d bytes)\n",
+         (int)length, (int)compressed_length);
+
+  /* Write the 'compressed block' frame header */
   struct str *header = str_new_size(6);
   str_append_char(header, LUMBERJACK_VERSION_1);
   str_append_char(header, LUMBERJACK_COMPRESSED_BLOCK_FRAME);
@@ -329,12 +329,9 @@ int lumberjack_flush(struct lumberjack *lumberjack) {
     return -1;
   }
 
+  /* write the compressed payload */
   ssize_t remaining = compressed_length;
   size_t offset = 0;
-  //printf("Start of compressed stuff: ");
-  //fwrite(lumberjack->compression_buffer->data, 15, 1, stdout);
-  //fwrite("\n", 1, 1, stdout);
-  //fflush(stdout);
   while (remaining > 0) {
     bytes = SSL_write(lumberjack->ssl,
                       str_data(lumberjack->compression_buffer) + offset,
@@ -458,6 +455,8 @@ static int lumberjack_wait_for_ack(struct lumberjack *lumberjack) {
   int rc;
   struct backoff sleeper;
   backoff_init(&sleeper, &MIN_SLEEP, &MAX_SLEEP);
+
+  printf("lumberjack_wait_for_ack: waiting for ack\n");
 
   while ((rc = lumberjack_read_ack(lumberjack, &ack)) < 0) {
     /* read error. */
