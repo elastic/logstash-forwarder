@@ -39,10 +39,8 @@ void *emitter(void *arg) {
 
   if (config->ssl_ca_path != NULL) {
     rc = lumberjack_set_ssl_ca(lumberjack, config->ssl_ca_path);
-    if (rc != 0) {
-      printf("lumberjack_set_ssl_ca failed. Is '%s' valid?\n", config->ssl_ca_path);
-      return NULL;
-    }
+    insist(rc == 0, "lumberjack_set_ssl_ca failed, is '%s' a valid ssl cert?",
+           config->ssl_ca_path);
   }
 
   long count = 0;
