@@ -223,7 +223,7 @@ static int lumberjack_tcp_connect(struct lumberjack *lumberjack) {
   /* hostnames can resolve to multiple addresses, pick one at random. */
   char *address = hostinfo->h_addr_list[rand() % addr_count];
 
-  printf("Connecting to %s(%s):%hd\n", lumberjack->host,
+  printf("Connecting to %s(%s):%hu\n", lumberjack->host,
          inet_ntoa(*(struct in_addr *)address), lumberjack->port);
   fd = socket(PF_INET, SOCK_STREAM, 0);
   insist(fd >= 0, "socket() failed: %s\n", strerror(errno));
@@ -239,7 +239,7 @@ static int lumberjack_tcp_connect(struct lumberjack *lumberjack) {
     return -1;
   }
 
-  printf("Connected successfully to %s(%s):%hd\n", lumberjack->host,
+  printf("Connected successfully to %s(%s):%hu\n", lumberjack->host,
          inet_ntoa(*(struct in_addr *)address), lumberjack->port);
 
   lumberjack->fd = fd;
