@@ -38,3 +38,9 @@ Below is valid as of 2012/09/19
 
 * the protocol lumberjack uses supports sending a string:string map
 * the lumberjack tool lets you specify arbitrary extra data with `--field name=value`
+
+## easy deployment
+
+* all dependencies are built at compile-time (openssl, jemalloc, etc)
+* 'make deb' (or make rpm) will package everything into a single deb (or rpm)
+* bin/lumberjack.sh makes sure the dependencies are found
