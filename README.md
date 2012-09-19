@@ -6,33 +6,35 @@ Collect logs locally in preparation for processing elsewhere!
 
 Problem: logstash jar releases are too fat for constrained systems.
 
-Goal: Something small, fast, and light-weight to ship local logs externally.
+## Goal s
 
-## Requirements
-
-* minimal resource usage
+* minimize resource usage where possible (cpu, memory, network)
+* secure transmission of logs
 * configurable event data
-* encryption and compression
+* easy to deploy with minimal moving parts.
 
 Simple inputs only:
 
 * follow files, respect rename/truncation conditions
-* local sockets, maybe, if syslog(3) is worth supporting.
 * stdin, useful for things like 'varnishlog | lumberjack ...'
 
-Simple outputs only:
+## Implementation details 
 
-* custom wire event protocol (TBD)
+Below is valid as of 2012/09/19
 
-## Tentative idea:
+### Minimize resource usage
 
-    # Ship apache logs in real time to somehost:12345
-    ./lumberjack --target somehost:12345 /var/log/apache/access.log ...
+* sets small resource limits (memory, open files) on start up based on the number of files being watched
+* cpu: sleeps when there is nothing to do
+* network/cpu: sleeps if there's a network failure
+* network: uses zlib for compression
 
-    # Ship apache logs with additional log fields:
-    ./lumberjack --target foo:12345 --field host=$HOSTNAME --field role=apt-repo /mnt/apt/access.log
+### secure transmission
 
-* Serialization: msgpack (likely)
-* Encryption: SSL
-* Authentication (both directions): SSL certificates
-* Compression: TLS v1 comes with compression, might be sufficient.
+* uses openssl to transport logs. Currently supports verifying the server
+  certificate only (so you know who you are sending to).
+
+### configurable event data
+
+* the protocol lumberjack uses supports sending a string:string map
+* the lumberjack tool lets you specify arbitrary extra data with `--field name=value`
