@@ -6,7 +6,7 @@ Collect logs locally in preparation for processing elsewhere!
 
 Problem: logstash jar releases are too fat for constrained systems.
 
-## Goal s
+## Goals
 
 * minimize resource usage where possible (cpu, memory, network)
 * secure transmission of logs
@@ -26,7 +26,7 @@ Below is valid as of 2012/09/19
 
 * sets small resource limits (memory, open files) on start up based on the number of files being watched
 * cpu: sleeps when there is nothing to do
-* network/cpu: sleeps if there's a network failure
+* network/cpu: sleeps if there is a network failure
 * network: uses zlib for compression
 
 ### secure transmission
