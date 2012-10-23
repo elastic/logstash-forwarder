@@ -6,6 +6,24 @@ Collect logs locally in preparation for processing elsewhere!
 
 Problem: logstash jar releases are too fat for constrained systems.
 
+Solution: lumberjack
+
+## Building it
+
+* compile: make 
+* rpm package: make rpm
+* deb package: make deb
+
+Packages install to /opt/lumberjack. Lumberjack builds all necessary
+dependencies itself, so there should be no run-time dependencies you
+need.
+
+## Running it
+
+Generally: `lumberjack.sh --host somehost --port 12345 /var/log/messages`
+
+See `lumberjack.sh --help`
+
 ## Goals
 
 * minimize resource usage where possible (cpu, memory, network)
