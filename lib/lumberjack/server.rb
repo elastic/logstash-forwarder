@@ -100,7 +100,7 @@ module Lumberjack
           key = io.read(key_len);
           value_len = io.read(4).unpack("N").first
           value = io.read(value_len);
-          map[key] = value
+          map[key.force_encoding("UTF-8")] = value.force_encoding("UTF-8")
         end
 
         block.call(map)
