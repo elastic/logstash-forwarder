@@ -55,10 +55,12 @@ void *harvest(void *arg) {
     fd = 0;
   } else {
     fd = open(config->path, O_RDONLY);
+    insist(fd >= 0, "open(%s) failed: %s", config->path, strerror(errno));
     /* Start at the end of the file */
-    lseek(fd, 0, SEEK_END);
+    off_t seek_ret = lseek(fd, 0, SEEK_END);
+    insist(seek_ret >= 0, "lseek(%s, 0, SEEK_END) failed: %s",
+           config->path, strerror(errno));
   }
-  insist(fd >= 0, "open(%s) failed: %s", config->path, strerror(errno));
   path_len = strlen(config->path);
 
   struct kv *event = calloc(3 + config->fields_len, sizeof(struct kv));
