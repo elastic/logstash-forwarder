@@ -249,8 +249,8 @@ int main(int argc, char **argv) {
   }
 
   printf("All harvesters completed. Exiting.\n");
-
   free(harvesters);
-  /* If we get here, the emitter failed. */
+
+  /* TODO(sissel): Tell emitter to flush and exit */
   return 1;
 } /* main */
