@@ -5,7 +5,7 @@ require "zlib"
 
 module Lumberjack
   
-  WINDOW_SIZE = 1024
+  WINDOW_SIZE = 5000
   SEQUENCE_MAX = (2**(0.size * 8 -2) -1)
 
   class Client
@@ -41,7 +41,7 @@ module Lumberjack
       #if @socket.peer_cert.to_s != openssl_cert.to_s
       #  raise "Client and server certificates do not match."
       #end
-
+=begin
       @send = ""
       @semaphore = Mutex.new
 
@@ -56,6 +56,7 @@ module Lumberjack
           write local
         end
       }
+=end
       @socket.syswrite(["1", "W", Lumberjack::WINDOW_SIZE].pack("AAN"))
     end
 
@@ -75,9 +76,10 @@ module Lumberjack
     def write_hash(hash)
       frame = to_frame(hash, inc)
       ack if (@sequence - @last_ack) >= Lumberjack::WINDOW_SIZE
-      @semaphore.synchronize do
-        @send << frame
-      end
+      #@semaphore.synchronize do
+      #  @send << frame
+      #end
+      write frame
     end
 
     private
