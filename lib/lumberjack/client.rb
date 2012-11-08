@@ -5,7 +5,7 @@ require "zlib"
 
 module Lumberjack
   
-  WINDOW_SIZE = 100
+  WINDOW_SIZE = 60000
   SEQUENCE_MAX = (2**(0.size * 8 -2) -1)
 
   class Client
@@ -26,7 +26,7 @@ module Lumberjack
 
     def initialize(opts={})
       @sequence = 0
-      @ack = 0
+      @last_ack = 0
       @sent = 0
       @opts = {
         :port => 0,
@@ -43,39 +43,13 @@ module Lumberjack
       #  raise "Client and server certificates do not match."
       #end
 
-      @send = ""
-      @semaphore = Mutex.new
-      
-      Thread.new {
-        loop do
-          version = @socket.read(1)
-          type = @socket.read(1)
-          raise "Whoa we shouldn't get this frame: #{type}" if type != "A"
-          sequence = @socket.read(4).unpack("N").first
-          #puts sequence
-          @ack = sequence
-        end
-      }
-
-      Thread.new {
-        loop do
-          sleep(1) if @send.empty?
-          local = ""
-          @semaphore.synchronize do
-            local << @send
-            @send = ""
-          end
-          write local
-        end
-      }
-
       @socket.syswrite(["1", "W", Lumberjack::WINDOW_SIZE].pack("AAN"))
     end
 
     private 
     def inc
-      @sequence = @sequence + 1
       @sequence = 0 if @sequence > Lumberjack::SEQUENCE_MAX
+      @sequence = @sequence + 1
     end
 
     private
@@ -85,16 +59,18 @@ module Lumberjack
 
     public
     def write_hash(hash)
-      s = inc
-      frame = to_frame(hash, s)
-      while((@sequence - @ack) >= Lumberjack::WINDOW_SIZE)
-        #puts @sequence
-        #puts @ack
-        #puts "-----"
-      end
-      @semaphore.synchronize do
-        @send << frame
-      end
+      frame = to_frame(hash, inc)
+      ack if (@sequence - @last_ack) >= Lumberjack::WINDOW_SIZE
+      write(frame)
+    end
+
+    private
+    def ack
+      version = @socket.read(1)
+      type = @socket.read(1)
+      raise "Whoa we shouldn't get this frame: #{type}" if type != "A"
+      @last_ack = @socket.read(4).unpack("N").first
+      ack if (@sequence - @last_ack) >= Lumberjack::WINDOW_SIZE
     end
 
     private
