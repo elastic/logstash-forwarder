@@ -42,6 +42,11 @@ module Lumberjack
     def write(hash)
       @socket.write_hash(hash)
     end
+
+    public
+    def host
+      @socket.host
+    end
   end
 
   class Socket
@@ -55,7 +60,7 @@ module Lumberjack
     # * :ssl_certificate - the path to the ssl cert to use
     attr_reader :sequence
     attr_reader :window_size
-
+    attr_reader :host
     def initialize(opts={})
       @sequence = 0
       @last_ack = 0
@@ -65,7 +70,7 @@ module Lumberjack
         :ssl_certificate => nil,
         :window_size => 5000
       }.merge(opts)
-
+      @host = @opts[:address]
       @window_size = @opts[:window_size]
 
       tcp_socket = TCPSocket.new(@opts[:address], @opts[:port])
@@ -145,7 +150,7 @@ module Lumberjack
       keys = []
       hash.each do |k,v|
         keys << "#{prefix}#{k}" if v.class == String
-        keys << hash[k].deep_keys(hash, "#{k}.") if v.class == Hash
+        keys << deep_keys(hash[k], "#{k}.") if v.class == Hash
       end
       keys.flatten
     end
