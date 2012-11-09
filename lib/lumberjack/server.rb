@@ -127,8 +127,7 @@ module Lumberjack
         return @io.read(bytes)
       elsif @buffer.length > bytes
         #puts "reading buffered"
-        data = @buffer[0...bytes]
-        @buffer[0...bytes] = ""
+        data = @buffer.slice!(0...bytes)
         return data
       else
         data = @buffer.clone
