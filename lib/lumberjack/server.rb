@@ -97,10 +97,10 @@ module Lumberjack
         map = {}
         count.times do 
           key_len = io.read(4).unpack("N").first
-          key = io.read(key_len);
+          key = io.read(key_len)
           value_len = io.read(4).unpack("N").first
-          value = io.read(value_len);
-          map[key.force_encoding("UTF-8")] = value.force_encoding("UTF-8")
+          value = io.read(value_len)
+          map[key] = value
         end
 
         block.call(map)
