@@ -1,7 +1,11 @@
 # Protocol
 
-* TLS Encryption: optional, channel
-* Compression: optional, frame-based
+The needs that lead to this protocol are:
+
+* Encryption amd Authentication to protect 
+* Compression should be used to reduce bandwidth
+* Round-trip latency should not damage throughput
+* Application-level message acknowledgement
 
 ## Implementation Considerations
 
@@ -18,6 +22,10 @@ support bulk acknowledgements.
 
 Reliable, ordered byte transport is ensured by using TCP (or TLS on top), and
 this protocol aims to provide reliable, application-level, message transport.
+
+## Encryption and Authentication
+
+Currently this is to be handled by TLS.
 
 ## Wire Format
 
