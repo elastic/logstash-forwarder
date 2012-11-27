@@ -405,8 +405,19 @@ static int lumberjack_read_ack(struct lumberjack *lumberjack, uint32_t *sequence
   ssize_t bytes;
   size_t remaining = 6; /* version + frame type + 32bit sequence value */
   size_t offset = 0;
-  struct backoff sleeper;
-  backoff_init(&sleeper, &MIN_SLEEP, &MAX_SLEEP);
+  int rc;
+
+  /* TODO(sissel): Allow a few seconds for a read timeout. If it occurs, fail this read. */
+  //fd_set fds;
+  //FD_ZERO(&fds);
+  //FD_SET(SSL_get_rfd(lumberjack->ssl), &fds);
+  //struct timeval timeout = { 10, 0 }; /* 10 second timeout waiting for ack */
+  //rc = select(1, &fds, NULL, NULL, &timeout);
+  //if (rc == 0) {
+    ///* timeout, fail the read */
+    //errno = ETIMEDOUT;
+    //return -1;
+  //}
 
   while (remaining > 0) {
     bytes = SSL_read(lumberjack->ssl, buf + offset, remaining);
