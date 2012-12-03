@@ -110,7 +110,7 @@ module Lumberjack
       type = @socket.read(1)
       raise "Whoa we shouldn't get this frame: #{type}" if type != "A"
       @last_ack = @socket.read(4).unpack("N").first
-      ack if (@sequence - @last_ack) >= Lumberjack::WINDOW_SIZE
+      ack if (@sequence - @last_ack) >= @window_size
     end
 
     private
