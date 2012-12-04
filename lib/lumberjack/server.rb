@@ -61,7 +61,11 @@ module Lumberjack
     end # def initialize
 
     def run(&block)
-      each_event(&block)
+      begin
+        each_event(&block)
+      rescue IOError => e
+        p :io_error => e
+      end
     end # def run
 
     def each_event(&block)
