@@ -11,6 +11,7 @@ class LogFile
     @count = 0
     open
     @name = File.basename(@path)
+    puts "LogFile: #{@path}"
   end
 
   def open
@@ -27,7 +28,7 @@ class LogFile
     @file.syswrite({
       "count" => @count,
       "@timestamp" => iso8601(Time.now)
-    }.to_json)
+    }.to_json + "\n")
 
     @count += 1
   end
