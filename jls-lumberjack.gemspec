@@ -13,5 +13,5 @@ Gem::Specification.new do |gem|
   gem.test_files    = []
   gem.name          = "jls-lumberjack"
   gem.require_paths = ["lib"]
-  gem.version       = "0.0.6"
+  gem.version       = "0.0.7"
 end
