@@ -10,6 +10,7 @@ class LogFile
     @path = path
     @count = 0
     open
+    @name = File.basename(@path)
   end
 
   def open
@@ -25,8 +26,9 @@ class LogFile
   def hit
     @file.syswrite({
       "count" => @count,
-      "time" => iso8601(Time.now)
+      "@timestamp" => iso8601(Time.now)
     }.to_json)
+
     @count += 1
   end
 
@@ -39,7 +41,9 @@ end
 path = ARGV[0]
 
 numlogs = 50
-logs = numlogs.times.collect { |i| LogFile.new(File.join(path, "#{i}.log")) }
+logs = numlogs.times.collect do |i| 
+  LogFile.new(File.join(path, i.to_s))
+end
 
 rotate_count = 50000
 
