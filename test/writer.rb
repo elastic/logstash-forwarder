@@ -14,7 +14,7 @@ class LogFile
 
   def open
     @file.close if !@file.nil?
-    @file = File.new(path, "w+")
+    @file = File.new(@path, "w+")
   end
 
   def rotate
@@ -23,10 +23,11 @@ class LogFile
   end
 
   def hit
-    @file.puts({
+    @file.syswrite({
       "count" => @count,
       "time" => iso8601(Time.now)
     }.to_json)
+    @count += 1
   end
 
   def iso8601(t)
@@ -48,7 +49,6 @@ while true
   hits.times do |i|
     logs[i].hit
   end
-
 
   count += 1
   if count > rotate_count
