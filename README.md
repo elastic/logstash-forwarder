@@ -62,3 +62,22 @@ Below is valid as of 2012/09/19
 * all dependencies are built at compile-time (openssl, jemalloc, etc)
 * 'make deb' (or make rpm) will package everything into a single deb (or rpm)
 * bin/lumberjack.sh makes sure the dependencies are found
+
+## future
+
+I would love to not have a custom protocol, but nothing I've found implements
+what I need, which is: encrypted, trusted, compressed, latency-resilient, and
+reliable transport of events.
+
+* redis development refuses to accept encryption support, would likely reject
+  compression as well.
+* zeromq lacks authentication, encryption, and compression.
+* thrift also lacks authentication, encryption, and compression, and also is an
+  RPC framework, not a streaming system.
+* websockets don't do authentication or compression, but support encrypted
+  channels with SSL. Websockets also require XORing the entire payload of all
+  messages - wasted energy.
+* SPDY is still changing too frequently and is also RPC. Streaming requires
+  custom framing.
+* HTTP is RPC and very high over head for small events (uncompressable headers,
+  etc). Streaming requires custom framing.
