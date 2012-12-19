@@ -4,17 +4,19 @@ class Graph
   constructor: () ->
     @data = []
     @element = document.createElement("div")
-    @rickshaw = new Rickshaw.Graph({
-      element: @element,
-      width: 700,
-      height: 100,
-      series: @data
-    })
-    document.body.appendChild(@element)
+    console.log("New graph")
 
   record: (value) ->
     time = (new Date()).getTime() / 1000.0;
     @data.append({ x: time, y: value })
+    if !@rickshaw
+      @rickshaw = new Rickshaw.Graph({
+        element: @element,
+        width: 700,
+        height: 100,
+        series: @data
+      })
+      document.body.appendChild(@element)
     @rickshaw.render
 # class Graph
 
@@ -24,6 +26,7 @@ class GraphList
 
   record: (identity, value) ->
     @graphs[identity] ||= new Graph
+    console.log(identity)
     @graphs[identity].record(value)
 # GraphList
     
@@ -38,18 +41,23 @@ class LogStashSocket
     socket.onopen = (event) => console.log("Connected!")
     socket.onerror = (event) =>
       console.log("websocket error: " + event)
+      socket.close()
       retry = () => @connect()
       setTimeout(retry, 1000)
-      socket.close()
 
     socket.onmessage = (event) =>
       obj = JSON.parse(event.data)
-      @callback(obj);
+      @callback(obj)
 
 graphlist = new GraphList()
-socket = new LogStashSocket("ws://demo.logstash.net:3232/", (event) =>
+callback = (event) =>
+  console.log(event)
   metrics = event["@fields"]
-  for key, value in metrics
+  for key, value of metrics
     [root, name, metric] = key.split(".")
     continue if root != "age" && metric != "mean"
+    console.log(name + ": " + value)
     graphlist.record(name, value)
+
+socket = new LogStashSocket("ws://" + document.location.hostname + ":3232/",
+                            callback)
