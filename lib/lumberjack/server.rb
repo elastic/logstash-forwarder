@@ -77,8 +77,7 @@ module Lumberjack
         frame = io.read(1)
 
         if frame == "W" # window size
-          window_size = io.read(4).unpack("N").first / 2
-          #puts "Window size: #{window_size}"
+          window_size = io.read(4).unpack("N").first
           next
         elsif frame == "C" # compressed data
           length = io.read(4).unpack("N").first
@@ -109,6 +108,10 @@ module Lumberjack
 
         block.call(map)
 
+        if last_ack > sequence
+          $stderr.puts "last_ack > sequence! #{last_ack} vs #{sequence}. " \
+            "Probably a bug on the client sending us events"
+        end
         if sequence - last_ack >= window_size
           # ack this.
           io.syswrite(["1", "A", sequence].pack("AAN"))
