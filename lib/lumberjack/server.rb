@@ -63,8 +63,8 @@ module Lumberjack
     def run(&block)
       begin
         each_event(&block)
-      rescue IOError => e
-        p :io_error => e
+      rescue IOError, OpenSSL::SSL::SSLError => e
+        p e.class => e
       end
     end # def run
 
