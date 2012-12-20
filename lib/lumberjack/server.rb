@@ -129,6 +129,13 @@ module Lumberjack
     end
 
     def read(bytes)
+      #puts "Read[#{bytes}]: ---"
+      v = _read(bytes)
+      #puts "Read[#{bytes}]; #{v.inspect}"
+      return v 
+    end
+
+    def _read(bytes)
       if @buffer.empty?
         #puts "reading direct from @io"
         return @io.read(bytes)
