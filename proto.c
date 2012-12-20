@@ -24,6 +24,7 @@
 
 #include "strlist.h"
 #include "sleepdefs.h"
+#include "flog.h"
 
 static void lumberjack_init(void);
 static int lumberjack_tcp_connect(struct lumberjack *lumberjack);
@@ -193,7 +194,9 @@ static struct hostent *lumberjack_choose_address(const char *host) {
   while (hostinfo == NULL) {
     int item = rand() % hostlist->nitems;
     char *chosen = hostlist->items[item];
-    hostinfo = gethostbyname(chosen);
+    flog_if_slow(stdout, 0.200, {
+      hostinfo = gethostbyname(chosen);
+    }, "gethostbyname('%s')", chosen);
     if (hostinfo == NULL) {
       printf("gethostbyname(%s) failed: %s\n", chosen,
              hstrerror(h_errno));
@@ -233,7 +236,9 @@ static int lumberjack_tcp_connect(struct lumberjack *lumberjack) {
   sockaddr.sin_port = htons(lumberjack->port),
   memcpy(&sockaddr.sin_addr, address, hostinfo->h_length);
 
-  rc = connect(fd, (struct sockaddr *)&sockaddr, sizeof(sockaddr));
+  flog_if_slow(stdout, 0.250, {
+    rc = connect(fd, (struct sockaddr *)&sockaddr, sizeof(sockaddr));
+  }, "connect to %s:%hu", inet_ntoa(*(struct in_addr *)address), lumberjack->port);
   if (rc < 0) {
     close(fd);
     return -1;
@@ -464,7 +469,9 @@ int lumberjack_send_data(struct lumberjack *lumberjack, const char *payload,
     lumberjack_flush(lumberjack);
 
     /* read at least one ACK */
-    lumberjack_wait_for_ack(lumberjack);
+    flog_if_slow(stdout, 0.500, {
+      lumberjack_wait_for_ack(lumberjack);
+    }, "wait for ack (current sequence: %u)", lumberjack->sequence);
   }
 
   /* Send this data frame on the wire */

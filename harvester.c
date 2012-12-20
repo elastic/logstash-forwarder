@@ -15,6 +15,7 @@
 #include "backoff.h"
 #include "insist.h"
 #include "sleepdefs.h"
+#include "flog.h"
 
 #ifdef __MACH__
 /* OS X is dumb, or I am dumb, or we are both dumb. I don't know anymore,
@@ -102,7 +103,10 @@ void *harvest(void *arg) {
 
   int offset = 0;
   for (;;) {
-    bytes = read(fd, buf + offset, BUFFERSIZE - offset - 1);
+    flog_if_slow(stdout, 0.250, {
+      bytes = read(fd, buf + offset, BUFFERSIZE - offset - 1);
+    }, "read of %d bytes on '%s'", BUFFERSIZE - offset - 1, config->path);
+
     offset += bytes;
     if (bytes < 0) {
       /* error, maybe indicate a failure of some kind. */
@@ -144,7 +148,9 @@ void *harvest(void *arg) {
           zmq_msg_t event;
           zmq_msg_init_data(&event, str_data(serialized), str_length(serialized),
                             my_str_free, serialized);
-          rc = zmq_send(socket, &event, 0);
+          flog_if_slow(stdout, 0.250, {
+            rc = zmq_send(socket, &event, 0);
+          }, "zmq_send (harvesting file '%s')", config->path);
           insist(rc == 0, "zmq_send(event) failed: %s", zmq_strerror(rc));
           zmq_msg_close(&event);
         }
