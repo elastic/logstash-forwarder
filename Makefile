@@ -37,6 +37,7 @@ vendor-clean:
 	-make -C vendor/libuuid/ clean
 	-make -C vendor/zeromq/ clean
 	-make -C vendor/zlib/ clean
+	-make -C vendor/apr/ clean
 
 rpm deb: | build-all
 	fpm -s dir -t $@ -n lumberjack -v $(VERSION) --prefix /opt/lumberjack \
@@ -49,14 +50,15 @@ rpm deb: | build-all
 # install -d -m 755 build/bin/* $(PREFIX)/bin/lumberjack
 # install -d build/lib/* $(PREFIX)/lib
 
+flog.o: flog.c flog.h
 strlist.o: strlist.h
 emitter.o: strlist.h
 backoff.o: backoff.c backoff.h
-harvester.o: harvester.c harvester.h proto.h str.h sleepdefs.h
-emitter.o: emitter.c emitter.h ring.h sleepdefs.h
-lumberjack.o: lumberjack.c backoff.h harvester.h emitter.h
+harvester.o: harvester.c harvester.h proto.h str.h sleepdefs.h flog.h
+emitter.o: emitter.c emitter.h ring.h sleepdefs.h flog.h
+lumberjack.o: lumberjack.c backoff.h harvester.h emitter.h flog.h
 str.o: str.c str.h
-proto.o: proto.c proto.h str.h sleepdefs.h
+proto.o: proto.c proto.h str.h sleepdefs.h flog.h
 ring.o: ring.c ring.h
 
 harvester.o: build/include/insist.h 
@@ -101,7 +103,7 @@ build/bin/lumberjack.sh: lumberjack.sh | build/bin
 	install -m 755 $^ $@
 
 build/bin/lumberjack: | build/bin
-build/bin/lumberjack: lumberjack.o backoff.o harvester.o emitter.o str.o proto.o ring.o strlist.o
+build/bin/lumberjack: lumberjack.o backoff.o harvester.o emitter.o str.o proto.o ring.o strlist.o flog.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 	@echo " => Build complete: $@"
 	@echo " => Run 'make rpm' to build an rpm (or deb or tarball)"
@@ -132,6 +134,10 @@ build/include/zlib.h build/lib/libz.$(LIBEXT): | build
 build/include/openssl/ssl.h build/lib/libssl.$(LIBEXT) build/lib/libcrypto.$(LIBEXT): | build
 	@echo " => Building openssl"
 	PATH=$$PWD:$$PATH $(MAKE) -C vendor/openssl install PREFIX=$$PWD/build DEBUG=$(DEBUG)
+
+build/include/apr-1/apr.h build/lib/libapr-1.$(LIBEXT): | build
+	@echo " => Building apr"
+	PATH=$$PWD:$$PATH $(MAKE) -C vendor/apr install PREFIX=$$PWD/build DEBUG=$(DEBUG)
 
 build:
 	mkdir $@
