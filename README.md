@@ -2,7 +2,15 @@
 
 o/~ I'm a lumberjack and I'm ok! I sleep when idle, then I ship logs all day! I parse your logs, I eat the JVM agent for lunch! o/~
 
-Collect logs locally in preparation for processing elsewhere!
+## QUESTIONS?
+
+If you have questions and cannot find answers, please join the #logstash irc
+channel on freenode irc or ask on the logstash-users@googlegroups.com mailing
+list.
+
+## What is this?
+
+A tool to collect logs locally in preparation for processing elsewhere!
 
 Problem: logstash jar releases are too fat for constrained systems.
 
@@ -22,7 +30,27 @@ need.
 
 Generally: `lumberjack.sh --host somehost --port 12345 /var/log/messages`
 
+You'll need an ssl ca to verify the server (host) with.
+
 See `lumberjack.sh --help`
+
+## Use with logstash
+
+In logstash, you'll want to use the [lumberjack](http://logstash.net/docs/latest/inputs/lumberjack) input, something like:
+
+    input {
+      lumberjack {
+        # The port to listen on
+        port => 12345
+
+        # The paths to your ssl cert and key
+        ssl_certificate => "path/to/ssl.crt"
+        ssl_key => "path/to/ssl.key"
+
+        # Set this to whatever you want.
+        type => "somelogs"
+      }
+    }
 
 ## Goals
 
@@ -42,7 +70,8 @@ Below is valid as of 2012/09/19
 
 ### Minimize resource usage
 
-* sets small resource limits (memory, open files) on start up based on the number of files being watched
+* sets small resource limits (memory, open files) on start up based on the
+  number of files being watched
 * cpu: sleeps when there is nothing to do
 * network/cpu: sleeps if there is a network failure
 * network: uses zlib for compression
@@ -59,11 +88,16 @@ Below is valid as of 2012/09/19
 
 ## easy deployment
 
-* all dependencies are built at compile-time (openssl, jemalloc, etc)
+* all dependencies are built at compile-time (openssl, jemalloc, etc) because many os distributions lack these dependencies.
 * 'make deb' (or make rpm) will package everything into a single deb (or rpm)
-* bin/lumberjack.sh makes sure the dependencies are found
+* bin/lumberjack.sh makes sure the dependencies are found when run in production
 
-## future
+## future functional features
+
+* re-evaluate globs periodically to look for new log files
+* track position of in the log
+
+## future protocol discussion
 
 I would love to not have a custom protocol, but nothing I've found implements
 what I need, which is: encrypted, trusted, compressed, latency-resilient, and
