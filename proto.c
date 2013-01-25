@@ -21,6 +21,7 @@
 #include "openssl/bio.h"
 #include "openssl/ssl.h"
 #include "openssl/err.h"
+#include "openssl/rand.h"
 
 #include "strlist.h"
 #include "sleepdefs.h"
@@ -36,13 +37,17 @@ static int lumberjack_write_window_size(struct lumberjack *lumberjack);
 
 static int lumberjack_init_done = 0;
 
+static unsigned int rand_uint32() {
+  unsigned char bytes[4];
+  /* TODO(sissel): Check error code? -1 means we failed... */
+  RAND_pseudo_bytes(bytes, 4);
+  return *(unsigned int *)(bytes);
+} /* rand_uint32 */
+
 static void lumberjack_init(void) {
   if (lumberjack_init_done) {
     return;
   }
-
-  /* Seed the RNG so we can pick a random starting sequence number */
-  srand(time(NULL));
 
   /* ssl init */
   CRYPTO_malloc_init();
@@ -192,7 +197,7 @@ static struct hostent *lumberjack_choose_address(const char *host) {
 
   struct hostent *hostinfo = NULL;
   while (hostinfo == NULL) {
-    int item = rand() % hostlist->nitems;
+    int item = rand_uint32() % hostlist->nitems;
     char *chosen = hostlist->items[item];
     flog_if_slow(stdout, 0.200, {
       hostinfo = gethostbyname(chosen);
@@ -224,7 +229,7 @@ static int lumberjack_tcp_connect(struct lumberjack *lumberjack) {
   unsigned int addr_count;
   for (addr_count = 0; hostinfo->h_addr_list[addr_count] != NULL; addr_count++);
   /* hostnames can resolve to multiple addresses, pick one at random. */
-  char *address = hostinfo->h_addr_list[rand() % addr_count];
+  char *address = hostinfo->h_addr_list[rand_uint32() % addr_count];
 
   printf("Connecting to %s(%s):%hu\n", lumberjack->host,
          inet_ntoa(*(struct in_addr *)address), lumberjack->port);
