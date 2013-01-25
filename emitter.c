@@ -9,6 +9,7 @@
 #include "proto.h"
 #include "backoff.h"
 #include "clock_gettime.h"
+#include "flog.h"
 
 #include <sys/resource.h>
 
@@ -45,20 +46,24 @@ void *emitter(void *arg) {
 
   long count = 0;
   long bytes = 0;
+
+  zmq_pollitem_t items[1];
+
+  items[0].socket = socket;
+  items[0].events = ZMQ_POLLIN;
+
   for (;;) {
     /* Receive an event from a harvester and put it in the queue */
     zmq_msg_t message;
 
     rc = zmq_msg_init(&message);
     insist(rc == 0, "zmq_msg_init failed");
-    //printf("waiting for zmq\n");
-    rc = zmq_recv(socket, &message, ZMQ_NOBLOCK);
-    insist(rc == 0 || errno == EAGAIN, "zmq_recv(%s) failed (returned %d): %s",
-           config->zmq_endpoint, rc, zmq_strerror(errno));
-    if (rc != 0 && errno == EAGAIN) {
-      /* Nothing ready to read, flush and sleep. */
-      //printf("flush+sleep\n");
+    rc = zmq_poll(items, 1, 1000000 /* microseconds */);
 
+    if (rc == 0) {
+      /* poll timeout. We're idle, so let's flush and back-off. */
+      //if (rc != 0 && errno == EAGAIN) {
+      flog(stdout, "flushing since nothing came in over zmq");
       /* We flush here to keep slow feeders closer to real-time */
       rc = lumberjack_flush(lumberjack);
       if (rc != 0) {
@@ -70,7 +75,13 @@ void *emitter(void *arg) {
       continue;
     } 
 
-    /* when we get here here, we received an event. Ship it over lumberjack */
+    /* poll successful, read a message */
+    rc = zmq_recv(socket, &message, 0);
+    insist(rc == 0 /*|| errno == EAGAIN */,
+           "zmq_recv(%s) failed (returned %d): %s",
+           config->zmq_endpoint, rc, zmq_strerror(errno));
+
+    /* Clear the backoff timer since we received a message successfully */
     backoff_clear(&sleeper);
 
     /* Write the data over lumberjack. This will handle any
