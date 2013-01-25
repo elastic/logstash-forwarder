@@ -99,8 +99,8 @@ int lumberjack_set_ssl_ca(struct lumberjack *lumberjack, const char *path) {
   rc = stat(path, &path_stat);
   if (rc == -1) {
     /* Failed to stat the file */
-    printf("lumberjack_set_ssl_ca: stat(%s) failed: %s\n",
-           path, strerror(errno));
+    flog(stdout, "lumberjack_set_ssl_ca: stat(%s) failed: %s",
+         path, strerror(errno));
     return -1;
   }
 
@@ -131,7 +131,7 @@ int lumberjack_connect(struct lumberjack *lumberjack) {
 
   rc = lumberjack_ssl_handshake(lumberjack);
   if (rc < 0) {
-    printf("ssl handshake failed\n");
+    flog(stdout, "ssl handshake failed");
     lumberjack_disconnect(lumberjack);
     return -1;
   }
@@ -150,7 +150,7 @@ int lumberjack_connect(struct lumberjack *lumberjack) {
    * This is a no-op if there's nothing in the ring. */
   rc = lumberjack_retransmit_all(lumberjack);
   if (rc < 0) {
-    printf("lumberjack_retransmit_all failed\n");
+    flog(stdout, "lumberjack_retransmit_all failed");
     /* Retransmit failed, which means a write failed during retransmit,
      * disconnect and claim a connection failure. */
     lumberjack_disconnect(lumberjack);
@@ -173,8 +173,8 @@ int lumberjack_ensure_connected(struct lumberjack *lumberjack) {
     backoff(&sleeper);
     rc = lumberjack_connect(lumberjack);
     if (rc != 0) {
-      printf("Connection attempt to %s:%hd failed: %s\n",
-             lumberjack->host, lumberjack->port, strerror(errno));
+      flog(stdout, "Connection attempt to %s:%hd failed: %s",
+           lumberjack->host, lumberjack->port, strerror(errno));
     } else {
       /* we're connected! */
       backoff_clear(&sleeper);
@@ -203,8 +203,8 @@ static struct hostent *lumberjack_choose_address(const char *host) {
       hostinfo = gethostbyname(chosen);
     }, "gethostbyname('%s')", chosen);
     if (hostinfo == NULL) {
-      printf("gethostbyname(%s) failed: %s\n", chosen,
-             hstrerror(h_errno));
+      flog(stdout, "gethostbyname(%s) failed: %s", chosen,
+           hstrerror(h_errno));
       backoff(&sleeper);
     }
   }
@@ -222,6 +222,7 @@ static int lumberjack_tcp_connect(struct lumberjack *lumberjack) {
   int rc;
   int fd;
 
+  flog(stdout, "Choosing a new lumberjack server: %s", lumberjack->host);
   struct hostent *hostinfo = lumberjack_choose_address(lumberjack->host);
 
   /* 'struct hostent' has the list of addresses resolved in 'h_addr_list'
@@ -231,10 +232,10 @@ static int lumberjack_tcp_connect(struct lumberjack *lumberjack) {
   /* hostnames can resolve to multiple addresses, pick one at random. */
   char *address = hostinfo->h_addr_list[rand_uint32() % addr_count];
 
-  printf("Connecting to %s(%s):%hu\n", lumberjack->host,
+  flog(stdout, "Connecting to %s(%s):%hu", hostinfo->h_name,
          inet_ntoa(*(struct in_addr *)address), lumberjack->port);
   fd = socket(PF_INET, SOCK_STREAM, 0);
-  insist(fd >= 0, "socket() failed: %s\n", strerror(errno));
+  insist(fd >= 0, "socket() failed: %s", strerror(errno));
 
   struct sockaddr_in sockaddr;
   sockaddr.sin_family = PF_INET,
@@ -249,8 +250,8 @@ static int lumberjack_tcp_connect(struct lumberjack *lumberjack) {
     return -1;
   }
 
-  printf("Connected successfully to %s(%s):%hu\n", lumberjack->host,
-         inet_ntoa(*(struct in_addr *)address), lumberjack->port);
+  flog(stdout, "Connected successfully to %s(%s):%hu", hostinfo->h_name,
+       inet_ntoa(*(struct in_addr *)address), lumberjack->port);
 
   lumberjack->fd = fd;
   return 0;
@@ -285,9 +286,9 @@ static int lumberjack_ssl_handshake(struct lumberjack *lumberjack) {
         continue; /* retry */
       default:
         /* Some other SSL error */
-        printf("SSL_connect error vv\n");
+        flog(stdout, "SSL_connect error vv");
         ERR_print_errors_fp(stdout);
-        printf("SSL_connect error ^^\n");
+        flog(stdout, "SSL_connect error ^^");
         return -1;
     }
   }
@@ -316,6 +317,8 @@ int lumberjack_write(struct lumberjack *lumberjack, struct str *payload) {
   str_append_str(lumberjack->io_buffer, payload);
 
   if (str_length(lumberjack->io_buffer) > 16384) {
+    flog(stdout, "io_buffer large enough (%d), flushing",
+         str_length(lumberjack->io_buffer));
     return lumberjack_flush(lumberjack);
   }
   return 0;
@@ -344,8 +347,8 @@ int lumberjack_flush(struct lumberjack *lumberjack) {
          compressed_length, length, rc);
 
   str_truncate(lumberjack->io_buffer);
-  printf("lumberjack_flush: flushing %d bytes (compressed to %d bytes)\n",
-         (int)length, (int)compressed_length);
+  flog(stdout, "lumberjack_flush: flushing %d bytes (compressed to %d bytes)",
+       (int)length, (int)compressed_length);
 
   /* Write the 'compressed block' frame header */
   struct str *header = str_new_size(6);
@@ -382,7 +385,7 @@ int lumberjack_flush(struct lumberjack *lumberjack) {
 } /* lumberjack_flush */
 
 void lumberjack_disconnect(struct lumberjack *lumberjack) {
-  printf("Disconnect requested\n");
+  flog(stdout, "Disconnect requested");
   if (lumberjack->ssl) {
     SSL_shutdown(lumberjack->ssl);
     SSL_free(lumberjack->ssl);
@@ -402,9 +405,10 @@ int lumberjack_connected(struct lumberjack *lumberjack) {
   return lumberjack->connected;
 } /* lumberjack_connected */
 
-static int lumberjack_read_ack(struct lumberjack *lumberjack, uint32_t *sequence_ret) {
+static int lumberjack_read_ack(struct lumberjack *lumberjack,
+                               uint32_t *sequence_ret) {
   if (!lumberjack_connected(lumberjack)) {
-    printf("NOT CONNECTED\n");
+    flog(stdout, "NOT CONNECTED");
     return -1;
   }
 
@@ -433,7 +437,7 @@ static int lumberjack_read_ack(struct lumberjack *lumberjack, uint32_t *sequence
     bytes = SSL_read(lumberjack->ssl, buf + offset, remaining);
     if (bytes <= 0) {
       /* eof(0) or error(<0). */
-      printf("bytes <= 0: %ld\n", (long int) bytes);
+      flog(stdout, "bytes <= 0: %ld", (long int) bytes);
       errno = EPIPE; /* close enough? */
       return -1;
     }
@@ -471,7 +475,11 @@ int lumberjack_send_data(struct lumberjack *lumberjack, const char *payload,
   /* if the ring is currently full, we need to wait for acks. */
   while (ring_is_full(lumberjack->ring)) {
     /* flush any writes waiting for buffering/compression */
-    lumberjack_flush(lumberjack);
+    flog(stdout, "ring buffer is full (%d items), flushing.",
+         ring_count(lumberjack->ring));
+    flog_if_slow(stdout, 0.500, {
+      lumberjack_flush(lumberjack);
+    }, "flush complete", NULL);
 
     /* read at least one ACK */
     flog_if_slow(stdout, 0.500, {
@@ -501,11 +509,11 @@ static int lumberjack_wait_for_ack(struct lumberjack *lumberjack) {
   struct backoff sleeper;
   backoff_init(&sleeper, &MIN_SLEEP, &MAX_SLEEP);
 
-  printf("lumberjack_wait_for_ack: waiting for ack\n");
+  flog(stdout, "lumberjack_wait_for_ack: waiting for ack");
 
   while ((rc = lumberjack_read_ack(lumberjack, &ack)) < 0) {
     /* read error. */
-    printf("lumberjack_read_ack failed: %s\n", strerror(errno));
+    flog(stdout, "lumberjack_read_ack failed: %s", strerror(errno));
     lumberjack_disconnect(lumberjack);
     backoff(&sleeper);
     lumberjack_ensure_connected(lumberjack);
@@ -555,7 +563,7 @@ static int lumberjack_retransmit_all(struct lumberjack *lumberjack) {
 
     if (rc != 0) {
       /* write failure, fail. */
-      printf("write failure\n");
+      flog(stdout, "write failure");
       return -1;
     }
   } /* for each item in the ring */
@@ -626,7 +634,7 @@ int lumberjack_write_window_size(struct lumberjack *lumberjack) {
   rc = lumberjack_write(lumberjack, &payload);
   if (rc != 0) {
     /* write failure, fail. */
-    printf("write failure while writing the window size\n");
+    flog(stdout, "write failure while writing the window size");
     return -1;
   }
   return 0;
