@@ -167,10 +167,11 @@ module Lumberjack
       if @data_count > 0
         transition(:data_field_key_len, 4)
       else
+        # emit the whole map now that we found the end of the data fields list.
+        yield :data, @sequence, @data
         transition(:header, 2)
       end
 
-      yield :data, @sequence, @data
     end # def data_field_value
 
     def compressed_lead(&block)
