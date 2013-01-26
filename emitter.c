@@ -35,8 +35,9 @@ void *emitter(void *arg) {
   backoff_init(&sleeper, &MIN_SLEEP, &MAX_SLEEP);
 
   struct lumberjack *lumberjack;
-  lumberjack = lumberjack_new(config->host, config->port);
+  lumberjack = lumberjack_new(config->host, config->port, config->window_size);
   insist(lumberjack != NULL, "lumberjack_new failed");
+  lumberjack->ring_size = config->window_size;
 
   if (config->ssl_ca_path != NULL) {
     rc = lumberjack_set_ssl_ca(lumberjack, config->ssl_ca_path);

@@ -43,11 +43,12 @@ struct lumberjack {
  *
  * - host is a hostname or IP address.
  * - port is the port to connect to.
+ * - window_size is how many events to send before waiting for an ack.
  *
  * If the hostname resolves to multiple addresses, one address is picked at
  * random each time a connection is made.
  */
-struct lumberjack *lumberjack_new(const char *host, unsigned short port);
+struct lumberjack *lumberjack_new(const char *host, unsigned short port, size_t window_size);
 
 /* Tell lumberjack about an SSL cert/ca it should trust 
  *

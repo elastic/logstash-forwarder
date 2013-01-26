@@ -24,6 +24,7 @@ typedef enum {
   opt_ssl_ca_path,
   opt_host,
   opt_port,
+  opt_window_size,
 } optlist_t;
 
 struct option_doc {
@@ -61,6 +62,9 @@ static struct option_doc options[] = {
     "by separating hosts with a comma." },
   { "port", required_argument, opt_port,
     "The port to connect on the lumberjack server" },
+  { "window-size", required_argument, opt_window_size,
+    "The maximum number of outstanding messages to send before we will " \
+    "wait for an acknowledgement" },
   { NULL, 0, 0, NULL },
 };
 
@@ -169,6 +173,10 @@ int main(int argc, char **argv) {
         break;
       case opt_port:
         emitter_config.port = (short)atoi(optarg);
+        break;
+      case opt_window_size:
+        emitter_config.window_size = (size_t)atoi(optarg);
+        printf("size: %d\n", (int)emitter_config.window_size);
         break;
       case opt_field:
         tmp = strchr(optarg, '=');

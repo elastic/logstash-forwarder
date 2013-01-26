@@ -58,7 +58,7 @@ static void lumberjack_init(void) {
   lumberjack_init_done = 1;
 } /* lumberjack_init */
 
-struct lumberjack *lumberjack_new(const char *host, unsigned short port) {
+struct lumberjack *lumberjack_new(const char *host, unsigned short port, size_t window_size) {
   struct lumberjack *lumberjack;
   lumberjack_init(); /* global one-time init */
 
@@ -73,7 +73,12 @@ struct lumberjack *lumberjack_new(const char *host, unsigned short port) {
   /* I tried with 128, 256, 512, 1024, 2048, and 16384,
    * in a local network, an window size of 1024 seemed to have the best
    * performance (equal to 2048 and 16384) for the least memory cost. */
-  lumberjack->ring_size = 1024; /* TODO(sissel): tunable */
+  if (window_size < 1024) {
+    flog(stdout, "Window size less than 1024 (%d) isn't shown to have performance benefits",
+         window_size);
+  }
+
+  lumberjack->ring_size = window_size; /* TODO(sissel): tunable */
   lumberjack->ring = ring_new_size(lumberjack->ring_size);
 
   /* Create this once. */
