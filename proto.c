@@ -433,7 +433,7 @@ static int lumberjack_read_ack(struct lumberjack *lumberjack,
   FD_ZERO(&fds);
   FD_SET(SSL_get_rfd(lumberjack->ssl), &fds);
   struct timeval timeout = { 30, 0 }; /* 30 second timeout waiting for ack */
-  rc = select(1, &fds, NULL, ULL, &timeout);
+  rc = select(1, &fds, NULL, NULL, &timeout);
   if (rc == 0) {
     /* timeout, fail the read */
     errno = ETIMEDOUT;
