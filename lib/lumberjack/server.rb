@@ -209,7 +209,7 @@ module Lumberjack
           #send(event, *args)
         end # feed
       end # while true
-    rescue EOFError, OpenSSL::SSL::SSLError
+    rescue EOFError, OpenSSL::SSL::SSLError, IOError
       # EOF or other read errors, only action is to shutdown which we'll do in
       # 'ensure'
     ensure
