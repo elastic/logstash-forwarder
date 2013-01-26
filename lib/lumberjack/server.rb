@@ -44,120 +44,188 @@ module Lumberjack
 
     def run(&block)
       while true
-        begin 
-          Thread.new(@ssl_server.accept) do |fd| 
-            Connection.new(fd).run(&block)
-          end
-        rescue => e
-          p :accept_error => e
+        Thread.new(@ssl_server.accept) do |fd| 
+          Connection.new(fd).run(&block)
         end
       end
     end # def run
   end # class Server
 
-  class Connection
-    def initialize(fd)
-      @fd = fd
+  class Parser
+    def initialize
+      @buffer_offset = 0
+      @buffer = ""
+      @buffer.force_encoding("BINARY")
+      transition(:header, 2)
     end # def initialize
 
-    def run(&block)
-      begin
-        each_event(&block)
-      rescue IOError, OpenSSL::SSL::SSLError => e
-        p e.class => e
+    def transition(state, next_length)
+      @state = state
+      #puts :transition => state
+      # TODO(sissel): Assert this self.respond_to?(state)
+      # TODO(sissel): Assert state is in STATES
+      # TODO(sissel): Assert next_length is a number
+      need(next_length)
+    end # def transition
+
+    # Feed data to this parser.
+    # 
+    # Currently, it will return the raw payload of websocket messages.
+    # Otherwise, it returns nil if no complete message has yet been consumed.
+    #
+    # @param [String] the string data to feed into the parser. 
+    # @return [String, nil] the websocket message payload, if any, nil otherwise.
+    def feed(data, &block)
+      @buffer << data
+      #p :need => @need
+      while have?(@need)
+        send(@state, &block) 
+        #case @state
+          #when :header; header(&block)
+          #when :window_size; window_size(&block)
+          #when :data_lead; data_lead(&block)
+          #when :data_field_key_len; data_field_key_len(&block)
+          #when :data_field_key; data_field_key(&block)
+          #when :data_field_value_len; data_field_value_len(&block)
+          #when :data_field_value; data_field_value(&block)
+          #when :data_field_value; data_field_value(&block)
+          #when :compressed_lead; compressed_lead(&block)
+          #when :compressed_payload; compressed_payload(&block)
+        #end # case @state
       end
+      return nil
+    end # def <<
+
+    # Do we have at least 'length' bytes in the buffer?
+    def have?(length)
+      return length <= (@buffer.size - @buffer_offset)
+    end # def have?
+
+    # Get 'length' string from the buffer.
+    def get(length=nil)
+      length = @need if length.nil?
+      data = @buffer[@buffer_offset ... @buffer_offset + length]
+      @buffer_offset += length
+      if @buffer_offset > 16384
+        @buffer = @buffer[@buffer_offset  .. -1]
+        @buffer_offset = 0
+      end
+      return data
+    end # def get
+
+    # Set the minimum number of bytes we need in the buffer for the next read.
+    def need(length)
+      @need = length
+    end # def need
+
+    FRAME_WINDOW = "W".ord
+    FRAME_DATA = "D".ord
+    FRAME_COMPRESSED = "C".ord
+    def header(&block)
+      version, frame_type = get.bytes.to_a[0..1]
+
+      case frame_type
+        when FRAME_WINDOW; transition(:window_size, 4)
+        when FRAME_DATA; transition(:data_lead, 8)
+        when FRAME_COMPRESSED; transition(:compressed_lead, 4)
+        else; raise "Unknown frame type: #{frame_type}"
+      end
+    end
+
+    def window_size(&block)
+      @window_size = get.unpack("N").first
+      transition(:header, 2)
+      yield :window_size, @window_size
+    end # def window_size
+
+    def data_lead(&block)
+      @sequence, @data_count = get.unpack("NN")
+      @data = {}
+      transition(:data_field_key_len, 4)
+    end
+
+    def data_field_key_len(&block)
+      key_len = get.unpack("N").first
+      transition(:data_field_key, key_len)
+    end
+
+    def data_field_key(&block)
+      @key = get
+      transition(:data_field_value_len, 4)
+    end
+
+    def data_field_value_len(&block)
+      transition(:data_field_value, get.unpack("N").first)
+    end
+
+    def data_field_value(&block)
+      @value = get
+
+      @data_count -= 1
+      @data[@key] = @value
+
+      if @data_count > 0
+        transition(:data_field_key_len, 4)
+      else
+        transition(:header, 2)
+      end
+
+      yield :data, @sequence, @data
+    end # def data_field_value
+
+    def compressed_lead(&block)
+      length = get.unpack("N").first
+      transition(:compressed_payload, length)
+    end
+    
+    def compressed_payload(&block)
+      original = Zlib::Inflate.inflate(get)
+      transition(:header, 2)
+
+      # Parse the uncompressed payload.
+      feed(original, &block)
+    end
+  end # class Parser
+
+  class Connection
+    def initialize(fd)
+      super()
+      @parser = Parser.new
+      @fd = fd
+      @last_ack = 0
+
+      # a safe default until we are told by the client what window size to use
+      @window_size = 1 
+    end
+
+    def run(&block)
+      while true
+        @parser.feed(@fd.sysread(16384)) do |event, *args|
+          case event
+            when :window_size; window_size(*args, &block)
+            when :data; data(*args, &block)
+          end
+          #send(event, *args)
+        end # feed
+      end # while true
+    rescue EOFError, OpenSSL::SSL::SSLError
+      # EOF or other read errors, only action is to shutdown which we'll do in
+      # 'ensure'
+    ensure
+      @fd.close
     end # def run
 
-    def each_event(&block)
-      last_ack = 0
-      window_size = 0
-      io = IOWrap.new(@fd)
-      while true
-        version = io.read(1)
-        frame = io.read(1)
+    def window_size(size)
+      @window_size = size
+    end
 
-        if frame == "W" # window size
-          window_size = io.read(4).unpack("N").first
-          next
-        elsif frame == "C" # compressed data
-          length = io.read(4).unpack("N").first
-          #puts "Compressed frame length #{length}"
-          compressed = io.read(length)
-          original = Zlib::Inflate.inflate(compressed)
-          #original = LZ4::uncompress(compressed, length)
-          io.pushback(original)
-          next
-        elsif frame != "D"
-          #puts "Unexpected frame type: #{version.inspect} / #{frame.inspect}"
-          io.close
-          return
-        end
-        #
-        # data frame
-        sequence = io.read(4).unpack("N").first
-        count = io.read(4).unpack("N").first
-
-        map = {}
-        count.times do 
-          key_len = io.read(4).unpack("N").first
-          key = io.read(key_len)
-          value_len = io.read(4).unpack("N").first
-          value = io.read(value_len)
-          map[key] = value
-        end
-
-        block.call(map)
-
-        if last_ack > sequence
-          $stderr.puts "last_ack > sequence! #{last_ack} vs #{sequence}. " \
-            "Probably a bug on the client sending us events"
-        end
-        if sequence - last_ack >= window_size
-          # ack this.
-          io.syswrite(["1", "A", sequence].pack("AAN"))
-          last_ack = sequence
-        end
+    def data(sequence, map, &block)
+      block.call(map)
+      if (sequence - @last_ack) >= @window_size
+        @fd.syswrite(["1A", sequence].pack("A*N"))
+        @last_ack = sequence
       end
-    end # def each_event
+    end
   end # class Connection
 
-  # Wrap an io-like object but support pushback.
-  class IOWrap
-    def initialize(io)
-      @io = io
-      @buffer = ""
-    end
-
-    def read(bytes)
-      #puts "Read[#{bytes}]: ---"
-      v = _read(bytes)
-      #puts "Read[#{bytes}]; #{v.inspect}"
-      return v 
-    end
-
-    def _read(bytes)
-      if @buffer.empty?
-        #puts "reading direct from @io"
-        return @io.read(bytes)
-      elsif @buffer.length > bytes
-        #puts "reading buffered"
-        data = @buffer.slice!(0...bytes)
-        return data
-      else
-        data = @buffer.clone
-        @buffer.clear
-        return data + @io.read(bytes - data.length)
-      end
-    end
-
-    def pushback(data)
-      #puts "Pushback: #{data[0..30].inspect}..."
-      @buffer += data
-    end
-
-    def method_missing(method, *args)
-      @io.send(method, *args)
-    end
-  end # class IOWrap
 end # module Lumberjack
-
