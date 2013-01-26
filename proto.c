@@ -429,11 +429,12 @@ static int lumberjack_read_ack(struct lumberjack *lumberjack,
    * This timeout should cause a disconnect and reconnect to a new server.
    * The idea is to prevent one receiving server from becoming overloaded. */
   int rc;
-  fd_set fds;
-  FD_ZERO(&fds);
-  FD_SET(SSL_get_rfd(lumberjack->ssl), &fds);
+  int ssl_fd = SSL_get_rfd(lumberjack->ssl);
+  fd_set read_fds;
+  FD_ZERO(&read_fds);
+  FD_SET(ssl_fd, &read_fds);
   struct timeval timeout = { 30, 0 }; /* 30 second timeout waiting for ack */
-  rc = select(1, &fds, NULL, NULL, &timeout);
+  rc = select(ssl_fd + 1 /* 'max fd in the list' */, &read_fds, NULL, NULL, &timeout);
   if (rc == 0) {
     /* timeout, fail the read */
     errno = ETIMEDOUT;
