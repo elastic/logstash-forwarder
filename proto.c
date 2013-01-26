@@ -425,18 +425,20 @@ static int lumberjack_read_ack(struct lumberjack *lumberjack,
   size_t remaining = 6; /* version + frame type + 32bit sequence value */
   size_t offset = 0;
 
-  /* TODO(sissel): Allow a few seconds for a read timeout. If it occurs, fail this read. */
-  //int rc;
-  //fd_set fds;
-  //FD_ZERO(&fds);
-  //FD_SET(SSL_get_rfd(lumberjack->ssl), &fds);
-  //struct timeval timeout = { 10, 0 }; /* 10 second timeout waiting for ack */
-  //rc = select(1, &fds, NULL, NULL, &timeout);
-  //if (rc == 0) {
-    ///* timeout, fail the read */
-    //errno = ETIMEDOUT;
-    //return -1;
-  //}
+  /* Allow a few seconds for a read timeout. If it occurs, fail this read. 
+   * This timeout should cause a disconnect and reconnect to a new server.
+   * The idea is to prevent one receiving server from becoming overloaded. */
+  int rc;
+  fd_set fds;
+  FD_ZERO(&fds);
+  FD_SET(SSL_get_rfd(lumberjack->ssl), &fds);
+  struct timeval timeout = { 30, 0 }; /* 30 second timeout waiting for ack */
+  rc = select(1, &fds, NULL, ULL, &timeout);
+  if (rc == 0) {
+    /* timeout, fail the read */
+    errno = ETIMEDOUT;
+    return -1;
+  }
 
   while (remaining > 0) {
     bytes = SSL_read(lumberjack->ssl, buf + offset, remaining);
