@@ -140,6 +140,7 @@ int main(int argc, char **argv) {
   /* defaults */
   memset(&emitter_config, 0, sizeof(struct emitter_config));
   emitter_config.port = 5001;
+  emitter_config.window_size = 4096;
   
   /* convert the 'option_doc' array into a 'struct option' array 
    * for use with getopt_long_only */
