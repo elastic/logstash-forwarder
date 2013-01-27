@@ -360,7 +360,9 @@ int lumberjack_flush(struct lumberjack *lumberjack) {
   str_append_char(header, LUMBERJACK_VERSION_1);
   str_append_char(header, LUMBERJACK_COMPRESSED_BLOCK_FRAME);
   str_append_uint32(header, compressed_length);
-  bytes = SSL_write(lumberjack->ssl, str_data(header), str_length(header));
+  flog_if_slow(stdout, 1.0, {
+    bytes = SSL_write(lumberjack->ssl, str_data(header), str_length(header));
+  }, "SSL_write (lumberjack compressed header)", NULL);
   str_free(header);
 
   if (bytes < 0) {
@@ -373,9 +375,12 @@ int lumberjack_flush(struct lumberjack *lumberjack) {
   ssize_t remaining = compressed_length;
   size_t offset = 0;
   while (remaining > 0) {
-    bytes = SSL_write(lumberjack->ssl,
-                      str_data(lumberjack->compression_buffer) + offset,
-                      remaining);
+    flog_if_slow(stdout, 1.0, {
+      bytes = SSL_write(lumberjack->ssl,
+                        str_data(lumberjack->compression_buffer) + offset,
+                        remaining);
+    }, "SSL_write (lumberjack compressed body (%d bytes attempted)", remaining);
+
     /* TODO(sissel): if bytes != chunk_size? */
     if (bytes < 0) {
       /* error occurred while writing. */
@@ -442,7 +447,9 @@ static int lumberjack_read_ack(struct lumberjack *lumberjack,
   }
 
   while (remaining > 0) {
-    bytes = SSL_read(lumberjack->ssl, buf + offset, remaining);
+    flog_if_slow(stdout, 1.0, {
+      bytes = SSL_read(lumberjack->ssl, buf + offset, remaining);
+    }, "SSL_read (tried to read %d bytes)", remaining);
     if (bytes <= 0) {
       /* eof(0) or error(<0). */
       flog(stdout, "bytes <= 0: %ld", (long int) bytes);
