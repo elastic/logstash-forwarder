@@ -18,6 +18,8 @@ Solution: lumberjack
 
 ## Building it
 
+Make sure you have installed FPM (rubygem) and have outgoing FTP access (ftp.openssl.org).
+
 * compile: make 
 * rpm package: make rpm
 * deb package: make deb
