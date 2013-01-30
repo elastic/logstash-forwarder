@@ -44,7 +44,16 @@ module Lumberjack
 
     def run(&block)
       while true
-        Thread.new(@ssl_server.accept) do |fd| 
+        # NOTE: This means ssl accepting is single-threaded.
+        begin
+          client = @ssl_server.accept
+        rescue EOFError, OpenSSL::SSL::SSLError, IOError
+          # ssl handshake failure or other issue, skip it.
+          client.close rescue nil
+          next
+        end
+
+        Thread.new(client) do |fd|
           Connection.new(fd).run(&block)
         end
       end
