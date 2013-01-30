@@ -1,7 +1,7 @@
 # This build actually fails under Fedora 16. I looked at redhat and debian,
 # both apply like 50 patches to openssl prior to packaging.
 VERSION=1.0.1c
-URL=ftp://ftp.openssl.org/source/openssl-$(VERSION).tar.gz
+URL=http://ftp.openssl.org/source/openssl-$(VERSION).tar.gz
 TARBALL=$(shell basename $(URL))
 WORKDIR=openssl-$(VERSION)
 
