@@ -224,7 +224,8 @@ module Lumberjack
       # EOF or other read errors, only action is to shutdown which we'll do in
       # 'ensure'
     ensure
-      @fd.close
+      # Try to ensure it's closed, but if this fails I don't care.
+      @fd.close rescue nil
     end # def run
 
     def window_size(size)
