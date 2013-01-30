@@ -49,6 +49,8 @@ module Lumberjack
           client = @ssl_server.accept
         rescue EOFError, OpenSSL::SSL::SSLError, IOError
           # ssl handshake failure or other issue, skip it.
+          # TODO(sissel): log the error
+          # TODO(sissel): try to identify what client was connecting that failed.
           client.close rescue nil
           next
         end
