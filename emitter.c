@@ -16,8 +16,15 @@
 #include "sleepdefs.h"
 
 void *emitter(void *arg) {
-  struct emitter_config *config = arg;
   int rc;
+  struct emitter_config *config = arg;
+  insist(config->zmq != NULL, "zmq is NULL");
+  insist(config->zmq_endpoint != NULL, "zmq_endpoint is NULL");
+  insist(config->ssl_ca_path != NULL, "ssl_ca_path is NULL");
+  insist(config->window_size > 0, "window_size (%d) must be positive",
+         (int)config->window_size);
+  insist(config->host != NULL, "host is NULL");
+  insist(config->port > 0, "port (%hd) must be positive", config->port);
 
   void *socket = zmq_socket(config->zmq, ZMQ_PULL);
   insist(socket != NULL, "zmq_socket() failed: %s", strerror(errno));
