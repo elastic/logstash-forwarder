@@ -355,6 +355,7 @@ int lumberjack_flush(struct lumberjack *lumberjack) {
   flog(stdout, "lumberjack_flush: flushing %d bytes (compressed to %d bytes)",
        (int)length, (int)compressed_length);
 
+  /* TODO(sissel): Handle timeouts on any writes. */
   /* Write the 'compressed block' frame header */
   struct str *header = str_new_size(6);
   str_append_char(header, LUMBERJACK_VERSION_1);
