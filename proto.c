@@ -87,7 +87,8 @@ struct lumberjack *lumberjack_new(const char *host, unsigned short port, size_t 
 
   lumberjack->io_buffer = str_new_size(16384); /* TODO(sissel): tunable */
 
-  /* zlib provides compressBound() */
+  /* zlib provides compressBound() to give a 'worst case' compressed
+   * payload size on a input payload of a given size. */
   lumberjack->compression_buffer = str_new_size(compressBound(16384));
   return lumberjack;
 } /* lumberjack_new */
@@ -514,7 +515,8 @@ int lumberjack_send_data(struct lumberjack *lumberjack, const char *payload,
 
     /* read at least one ACK */
     flog_if_slow(stdout, 0.500, {
-      lumberjack_wait_for_ack(lumberjack);
+      rc = lumberjack_wait_for_ack(lumberjack);
+      flog(stdout, "lumberjack_wait_for_ack returned %d", rc);
     }, "wait for ack (current sequence: %u)", lumberjack->sequence);
   }
 
