@@ -27,6 +27,9 @@
 #include "sleepdefs.h"
 #include "flog.h"
 
+#define LUMBERJACK_POLL_READ 0x01
+#define LUMBERJACK_POLL_WRITE 0x02
+
 static void lumberjack_init(void);
 static int lumberjack_tcp_connect(struct lumberjack *lumberjack);
 static int lumberjack_ssl_handshake(struct lumberjack *lumberjack);
@@ -34,6 +37,8 @@ static int lumberjack_connected(struct lumberjack *lumberjack);
 static int lumberjack_wait_for_ack(struct lumberjack *lumberjack);
 static int lumberjack_retransmit_all(struct lumberjack *lumberjack);
 static int lumberjack_write_window_size(struct lumberjack *lumberjack);
+static int lumberjack_poll(struct lumberjack *lumberjack,
+                           time_t seconds, int flags);
 
 static int lumberjack_init_done = 0;
 
@@ -274,6 +279,7 @@ static int lumberjack_tcp_connect(struct lumberjack *lumberjack) {
        inet_ntoa(*(struct in_addr *)address), lumberjack->port);
 
   lumberjack->fd = fd;
+
   return 0;
 } /* lumberjack_tcp_connect */
 
@@ -383,6 +389,15 @@ int lumberjack_flush(struct lumberjack *lumberjack) {
   str_append_char(header, LUMBERJACK_VERSION_1);
   str_append_char(header, LUMBERJACK_COMPRESSED_BLOCK_FRAME);
   str_append_uint32(header, compressed_length);
+
+  rc = lumberjack_poll(lumberjack, 10, LUMBERJACK_POLL_WRITE);
+  if ((rc & LUMBERJACK_POLL_WRITE) == 0) {
+    /* socket was not writable after the given timeout. Fail it. */
+    flog(stdout, "Waited 10 seconds for a writable socket. Giving up.");;
+    lumberjack_disconnect(lumberjack);
+    return -1;
+  }
+
   flog_if_slow(stdout, 1.0, {
     bytes = SSL_write(lumberjack->ssl, str_data(header), str_length(header));
   }, "SSL_write (lumberjack compressed header)", NULL);
@@ -406,6 +421,14 @@ int lumberjack_flush(struct lumberjack *lumberjack) {
   backoff_init(&sleeper, &MIN_SLEEP, &MAX_SLEEP);
 
   while (remaining > 0) {
+    rc = lumberjack_poll(lumberjack, 10, LUMBERJACK_POLL_WRITE);
+    if ((rc & LUMBERJACK_POLL_WRITE) == 0) {
+      /* socket was not writable after the given timeout. Fail it. */
+      flog(stdout, "Waited 10 seconds for a writable socket. Giving up.");
+      lumberjack_disconnect(lumberjack);
+      return -1;
+    }
+
     bytes = SSL_write(lumberjack->ssl,
                       str_data(lumberjack->compression_buffer) + offset,
                       remaining);
@@ -473,23 +496,19 @@ static int lumberjack_read_ack(struct lumberjack *lumberjack,
   size_t remaining = 6; /* version + frame type + 32bit sequence value */
   size_t offset = 0;
 
-  /* Allow a few seconds for a read timeout. If it occurs, fail this read. 
-   * This timeout should cause a disconnect and reconnect to a new server.
-   * The idea is to prevent one receiving server from becoming overloaded. */
   int rc;
-  int ssl_fd = SSL_get_rfd(lumberjack->ssl);
-  fd_set read_fds;
-  FD_ZERO(&read_fds);
-  FD_SET(ssl_fd, &read_fds);
-  struct timeval timeout = { 10, 0 }; /* 10 second timeout waiting for ack */
-  rc = select(ssl_fd + 1 /* 'max fd in the list' */, &read_fds, NULL, NULL, &timeout);
-  if (rc == 0) {
-    /* timeout, fail the read */
-    errno = ETIMEDOUT;
-    return -1;
-  }
-
   while (remaining > 0) {
+    /* Allow a few seconds for a read timeout. If it occurs, fail this read. 
+     * This timeout should cause a disconnect and reconnect to a new server.
+     * The idea is to prevent one receiving server from becoming overloaded. */
+    rc = lumberjack_poll(lumberjack, 10, LUMBERJACK_POLL_READ);
+    if ((rc & LUMBERJACK_POLL_READ) == 0) {
+      /* socket was not writable after the given timeout. Fail it. */
+      flog(stdout, "Waited 10 seconds for a readable socket. Giving up.");
+      errno = ETIMEDOUT;
+      return -1;
+    }
+
     flog_if_slow(stdout, 1.0, {
       bytes = SSL_read(lumberjack->ssl, buf + offset, remaining);
     }, "SSL_read (tried to read %d bytes)", remaining);
@@ -709,3 +728,36 @@ int lumberjack_write_window_size(struct lumberjack *lumberjack) {
   }
   return 0;
 } /* lumberjack_write_window_size */
+
+int lumberjack_poll(struct lumberjack *lumberjack, time_t seconds, int flags) {
+  int ssl_fd = SSL_get_rfd(lumberjack->ssl);
+  fd_set read_fds, write_fds;
+  FD_ZERO(&read_fds);
+  FD_ZERO(&write_fds);
+
+  if (flags & LUMBERJACK_POLL_READ) {
+    FD_SET(ssl_fd, &read_fds);
+  }
+  if (flags & LUMBERJACK_POLL_WRITE) {
+    FD_SET(ssl_fd, &write_fds);
+  }
+
+  struct timeval timeout = { seconds, 0 }; 
+
+  int rc = select(ssl_fd + 1 /* 'max fd in the list' */,
+                    &read_fds, &write_fds, NULL, &timeout);
+  if (rc == 0) {
+    /* timeout, fail the read */
+    errno = ETIMEDOUT;
+    return 0;
+  }
+
+  int retval = 0;
+  if (FD_ISSET(ssl_fd, &read_fds)) {
+    retval |= LUMBERJACK_POLL_READ;
+  }
+  if (FD_ISSET(ssl_fd, &write_fds)) {
+    retval |= LUMBERJACK_POLL_WRITE;
+  }
+  return retval;
+} /* lumberjack_poll */
