@@ -151,6 +151,15 @@ int lumberjack_connect(struct lumberjack *lumberjack) {
     return -1;
   }
 
+  /* Always truncate the output buffer on a new connection.
+   * This prevents accidental buffer leaks from an old/dead connection 
+   * into this new one. 
+   *
+   * The symptom of such a leak is that, upon a new connection, 
+   * the oldest non-ack'd event is not the first event seen by the receiver. 
+   */
+  str_truncate(lumberjack->io_buffer);
+
   /* Retransmit anything currently in the ring (unacknowledged data frames) 
    * This is a no-op if there's nothing in the ring. */
   rc = lumberjack_retransmit_all(lumberjack);
