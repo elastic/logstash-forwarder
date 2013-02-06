@@ -13,6 +13,7 @@
 
 #include <sys/resource.h>
 
+#include "zmq_compat.h"
 #include "sleepdefs.h"
 
 void *emitter(void *arg) {
@@ -29,7 +30,8 @@ void *emitter(void *arg) {
   void *socket = zmq_socket(config->zmq, ZMQ_PULL);
   insist(socket != NULL, "zmq_socket() failed: %s", strerror(errno));
   int64_t hwm = 100;
-  zmq_setsockopt(socket, ZMQ_HWM, &hwm, sizeof(hwm));
+  //zmq_setsockopt(socket, ZMQ_HWM, &hwm, sizeof(hwm));
+  zmq_compat_set_recvhwm(socket, hwm);
   rc = zmq_bind(socket, config->zmq_endpoint);
   insist(rc != -1, "zmq_bind(%s) failed: %s", config->zmq_endpoint,
          zmq_strerror(errno));
@@ -90,7 +92,8 @@ void *emitter(void *arg) {
     } 
 
     /* poll successful, read a message */
-    rc = zmq_recv(socket, &message, 0);
+    //rc = zmq_recv(socket, &message, 0);
+    rc = zmq_compat_recvmsg(socket, &message, 0);
     insist(rc == 0 /*|| errno == EAGAIN */,
            "zmq_recv(%s) failed (returned %d): %s",
            config->zmq_endpoint, rc, zmq_strerror(errno));

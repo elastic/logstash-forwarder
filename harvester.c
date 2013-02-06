@@ -16,6 +16,7 @@
 #include "insist.h"
 #include "sleepdefs.h"
 #include "flog.h"
+#include "zmq_compat.h"
 
 #ifdef __MACH__
 /* OS X is dumb, or I am dumb, or we are both dumb. I don't know anymore,
@@ -85,7 +86,8 @@ void *harvest(void *arg) {
   insist(socket != NULL, "zmq_socket() failed: %s", strerror(errno));
 
   int64_t hwm = 100;
-  zmq_setsockopt(socket, ZMQ_HWM, &hwm, sizeof(hwm));
+  //zmq_setsockopt(socket, ZMQ_HWM, &hwm, sizeof(hwm));
+  zmq_compat_set_sendhwm(socket, hwm);
 
   /* Wait for the zmq endpoint to be up (wait for connect to succeed) */
   struct backoff sleeper;
@@ -150,7 +152,8 @@ void *harvest(void *arg) {
           zmq_msg_init_data(&event, str_data(serialized), str_length(serialized),
                             my_str_free, serialized);
           flog_if_slow(stdout, 0.250, {
-            rc = zmq_send(socket, &event, 0);
+            //rc = zmq_send(socket, &event, 0);
+            rc = zmq_compat_sendmsg(socket, &event, 0);
           }, "zmq_send (harvesting file '%s')", config->path);
           insist(rc == 0, "zmq_send(event) failed: %s", zmq_strerror(rc));
           zmq_msg_close(&event);
