@@ -547,7 +547,9 @@ int lumberjack_send_data(struct lumberjack *lumberjack, const char *payload,
     /* read at least one ACK */
     flog_if_slow(stdout, 0.500, {
       rc = lumberjack_wait_for_ack(lumberjack);
-      flog(stdout, "lumberjack_wait_for_ack returned %d", rc);
+      if (rc != 0) {
+        flog(stdout, "lumberjack_wait_for_ack failed %d", rc);
+      }
     }, "wait for ack (current sequence: %u)", lumberjack->sequence);
   }
 
@@ -583,6 +585,8 @@ static int lumberjack_wait_for_ack(struct lumberjack *lumberjack) {
     backoff(&sleeper);
     lumberjack_ensure_connected(lumberjack);
   }
+
+  flog(stdout, "lumberjack_wait_for_ack: received ack: %u", ack);
 
   /* TODO(sissel): Verify this is even a sane ack */
 
