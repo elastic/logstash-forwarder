@@ -162,6 +162,7 @@ int lumberjack_connect(struct lumberjack *lumberjack) {
   /* Send our window size */
   rc = lumberjack_write_window_size(lumberjack);
   if (rc < 0) {
+    flog(stdout, "lumberjack_write_window_size failed: %d", rc);
     lumberjack_disconnect(lumberjack);
     return -1;
   }
@@ -230,7 +231,7 @@ static struct hostent *lumberjack_choose_address(const char *host) {
       if (hostlist->nitems > 1) {
         /* only log that we've selected a random host if there's multiple hosts
          * in the list. */
-        flog(stdout, "Random host selection: %s from %s\n", chosen, host);
+        flog(stdout, "Random host selection: %s from %s", chosen, host);
       }
     }
   }
@@ -390,10 +391,11 @@ int lumberjack_flush(struct lumberjack *lumberjack) {
   str_append_char(header, LUMBERJACK_COMPRESSED_BLOCK_FRAME);
   str_append_uint32(header, compressed_length);
 
-  rc = lumberjack_poll(lumberjack, 10, LUMBERJACK_POLL_WRITE);
+  time_t timeout = 30;
+  rc = lumberjack_poll(lumberjack, timeout, LUMBERJACK_POLL_WRITE);
   if ((rc & LUMBERJACK_POLL_WRITE) == 0) {
     /* socket was not writable after the given timeout. Fail it. */
-    flog(stdout, "Waited 10 seconds for a writable socket. Giving up.");;
+    flog(stdout, "Waited %d seconds for a writable socket. Giving up.", timeout);
     lumberjack_disconnect(lumberjack);
     return -1;
   }
@@ -405,6 +407,12 @@ int lumberjack_flush(struct lumberjack *lumberjack) {
 
   if (bytes < 0) {
     /* error occurred while writing. */
+    rc = SSL_get_error(lumberjack->ssl, bytes);
+    flog(stdout, "SSL_write returned %d (code: %d), something is wrong",
+         bytes, rc);
+    flog(stdout, "SSL_write error vv");
+    ERR_print_errors_fp(stdout);
+    flog(stdout, "SSL_write error ^^");
     lumberjack_disconnect(lumberjack);
     return -1;
   }
@@ -421,10 +429,11 @@ int lumberjack_flush(struct lumberjack *lumberjack) {
   backoff_init(&sleeper, &MIN_SLEEP, &MAX_SLEEP);
 
   while (remaining > 0) {
-    rc = lumberjack_poll(lumberjack, 10, LUMBERJACK_POLL_WRITE);
+    time_t timeout = 30;
+    rc = lumberjack_poll(lumberjack, timeout, LUMBERJACK_POLL_WRITE);
     if ((rc & LUMBERJACK_POLL_WRITE) == 0) {
       /* socket was not writable after the given timeout. Fail it. */
-      flog(stdout, "Waited 10 seconds for a writable socket. Giving up.");
+      flog(stdout, "Waited %d seconds for a writable socket. Giving up.", timeout);
       lumberjack_disconnect(lumberjack);
       return -1;
     }
@@ -501,10 +510,11 @@ static int lumberjack_read_ack(struct lumberjack *lumberjack,
     /* Allow a few seconds for a read timeout. If it occurs, fail this read. 
      * This timeout should cause a disconnect and reconnect to a new server.
      * The idea is to prevent one receiving server from becoming overloaded. */
-    rc = lumberjack_poll(lumberjack, 10, LUMBERJACK_POLL_READ);
+    time_t timeout = 30;
+    rc = lumberjack_poll(lumberjack, timeout, LUMBERJACK_POLL_READ);
     if ((rc & LUMBERJACK_POLL_READ) == 0) {
       /* socket was not writable after the given timeout. Fail it. */
-      flog(stdout, "Waited 10 seconds for a readable socket. Giving up.");
+      flog(stdout, "Waited %d seconds for a readable socket. Giving up.", timeout);
       errno = ETIMEDOUT;
       return -1;
     }
@@ -576,6 +586,7 @@ int lumberjack_send_data(struct lumberjack *lumberjack, const char *payload,
   rc = lumberjack_write(lumberjack, frame);
   if (rc != 0) {
     /* write failure, reconnect (which will resend) and such */
+    flog(stdout, "lumberjack_write failed: %d", rc);
     lumberjack_disconnect(lumberjack);
     lumberjack_ensure_connected(lumberjack);
   }
