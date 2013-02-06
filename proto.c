@@ -78,7 +78,7 @@ struct lumberjack *lumberjack_new(const char *host, unsigned short port, size_t 
          window_size);
   }
 
-  lumberjack->ring_size = window_size; /* TODO(sissel): tunable */
+  lumberjack->ring_size = window_size;
   lumberjack->ring = ring_new_size(lumberjack->ring_size);
 
   /* Create this once. */
@@ -227,7 +227,6 @@ static int lumberjack_tcp_connect(struct lumberjack *lumberjack) {
   int rc;
   int fd;
 
-  flog(stdout, "Choosing a new lumberjack server: %s", lumberjack->host);
   struct hostent *hostinfo = lumberjack_choose_address(lumberjack->host);
 
   /* 'struct hostent' has the list of addresses resolved in 'h_addr_list'
@@ -243,8 +242,8 @@ static int lumberjack_tcp_connect(struct lumberjack *lumberjack) {
   insist(fd >= 0, "socket() failed: %s", strerror(errno));
 
   struct sockaddr_in sockaddr;
-  sockaddr.sin_family = PF_INET,
-  sockaddr.sin_port = htons(lumberjack->port),
+  sockaddr.sin_family = PF_INET;
+  sockaddr.sin_port = htons(lumberjack->port);
   memcpy(&sockaddr.sin_addr, address, hostinfo->h_length);
 
   flog_if_slow(stdout, 0.250, {
@@ -287,6 +286,8 @@ static int lumberjack_ssl_handshake(struct lumberjack *lumberjack) {
     switch(SSL_get_error(lumberjack->ssl, rc)) {
       case SSL_ERROR_WANT_READ:
       case SSL_ERROR_WANT_WRITE:
+        /* TODO(sissel): Instead of sleeping, we should call select() for
+         * whichever case (read or write) is wanted */
         backoff(&sleeper);
         continue; /* retry */
       default:
@@ -321,6 +322,11 @@ int lumberjack_write(struct lumberjack *lumberjack, struct str *payload) {
    */
   str_append_str(lumberjack->io_buffer, payload);
 
+  //uint32_t seq;
+  //memcpy(&seq, str_data(frame) + 2, sizeof(uint32_t));
+  //seq = ntohl(seq);
+  //flog(stdout, "io_buffer: %.*s", str_length(lumberjack->io_buffer), str_data(lumberjack->io_buffer));
+
   if (str_length(lumberjack->io_buffer) > 16384) {
     flog(stdout, "io_buffer large enough (%d), flushing",
          str_length(lumberjack->io_buffer));
@@ -352,8 +358,8 @@ int lumberjack_flush(struct lumberjack *lumberjack) {
          compressed_length, length, rc);
 
   str_truncate(lumberjack->io_buffer);
-  flog(stdout, "lumberjack_flush: flushing %d bytes (compressed to %d bytes)",
-       (int)length, (int)compressed_length);
+  //flog(stdout, "lumberjack_flush: flushing %d bytes (compressed to %d bytes)",
+       //(int)length, (int)compressed_length);
 
   /* TODO(sissel): Handle timeouts on any writes. */
   /* Write the 'compressed block' frame header */
@@ -527,6 +533,7 @@ static int lumberjack_wait_for_ack(struct lumberjack *lumberjack) {
 
   flog(stdout, "lumberjack_wait_for_ack: waiting for ack");
 
+  /* Wait for an ack */
   while ((rc = lumberjack_read_ack(lumberjack, &ack)) < 0) {
     /* read error. */
     flog(stdout, "lumberjack_read_ack failed: %s", strerror(errno));
