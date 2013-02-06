@@ -481,7 +481,7 @@ static int lumberjack_read_ack(struct lumberjack *lumberjack,
   fd_set read_fds;
   FD_ZERO(&read_fds);
   FD_SET(ssl_fd, &read_fds);
-  struct timeval timeout = { 30, 0 }; /* 30 second timeout waiting for ack */
+  struct timeval timeout = { 10, 0 }; /* 10 second timeout waiting for ack */
   rc = select(ssl_fd + 1 /* 'max fd in the list' */, &read_fds, NULL, NULL, &timeout);
   if (rc == 0) {
     /* timeout, fail the read */
