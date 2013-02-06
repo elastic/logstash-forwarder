@@ -397,18 +397,38 @@ int lumberjack_flush(struct lumberjack *lumberjack) {
   /* write the compressed payload */
   ssize_t remaining = compressed_length;
   size_t offset = 0;
-  while (remaining > 0) {
-    flog_if_slow(stdout, 1.0, {
-      bytes = SSL_write(lumberjack->ssl,
-                        str_data(lumberjack->compression_buffer) + offset,
-                        remaining);
-    }, "SSL_write (lumberjack compressed body (%d bytes attempted)", remaining);
+  
+  struct timeval start;
+  gettimeofday(&start, NULL);
+  double elapsed;
 
-    /* TODO(sissel): if bytes != chunk_size? */
+  struct backoff sleeper;
+  backoff_init(&sleeper, &MIN_SLEEP, &MAX_SLEEP);
+
+  while (remaining > 0) {
+    bytes = SSL_write(lumberjack->ssl,
+                      str_data(lumberjack->compression_buffer) + offset,
+                      remaining);
+
     if (bytes < 0) {
-      /* error occurred while writing. */
-      lumberjack_disconnect(lumberjack);
-      return -1;
+      elapsed = duration(&start);
+      if (elapsed > 30) {
+        flog(stdout, "SSL_write took too long (%.3f seconds), assuming " \
+             "dead/busy server and disconnecting.", elapsed);
+        lumberjack_disconnect(lumberjack);
+        return -1;
+      }
+
+      rc = SSL_get_error(lumberjack->ssl, bytes);
+      if (rc == SSL_ERROR_WANT_READ) {
+        /* TODO(sissel): instead of backing off, select for read, then retry
+         * the write. */
+        backoff(&sleeper);
+      } else if (rc == SSL_ERROR_WANT_WRITE) {
+        /* TODO(sissel): instead of backing off, select for write, then retry
+         * the write. */
+        backoff(&sleeper);
+      }
     }
 
     remaining -= bytes;
