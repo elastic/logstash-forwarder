@@ -350,8 +350,8 @@ int lumberjack_write(struct lumberjack *lumberjack, struct str *payload) {
   //flog(stdout, "io_buffer: %.*s", str_length(lumberjack->io_buffer), str_data(lumberjack->io_buffer));
 
   if (str_length(lumberjack->io_buffer) > 16384) {
-    flog(stdout, "io_buffer large enough (%d), flushing",
-         str_length(lumberjack->io_buffer));
+    //flog(stdout, "io_buffer large enough (%d), flushing",
+         //str_length(lumberjack->io_buffer));
     return lumberjack_flush(lumberjack);
   }
   return 0;
