@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "proto.h"
+#include "flog.h"
 
 #define ZMQ_EMITTER_ENDPOINT "inproc://emitter"
 
@@ -93,7 +94,7 @@ void set_resource_limits(int file_count) {
 
   if ((getenv("LD_PRELOAD") != NULL) \
       && (strstr(getenv("LD_PRELOAD"), "/vgpreload_") != NULL)) {
-    printf("Valgrind detected, skipping self-resource limitations\n");
+    flog(stdout, "Valgrind detected, skipping self-resource limitations\n");
     return;
   }
 
@@ -103,7 +104,7 @@ void set_resource_limits(int file_count) {
    *   - two for the socketpair in zeromq
    * */
   limits.rlim_cur = limits.rlim_max = (file_count * 3 ) + 100;
-  printf("Watching %d files, setting open file limit to %ld\n",
+  flog(stdout, "Watching %d files, setting open file limit to %ld\n",
          file_count, limits.rlim_max);
   rc = setrlimit(RLIMIT_NOFILE, &limits);
   insist(rc != -1, "setrlimit(RLIMIT_NOFILE, ... %d) failed: %s\n",
@@ -122,8 +123,8 @@ void set_resource_limits(int file_count) {
   int bytes = (1<<20 * file_count);
   /* RLIMIT_RSS uses 'pages' as the unit, convert bytes to pages. */
   limits.rlim_cur = limits.rlim_max = (int)(bytes / sysconf(_SC_PAGESIZE));
-  printf("Watching %d files, setting memory usagelimit to %d bytes\n",
-         file_count, bytes); 
+  flog(stdout, "Watching %d files, setting memory usage limit to %d bytes\n",
+       file_count, bytes); 
   rc = setrlimit(RLIMIT_RSS, &limits);
   insist(rc != -1, "setrlimit(RLIMIT_RSS, %d pages (%d bytes)) failed: %s\n",
          (int)limits.rlim_max, bytes, strerror(errno));
