@@ -493,10 +493,15 @@ static int lumberjack_read_ack(struct lumberjack *lumberjack,
     flog_if_slow(stdout, 1.0, {
       bytes = SSL_read(lumberjack->ssl, buf + offset, remaining);
     }, "SSL_read (tried to read %d bytes)", remaining);
-    if (bytes <= 0) {
-      /* eof(0) or error(<0). */
-      flog(stdout, "bytes <= 0: %ld", (long int) bytes);
-      errno = EPIPE; /* close enough? */
+    if (bytes == 0) {
+      /* EOF or some other similar error */
+      errno = EPIPE; /* close enough to fake EOF? */
+      return -1;
+    } else if (bytes < 0) {
+      rc = SSL_get_error(lumberjack->ssl, bytes /* error code */);
+      flog(stdout, "SSL_read error vv");
+      ERR_print_errors_fp(stdout);
+      flog(stdout, "SSL_read error ^^");
       return -1;
     }
     offset += bytes;
