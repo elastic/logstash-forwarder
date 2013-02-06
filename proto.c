@@ -221,6 +221,12 @@ static struct hostent *lumberjack_choose_address(const char *host) {
       flog(stdout, "gethostbyname(%s) failed: %s", chosen,
            hstrerror(h_errno));
       backoff(&sleeper);
+    } else {
+      if (hostlist->nitems > 1) {
+        /* only log that we've selected a random host if there's multiple hosts
+         * in the list. */
+        flog(stdout, "Random host selection: %s from %s\n", chosen, host);
+      }
     }
   }
   strlist_free(hostlist);
