@@ -408,11 +408,15 @@ int lumberjack_flush(struct lumberjack *lumberjack) {
   if (bytes < 0) {
     /* error occurred while writing. */
     rc = SSL_get_error(lumberjack->ssl, bytes);
-    flog(stdout, "SSL_write returned %d (code: %d), something is wrong",
-         bytes, rc);
-    flog(stdout, "SSL_write error vv");
-    ERR_print_errors_fp(stdout);
-    flog(stdout, "SSL_write error ^^");
+    if (rc == SSL_ERROR_SYSCALL) {
+      flog(stdout, "SSL_write failed: %s", strerror(errno));
+    } else {
+      flog(stdout, "SSL_write returned %d (code: %d), something is wrong",
+           bytes, rc);
+      flog(stdout, "SSL_write error vv");
+      ERR_print_errors_fp(stdout);
+      flog(stdout, "SSL_write error ^^");
+    }
     lumberjack_disconnect(lumberjack);
     return -1;
   }
