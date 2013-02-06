@@ -105,7 +105,8 @@ void *harvest(void *arg) {
   for (;;) {
     flog_if_slow(stdout, 0.250, {
       bytes = read(fd, buf + offset, BUFFERSIZE - offset - 1);
-    }, "read of %d bytes on '%s'", BUFFERSIZE - offset - 1, config->path);
+    }, "read of %d bytes (got %d bytes) on '%s'",
+    BUFFERSIZE - offset - 1, bytes, config->path);
 
     offset += bytes;
     if (bytes < 0) {
