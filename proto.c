@@ -618,12 +618,8 @@ static int lumberjack_retransmit_all(struct lumberjack *lumberjack) {
    * un-acknowledged. Send it. */
   for (int i = 0, count = ring_count(lumberjack->ring); i < count; i++) {
     struct str *frame;
-    //uint32_t seq;
     rc = ring_peek(lumberjack->ring, i, (void **)&frame);
     insist(rc == RING_OK, "ring_peek(%d) failed unexpectedly: %d\n", i, rc);
-    //memcpy(&seq, str_data(frame) + 2, sizeof(uint32_t));
-    //seq = ntohl(seq);
-    //printf("Retransmitting seq %d\n", seq);
     rc = lumberjack_write(lumberjack, frame);
 
     if (rc != 0) {
