@@ -145,13 +145,6 @@ int lumberjack_connect(struct lumberjack *lumberjack) {
   /* If we get here, tcp connect + ssl handshake has succeeded */
   lumberjack->connected = 1;
 
-  /* Send our window size */
-  rc = lumberjack_write_window_size(lumberjack);
-  if (rc < 0) {
-    lumberjack_disconnect(lumberjack);
-    return -1;
-  }
-
   /* Always truncate the output buffer on a new connection.
    * This prevents accidental buffer leaks from an old/dead connection 
    * into this new one. 
@@ -160,6 +153,13 @@ int lumberjack_connect(struct lumberjack *lumberjack) {
    * the oldest non-ack'd event is not the first event seen by the receiver. 
    */
   str_truncate(lumberjack->io_buffer);
+
+  /* Send our window size */
+  rc = lumberjack_write_window_size(lumberjack);
+  if (rc < 0) {
+    lumberjack_disconnect(lumberjack);
+    return -1;
+  }
 
   /* Retransmit anything currently in the ring (unacknowledged data frames) 
    * This is a no-op if there's nothing in the ring. */
@@ -684,8 +684,13 @@ struct str* lumberjack_kv_pack(struct kv *kv_list, size_t kv_count) {
 int lumberjack_write_window_size(struct lumberjack *lumberjack) {
   uint32_t size = lumberjack->ring_size;
   char data[6];
+
+  flog(stdout, "Declaring window size of %u", size);
+
   data[0] = LUMBERJACK_VERSION_1;
   data[1] = LUMBERJACK_WINDOW_SIZE_FRAME;
+  
+  /* network byte order! */
   size = htonl(size);
   memcpy(data + 2, &size, sizeof(uint32_t));
 
