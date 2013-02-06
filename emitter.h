@@ -9,7 +9,7 @@ struct emitter_config {
   size_t window_size; /* the window size */
 
   char *host;
-  short port;
+  unsigned short port;
 };
 
 void *emitter(void *arg);

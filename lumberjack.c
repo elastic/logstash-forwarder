@@ -173,7 +173,7 @@ int main(int argc, char **argv) {
         emitter_config.host = strdup(optarg);
         break;
       case opt_port:
-        emitter_config.port = (short)atoi(optarg);
+        emitter_config.port = (unsigned short)atoi(optarg);
         break;
       case opt_window_size:
         emitter_config.window_size = (size_t)atoi(optarg);
