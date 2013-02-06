@@ -79,8 +79,8 @@ struct lumberjack *lumberjack_new(const char *host, unsigned short port, size_t 
    * in a local network, an window size of 1024 seemed to have the best
    * performance (equal to 2048 and 16384) for the least memory cost. */
   if (window_size < 1024) {
-    flog(stdout, "Window size less than 1024 (%d) isn't shown to have performance benefits",
-         window_size);
+    flog(stdout, "Window size less than 1024 (%d) isn't shown to have " \
+         "speed-performance benefits", window_size);
   }
 
   lumberjack->ring_size = window_size;
