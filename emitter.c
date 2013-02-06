@@ -60,6 +60,7 @@ void *emitter(void *arg) {
   items[0].socket = socket;
   items[0].events = ZMQ_POLLIN;
 
+  int can_flush = 0;
   for (;;) {
     /* Receive an event from a harvester and put it in the queue */
     zmq_msg_t message;
@@ -70,16 +71,21 @@ void *emitter(void *arg) {
 
     if (rc == 0) {
       /* poll timeout. We're idle, so let's flush and back-off. */
-      //if (rc != 0 && errno == EAGAIN) {
-      flog(stdout, "flushing since nothing came in over zmq");
-      /* We flush here to keep slow feeders closer to real-time */
-      rc = lumberjack_flush(lumberjack);
-      if (rc != 0) {
-        /* write failure, reconnect (which will resend) and such */
-        lumberjack_disconnect(lumberjack);
-        lumberjack_ensure_connected(lumberjack);
+      if (can_flush) {
+        /* only flush if there's something to flush... */
+        flog(stdout, "flushing since nothing came in over zmq");
+        /* We flush here to keep slow feeders closer to real-time */
+        rc = lumberjack_flush(lumberjack);
+        can_flush = 0;
+        if (rc != 0) {
+          /* write failure, reconnect (which will resend) and such */
+          lumberjack_disconnect(lumberjack);
+          lumberjack_ensure_connected(lumberjack);
+        }
       }
       backoff(&sleeper);
+
+      /* Restart the loop - checking to see if there's any messages */
       continue;
     } 
 
@@ -96,6 +102,8 @@ void *emitter(void *arg) {
      * connection/reconnection/ack issues */
     lumberjack_send_data(lumberjack, zmq_msg_data(&message),
                          zmq_msg_size(&message));
+    /* Since we sent data, let it be known that we can flush if idle */
+    can_flush = 1;
     /* Stats for debugging */
     count++;
     bytes += zmq_msg_size(&message);
