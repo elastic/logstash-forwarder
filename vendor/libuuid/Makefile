@@ -9,7 +9,7 @@ default: build
 include ../Makefile.ext
 
 UUID_DIR=$(WORKDIR)/shlibs/uuid
-$(UUID_DIR)/.libs/libuuid.so: configure
+$(UUID_DIR)/.libs/libuuid.$(LIBEXT): configure
 	$(MAKE) -C $(WORKDIR)/shlibs/uuid
 
 .PHONY: configure
@@ -20,20 +20,20 @@ $(WORKDIR)/Makefile: | $(WORKDIR)
 	cd $(WORKDIR); ./configure --prefix=$(PREFIX) --without-ncurses
 
 .PHONY: install
-install: $(PREFIX)/lib/libuuid.so $(PREFIX)/include/uuid/uuid.h $(PREFIX)/lib/libuuid.so.1
+install: $(PREFIX)/lib/libuuid.$(LIBEXT) $(PREFIX)/include/uuid/uuid.h $(PREFIX)/lib/libuuid.$(LIBEXT).1
 
-build: $(UUID_DIR)/.libs/libuuid.so
+build: $(UUID_DIR)/.libs/libuuid.$(LIBEXT)
 	make -C $(UUID_DIR)
 
-$(PREFIX)/lib/libuuid.so.1: | build $(PREFIX)/lib
+$(PREFIX)/lib/libuuid.$(LIBEXT).1: | build $(PREFIX)/lib
 	@if [ -z "$(PREFIX)" ] ; then \
 		echo "No PREFIX set, can't install" ; \
 		exit 1; \
 	fi
 	cp $(UUID_DIR)/src/.libs/$(shell basename $@) $@
 
-$(PREFIX)/lib/libuuid.so: | $(PREFIX)/lib/libuuid.so.1
-	ln -sf libuuid.so.1 $@
+$(PREFIX)/lib/libuuid.$(LIBEXT): | $(PREFIX)/lib/libuuid.$(LIBEXT).1
+	ln -sf libuuid.$(LIBEXT).1 $@
 
 $(PREFIX)/include/uuid/%.h: | build $(PREFIX)/include
 	@if [ -z "$(PREFIX)" ] ; then \
