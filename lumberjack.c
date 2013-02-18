@@ -86,7 +86,7 @@ void set_resource_limits(int file_count) {
   int rc;
 
   rc = nice(1); /* ask for less priority in the scheduler */
-  insist(rc != -1, "nice(1) failed: %s\n", strerror(errno));
+  insist(rc != -1, "nice(1) failed: %s", strerror(errno));
 
   /* Only set resource limits if not running under valgrind.
    * If we set limits under valgrind, it crashes due to exceeding said limits
@@ -94,7 +94,7 @@ void set_resource_limits(int file_count) {
 
   if ((getenv("LD_PRELOAD") != NULL) \
       && (strstr(getenv("LD_PRELOAD"), "/vgpreload_") != NULL)) {
-    flog(stdout, "Valgrind detected, skipping self-resource limitations\n");
+    flog(stdout, "Valgrind detected, skipping self-resource limitations");
     return;
   }
 
@@ -104,10 +104,10 @@ void set_resource_limits(int file_count) {
    *   - two for the socketpair in zeromq
    * */
   limits.rlim_cur = limits.rlim_max = (file_count * 3 ) + 100;
-  flog(stdout, "Watching %d files, setting open file limit to %ld\n",
+  flog(stdout, "Watching %d files, setting open file limit to %ld",
          file_count, limits.rlim_max);
   rc = setrlimit(RLIMIT_NOFILE, &limits);
-  insist(rc != -1, "setrlimit(RLIMIT_NOFILE, ... %d) failed: %s\n",
+  insist(rc != -1, "setrlimit(RLIMIT_NOFILE, ... %d) failed: %s",
          (int)limits.rlim_max, strerror(errno));
 
   /* I'd like to set RLIMIT_NPROC, but that setting applies to the entire user
@@ -120,13 +120,13 @@ void set_resource_limits(int file_count) {
 
   /* Set resident memory limit */
   /* Allow 1mb per file opened */
-  int bytes = (1<<20 * file_count);
+  int bytes = (1<<20) * file_count;
   /* RLIMIT_RSS uses 'pages' as the unit, convert bytes to pages. */
   limits.rlim_cur = limits.rlim_max = (int)(bytes / sysconf(_SC_PAGESIZE));
-  flog(stdout, "Watching %d files, setting memory usage limit to %d bytes\n",
+  flog(stdout, "Watching %d files, setting memory usage limit to %d bytes",
        file_count, bytes); 
   rc = setrlimit(RLIMIT_RSS, &limits);
-  insist(rc != -1, "setrlimit(RLIMIT_RSS, %d pages (%d bytes)) failed: %s\n",
+  insist(rc != -1, "setrlimit(RLIMIT_RSS, %d pages (%d bytes)) failed: %s",
          (int)limits.rlim_max, bytes, strerror(errno));
 } /* set_resource_limits */
 
@@ -258,7 +258,7 @@ int main(int argc, char **argv) {
     pthread_join(harvesters[i], NULL);
   }
 
-  printf("All harvesters completed. Exiting.\n");
+  flog(stdout, "All harvesters completed. Exiting.");
   free(harvesters);
 
   /* TODO(sissel): Tell emitter to flush and exit */
