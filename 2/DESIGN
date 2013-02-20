@@ -1,0 +1,33 @@
+
+Harvester reads events from files
+  Event:
+    Byte offset of start of event (number)
+    Line number of event (number)
+    File origin of event (string)
+    Message (string)
+
+Work model:
+  Harvester(s) 
+    -> Buffer (flush when full or after N idle seconds)
+      -> Compressor
+        -> Encryptor 
+          -> Emitter
+
+Network model w/ ZMQ:
+  pushpull events
+  reqreq for acknowledgements
+  
+
+Types of events:
+  File Event - represents an event read from a file
+    - file origin of event
+    - byte offset of event
+    - line number of event
+    - event message (the contents)
+  Compressed Envelope
+    - number of items
+    - type of item
+    - compressed payload
+  Encrypted Envelope
+    - cipher
+    - payload
