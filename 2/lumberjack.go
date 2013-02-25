@@ -3,6 +3,7 @@ package main
 import (
   "fmt"
   "lumberjack"
+  "os"
   "time"
   proto "code.google.com/p/goprotobuf/proto"
 )
@@ -16,36 +17,37 @@ func emit(events []*lumberjack.FileEvent) {
 func main() {
   // TODO(sissel): support flags for setting... stuff
   event_chan := make(chan *lumberjack.FileEvent, 32)
-  emitter_chan := make(chan *lumberjack.EventEnvelope, 1)
+  publisher_chan := make(chan *lumberjack.EventEnvelope, 1)
 
   // The basic model of execution:
   // - prospector: finds files in paths/globs to harvest, starts harvesters
   // - harvester: reads a file, sends events to the spooler
-  // - spooler: buffers events until ready to flush to the emitter
-  // - emitter: writes to the network, notifies registrar
+  // - spooler: buffers events until ready to flush to the publisher
+  // - publisher: writes to the network, notifies registrar
   // - registrar: records positions of files read
   // Finally, prospector uses the registrar information, on restart, to
   // determine where in each file to resume a harvester.
 
   // TODO(sissel): need a prospector scan for files and launch harvesters
 
-  // Example dummy harvester
-  h := lumberjack.Harvester{Path: "/var/log/messages"}
-  go h.Harvest(event_chan)
-  go h.Harvest(event_chan)
+  // Prospect the globs/paths given on the command line and launch harvesters
+  go lumberjack.Prospect(os.Args[1:], event_chan)
 
   var window_size uint64 = 1024 // Make this a flag
   var idle_timeout time.Duration = 1 * time.Second // Make this a flag
 
-  // harvester -> spooler
-  go lumberjack.Spooler(event_chan, emitter_chan, window_size, idle_timeout)
+  // Harvesters dump events into the spooler.
+  go lumberjack.Spooler(event_chan, publisher_chan, window_size, idle_timeout)
 
-  // spooler -> publisher
-  for x := range emitter_chan {
+  // Spooler flushes periodically to the publisher
+  for x := range publisher_chan {
     // got a bunch of events, ship them out.
     fmt.Printf("Spooler gave me %d events\n", len(x.Events))
+    for _, event := range x.Events {
+      fmt.Println(event)
+    }
   }
 
-  // emitter should send acknowledgements to the registrar
-  // registrar records last acknowledged positions in all files.
+  // TODO(sissel): publisher should send state to the registrar
+  // TODO(sissel): registrar records last acknowledged positions in all files.
 } /* main */
