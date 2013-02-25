@@ -2,7 +2,7 @@ package lumberjack
 
 import (
   "time"
-  "fmt"
+  //"fmt"
 )
 
 func Spooler(input chan *FileEvent, 
@@ -36,11 +36,11 @@ func Spooler(input chan *FileEvent,
           spool_i = 0
         }
       case <- ticker.C:
-        fmt.Println("tick")
+        //fmt.Println("tick")
         if now := time.Now(); now.After(next_flush_time) {
           // if current time is after the next_flush_time, flush! 
-          fmt.Printf("timeout: %d exceeded by %d\n", idle_timeout,
-                     now.Sub(next_flush_time))
+          //fmt.Printf("timeout: %d exceeded by %d\n", idle_timeout,
+                     //now.Sub(next_flush_time))
 
           // Flush what we have, if anything
           if spool_i > 0 { 
