@@ -2,13 +2,14 @@ package lumberjack
 
 import (
   "time"
+
   //"fmt"
 )
 
-func Spooler(input chan *FileEvent, 
-             output chan *EventEnvelope,
-             max_size uint64,
-             idle_timeout time.Duration) {
+func Spool(input chan *FileEvent, 
+           output chan *EventEnvelope,
+           max_size uint64,
+           idle_timeout time.Duration) {
   // heartbeat periodically. If the last flush was longer than
   // 'idle_timeout' time ago, then we'll force a flush to prevent us from
   // holding on to spooled events for too long.
@@ -26,13 +27,19 @@ func Spooler(input chan *FileEvent,
   for {
     select {
       case event := <- input:
+        //append(spool, event)
         spool[spool_i] = event
         spool_i++
 
         // Flush if full
-        if spool_i == len(spool) { 
-          output <- &EventEnvelope{Events: spool[:]}
+        if spool_i == cap(spool) { 
+          //spoolcopy := make([]*FileEvent, max_size)
+          var spoolcopy []*FileEvent
+          //fmt.Println(spool[0])
+          spoolcopy = append(spoolcopy, spool[:]...)
+          output <- &EventEnvelope{Events: spoolcopy}
           next_flush_time = time.Now().Add(idle_timeout)
+
           spool_i = 0
         }
       case <- ticker.C:
@@ -52,4 +59,4 @@ func Spooler(input chan *FileEvent,
       /* case ... */
     } /* select */
   } /* for */
-} /* spooler */
+} /* spool */
