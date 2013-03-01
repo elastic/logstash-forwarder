@@ -26,6 +26,7 @@ typedef enum {
   opt_host,
   opt_port,
   opt_window_size,
+  opt_logs_from,
 } optlist_t;
 
 struct option_doc {
@@ -66,6 +67,8 @@ static struct option_doc options[] = {
   { "window-size", required_argument, opt_window_size,
     "The maximum number of outstanding messages to send before we will " \
     "wait for an acknowledgement" },
+  { "logs-from", required_argument, opt_logs_from,
+    "Load log file paths from a file" },
   { NULL, 0, 0, NULL },
 };
 
@@ -130,6 +133,46 @@ void set_resource_limits(int file_count) {
          (int)limits.rlim_max, bytes, strerror(errno));
 } /* set_resource_limits */
 
+struct log_file_path {
+  char *path;
+  struct log_file_path *next;
+};
+
+struct log_file_path* get_log_file_paths(int argc, char **argv, const char *config, int *num) {
+  int n = 0;
+  int i;
+  struct log_file_path *curr, *head;
+  head = NULL;
+  for (i = 0; i < argc; i++, n++) {
+    curr = calloc(1, sizeof(struct log_file_path));
+    curr->next = head;
+    curr->path = argv[i];
+    head = curr;
+  }
+  
+  if (config) {
+    FILE *f = fopen(config, "r");
+    if (!f) {
+      printf("failed to open %s", config);
+      exit(1);
+    }
+    char line[1024]; 
+    while(fgets(line, 1024, f) != NULL ) {
+      if('/' == line[0]) {
+	curr = calloc(1, sizeof(struct log_file_path));
+	curr->next = head;
+	curr->path = strdup(line);
+	head = curr;
+	n++;
+      }
+    }
+    fclose(f);
+  }
+   
+  *num = n;
+  return head;
+}
+
 int main(int argc, char **argv) {
   int c, i;
   struct emitter_config emitter_config;
@@ -158,6 +201,7 @@ int main(int argc, char **argv) {
   getopt_options[i].name = NULL;
 
   char *tmp;
+  char *logs_from = NULL;
   while (i = -1, c = getopt_long_only(argc, argv, "+hv", getopt_options, &i), c != -1) {
     /* TODO(sissel): handle args */
     switch (c) {
@@ -197,6 +241,9 @@ int main(int argc, char **argv) {
         extra_fields[extra_fields_len - 1].value = strdup(tmp);
         extra_fields[extra_fields_len - 1].value_len = strlen(tmp);
         break;
+      case opt_logs_from:
+        logs_from = strdup(optarg);
+        break;
       default:
         insist(i == -1, "Flag (--%s%s%s) known, but someone forgot to " \
                "implement handling of it! This is certainly a bug.",
@@ -228,25 +275,29 @@ int main(int argc, char **argv) {
   /* I'll handle write failures; no signals please */
   signal(SIGPIPE, SIG_IGN);
 
-  insist(argc > 0, "No arguments given. What log files do you want shipped?");
-
+  int num_harvesters;
+  struct log_file_path *log_file_paths = get_log_file_paths(argc, argv, logs_from, &num_harvesters);
+  
+  insist(num_harvesters > 0 , "No arguments given. What log files do you want shipped?");
+  
   /* Set resource (memory, open file, etc) limits based on the
    * number of files being watched. */
-  set_resource_limits(argc);
+  set_resource_limits(num_harvesters);
 
-  pthread_t *harvesters = calloc(argc, sizeof(pthread_t));
+  pthread_t *harvesters = calloc(num_harvesters, sizeof(pthread_t));
   /* no I/O threads needed since we use inproc:// only */
   void *zmq = zmq_init(0 /* IO threads */); 
 
   /* Start harvesters for each path given */
-  for (i = 0; i < argc; i++) {
+  while(log_file_paths) {
     struct harvest_config *harvester = calloc(1, sizeof(struct harvest_config));
     harvester->zmq = zmq;
     harvester->zmq_endpoint = ZMQ_EMITTER_ENDPOINT;
-    harvester->path = argv[i];
+    harvester->path = log_file_paths->path;
     harvester->fields = extra_fields;
     harvester->fields_len = extra_fields_len;
     pthread_create(&harvesters[i], NULL, harvest, harvester);
+    log_file_paths = log_file_paths->next;
   }
 
   pthread_t emitter_thread;
