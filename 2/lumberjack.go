@@ -37,16 +37,9 @@ func main() {
   var idle_timeout time.Duration = 1 * time.Second // Make this a flag
 
   // Harvesters dump events into the spooler.
-  go lumberjack.Spooler(event_chan, publisher_chan, window_size, idle_timeout)
+  go lumberjack.Spool(event_chan, publisher_chan, window_size, idle_timeout)
 
-  // Spooler flushes periodically to the publisher
-  for x := range publisher_chan {
-    // got a bunch of events, ship them out.
-    fmt.Printf("Spooler gave me %d events\n", len(x.Events))
-    for _, event := range x.Events {
-      fmt.Println(event)
-    }
-  }
+  lumberjack.Publish(publisher_chan)
 
   // TODO(sissel): publisher should send state to the registrar
   // TODO(sissel): registrar records last acknowledged positions in all files.
