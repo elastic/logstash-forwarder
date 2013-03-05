@@ -7,7 +7,7 @@ import (
 )
 
 func Spool(input chan *FileEvent, 
-           output chan *EventEnvelope,
+           output chan []*FileEvent,
            max_size uint64,
            idle_timeout time.Duration) {
   // heartbeat periodically. If the last flush was longer than
@@ -37,7 +37,7 @@ func Spool(input chan *FileEvent,
           var spoolcopy []*FileEvent
           //fmt.Println(spool[0])
           spoolcopy = append(spoolcopy, spool[:]...)
-          output <- &EventEnvelope{Events: spoolcopy}
+          output <- spoolcopy
           next_flush_time = time.Now().Add(idle_timeout)
 
           spool_i = 0
@@ -51,8 +51,10 @@ func Spool(input chan *FileEvent,
 
           // Flush what we have, if anything
           if spool_i > 0 { 
+            var spoolcopy []*FileEvent
+            spoolcopy = append(spoolcopy, spool[0:spool_i]...)
+            output <- spoolcopy
             next_flush_time = now.Add(idle_timeout)
-            output <- &EventEnvelope{Events: spool[0:spool_i]}
             spool_i = 0
           }
         } /* if 'now' is after 'next_flush_time' */
