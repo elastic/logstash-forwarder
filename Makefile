@@ -15,6 +15,8 @@ CFLAGS+=-Wno-unused-function
 LDFLAGS+=-pthread
 LIBS=-lzmq -ljemalloc -lssl -lcrypto -luuid -lz
 
+MAKE?=make
+
 CFLAGS+=-Ibuild/include 
 LDFLAGS+=-Lbuild/lib -Wl,-rpath,'$$ORIGIN/../lib'
 
@@ -31,13 +33,13 @@ clean:
 	-@rm -fr lumberjack unixsock *.o build
 
 vendor-clean:
-	-make -C vendor/msgpack/ clean
-	-make -C vendor/jansson/ clean
-	-make -C vendor/jemalloc/ clean
-	-make -C vendor/libuuid/ clean
-	-make -C vendor/zeromq/ clean
-	-make -C vendor/zlib/ clean
-	-make -C vendor/apr/ clean
+	-$(MAKE) -C vendor/msgpack/ clean
+	-$(MAKE) -C vendor/jansson/ clean
+	-$(MAKE) -C vendor/jemalloc/ clean
+	-$(MAKE) -C vendor/libuuid/ clean
+	-$(MAKE) -C vendor/zeromq/ clean
+	-$(MAKE) -C vendor/zlib/ clean
+	-$(MAKE) -C vendor/apr/ clean
 
 rpm deb: | build-all
 	fpm -s dir -t $@ -n lumberjack -v $(VERSION) --prefix /opt/lumberjack \
@@ -106,7 +108,7 @@ build/bin/lumberjack: | build/bin
 build/bin/lumberjack: lumberjack.o backoff.o harvester.o emitter.o str.o proto.o ring.o strlist.o flog.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 	@echo " => Build complete: $@"
-	@echo " => Run 'make rpm' to build an rpm (or deb or tarball)"
+	@echo " => Run '$(MAKE) rpm' to build an rpm (or deb or tarball)"
 
 build/include/insist.h: | build/include
 	PATH=$$PWD:$$PATH fetch.sh -o $@ https://raw.github.com/jordansissel/experiments/master/c/better-assert/insist.h

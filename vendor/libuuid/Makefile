@@ -23,7 +23,7 @@ $(WORKDIR)/Makefile: | $(WORKDIR)
 install: $(PREFIX)/lib/libuuid.so $(PREFIX)/include/uuid/uuid.h $(PREFIX)/lib/libuuid.so.1
 
 build: $(UUID_DIR)/.libs/libuuid.so
-	make -C $(UUID_DIR)
+	$(MAKE) -C $(UUID_DIR)
 
 $(PREFIX)/lib/libuuid.so.1: | build $(PREFIX)/lib
 	@if [ -z "$(PREFIX)" ] ; then \
