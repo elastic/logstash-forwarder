@@ -43,10 +43,9 @@ func (s *FFS) Send(data []byte, flags zmq.SendRecvOption) (err error) {
     count, err := zmq.Poll(pi, int64(s.SendTimeout.Nanoseconds() / 1000))
     if count == 0 {
       // not ready in time, fail the socket and try again.
-      s.fail_socket()
-      err = syscall.ETIMEDOUT
       log.Printf("%s: timed out waiting to Send(): %s\n",
                  s.endpoint, err)
+      s.fail_socket()
     } else {
       //log.Printf("%s: sending %d payload\n", s.endpoint, len(data))
       err = s.socket.Send(data, flags)
@@ -129,6 +128,9 @@ func (s *FFS) ensure_connect() {
   //s.socket.SetSockOptInt(zmq.RCVTIMEO, int(s.RecvTimeout.Nanoseconds() / 1000000))
   //s.socket.SetSockOptInt(zmq.SNDTIMEO, int(s.SendTimeout.Nanoseconds() / 1000000))
 
+  // Abort anything in-flight on a socket that's closed.
+  s.socket.SetSockOptInt(zmq.LINGER, 0)
+
   for !s.connected {
     var max *big.Int = big.NewInt(int64(len(s.Endpoints)))
     i, _ := rand.Int(rand.Reader, max)
@@ -196,7 +198,6 @@ func Publish(input chan []*FileEvent, server_list []string,
     // This will cause reconnects/etc on failures automatically
     for {
       err = socket.Send(buffer.Bytes(), 0)
-      //log.Printf("send err? %s\n", err)
       data, err = socket.Recv(0)
       if err == nil {
         // success!
