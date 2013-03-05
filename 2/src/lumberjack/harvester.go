@@ -27,7 +27,7 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 
   file := h.open()
   defer file.Close()
-  info := file.Stat()
+  //info, _ := file.Stat()
 
   // TODO(sissel): Ask the registrar for the start position?
   // TODO(sissel): record the current file inode/device/etc
@@ -41,7 +41,7 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
   reader := bufio.NewReaderSize(file, 16<<10) // 16kb buffer by default
 
   var read_timeout = 10 * time.Second
-  last_read_time = time.Now()
+  last_read_time := time.Now()
   for {
     text, err := h.readline(reader, read_timeout)
 
@@ -50,7 +50,7 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
         // timed out waiting for data, got eof.
         // TODO(sissel): Check to see if the file was truncated
         // TODO(sissel): if last_read_time was more than 24 hours ago
-        if age = time.Since(last_read_time); age > (24 * time.Hour) {
+        if age := time.Since(last_read_time); age > (24 * time.Hour) {
           // This file is idle for more than 24 hours. Give up and stop harvesting.
           fmt.Printf("Stopping harvest of %s; last change was %d seconds ago\n", h.Path, age.Seconds())
           return
@@ -106,7 +106,7 @@ func (h *Harvester) open() *os.File {
 
 func (h *Harvester) readline(reader *bufio.Reader, eof_timeout time.Duration) (*string, error) {
   var buffer bytes.Buffer
-  start_time = time.Now()
+  start_time := time.Now()
   for {
     segment, is_partial, err := reader.ReadLine()
 
