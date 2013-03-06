@@ -212,6 +212,11 @@ module Lumberjack
 
     def run(&block)
       while true
+        # TODO(sissel): Ack on idle.
+        # X: - if any unacked, IO.select
+        # X:   - on timeout, ack all.
+        # X: Doing so will prevent slow streams from retransmitting
+        # X: too many events after errors.
         @parser.feed(@fd.sysread(16384)) do |event, *args|
           case event
             when :window_size; window_size(*args, &block)

@@ -13,6 +13,7 @@
 
 #include <sys/resource.h>
 
+#include "zmq_compat.h"
 #include "sleepdefs.h"
 
 void *emitter(void *arg) {
@@ -29,7 +30,8 @@ void *emitter(void *arg) {
   void *socket = zmq_socket(config->zmq, ZMQ_PULL);
   insist(socket != NULL, "zmq_socket() failed: %s", strerror(errno));
   int64_t hwm = 100;
-  zmq_setsockopt(socket, ZMQ_HWM, &hwm, sizeof(hwm));
+  //zmq_setsockopt(socket, ZMQ_HWM, &hwm, sizeof(hwm));
+  zmq_compat_set_recvhwm(socket, hwm);
   rc = zmq_bind(socket, config->zmq_endpoint);
   insist(rc != -1, "zmq_bind(%s) failed: %s", config->zmq_endpoint,
          zmq_strerror(errno));
@@ -52,8 +54,9 @@ void *emitter(void *arg) {
            config->ssl_ca_path);
   }
 
-  long count = 0;
-  long bytes = 0;
+  unsigned long count = 0;
+  unsigned long bytes = 0;
+  unsigned long report_interval = config->window_size * 4;
 
   zmq_pollitem_t items[1];
 
@@ -90,7 +93,8 @@ void *emitter(void *arg) {
     } 
 
     /* poll successful, read a message */
-    rc = zmq_recv(socket, &message, 0);
+    //rc = zmq_recv(socket, &message, 0);
+    rc = zmq_compat_recvmsg(socket, &message, 0);
     insist(rc == 0 /*|| errno == EAGAIN */,
            "zmq_recv(%s) failed (returned %d): %s",
            config->zmq_endpoint, rc, zmq_strerror(errno));
@@ -110,16 +114,16 @@ void *emitter(void *arg) {
 
     zmq_msg_close(&message);
 
-    if (count == 10000) {
+    if (count == report_interval) {
       struct timespec now;
       clock_gettime(CLOCK_MONOTONIC, &now);
       double s = (start.tv_sec + 0.0) + (start.tv_nsec / 1000000000.0);
       double n = (now.tv_sec + 0.0) + (now.tv_nsec / 1000000000.0);
-      flog(stdout, "Rate: %f (bytes: %f)\n", (count + 0.0) / (n - s), (bytes + 0.0) / (n - s));
+      flog(stdout, "Rate: %f (bytes: %f)", (count + 0.0) / (n - s), (bytes + 0.0) / (n - s));
       struct rusage rusage;
       rc = getrusage(RUSAGE_SELF, &rusage);
-      insist(rc == 0, "getrusage failed: %s\n", strerror(errno));
-      flog(stdout, "cpu user/system: %d.%06d / %d.%06d\n",
+      insist(rc == 0, "getrusage failed: %s", strerror(errno));
+      flog(stdout, "cpu user/system: %d.%06d / %d.%06dn",
            (int)rusage.ru_utime.tv_sec, (int)rusage.ru_utime.tv_usec,
            (int)rusage.ru_stime.tv_sec, (int)rusage.ru_stime.tv_usec);
       clock_gettime(CLOCK_MONOTONIC, &start);

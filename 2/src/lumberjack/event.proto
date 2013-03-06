@@ -1,0 +1,19 @@
+package lumberjack;
+
+message FileEvent {
+  // The source of this event (file path, etc)
+  required string source = 1;
+
+  // The byte offset (where in the source this event came from */
+  required uint64 offset = 2;
+
+  // The line offset
+  required uint64 line = 3;
+
+  // The contents of the event
+  required string text = 4;
+}
+
+message EventEnvelope {
+  repeated FileEvent events = 1;
+}
