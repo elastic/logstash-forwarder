@@ -781,7 +781,7 @@ int lumberjack_ssl_read(const struct lumberjack *lumberjack, void *buffer,
 
   while (remaining > 0) {
     rc = SSL_read(lumberjack->ssl, buffer + offset, remaining);
-    flog(stdout, "SSL_read read %d ; returned %d", remaining, rc);
+    //flog(stdout, "SSL_read read %d ; returned %d", remaining, rc);
 
     if (rc > 0) {
       // Healthy read.
