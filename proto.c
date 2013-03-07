@@ -777,7 +777,8 @@ int lumberjack_ssl_read(const struct lumberjack *lumberjack, void *buffer,
   int remaining = length;
 
   struct backoff sleeper;
-  backoff_init(&sleeper, &MIN_SLEEP, &MAX_SLEEP);
+  static struct timespec max_sleep = { 0, 250000000 }; /* 250ms */
+  backoff_init(&sleeper, &MIN_SLEEP, &max_sleep);
 
   while (remaining > 0) {
     rc = SSL_read(lumberjack->ssl, buffer + offset, remaining);
