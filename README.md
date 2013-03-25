@@ -2,7 +2,7 @@
 
 o/~ I'm a lumberjack and I'm ok! I sleep when idle, then I ship logs all day! I parse your logs, I eat the JVM agent for lunch! o/~
 
-## QUESTIONS?
+## Questions and support
 
 If you have questions and cannot find answers, please join the #logstash irc
 channel on freenode irc or ask on the logstash-users@googlegroups.com mailing
@@ -16,29 +16,58 @@ Problem: logstash jar releases are too fat for constrained systems.
 
 Solution: lumberjack
 
+### Goals
+
+* Minimize resource usage where possible (CPU, memory, network).
+* Secure transmission of logs.
+* Configurable event data.
+* Easy to deploy with minimal moving parts.
+* Simple inputs only:
+  * Follows files and respects rename/truncation conditions.
+  * Accepts `STDIN`, useful for things like `varnishlog | lumberjack...`.
+
 ## Building it
 
-Make sure you have installed FPM (rubygem) and have outgoing FTP access (ftp.openssl.org).
+1. Install [FPM](https://github.com/jordansissel/fpm)
 
-* compile: make 
-* rpm package: make rpm
-* deb package: make deb
+        $ sudo gem install fpm
 
-Packages install to /opt/lumberjack. Lumberjack builds all necessary
+2. Ensure you have outging FTP access to download OpenSS from
+`ftp.openssl.org`.
+
+3. Compile lumberback
+
+        $ git clone git://github.com/jordansissel/lumberjack.git
+        $ cd lumberback
+        $ make
+
+4. Make packages, either:
+
+        $ make rpm
+
+    Or:
+
+        $ make deb
+
+## Installing it
+
+Packages install to `/opt/lumberjack`. Lumberjack builds all necessary
 dependencies itself, so there should be no run-time dependencies you
 need.
 
 ## Running it
 
-Generally: `lumberjack.sh --host somehost --port 12345 /var/log/messages`
+Generally:
+
+    $ lumberjack.sh --host somehost --port 12345 /var/log/messages
 
 See `lumberjack.sh --help` for all the flags
 
-Key points:
+### Key points
 
-* You'll need an ssl ca to verify the server (host) with.
-* You can specify custom fields with the '--field foo=bar'. Any number of these
-  may be specified. I use them to set fields like 'type' and other custom
+* You'll need an SSL CA to verify the server (host) with.
+* You can specify custom fields with the `--field foo=bar`. Any number of these
+  may be specified. I use them to set fields like `type` and other custom
   attributes relevant to each log.
 * Any non-flag argument after is considered a file path. You can watch any
   number of files.
@@ -61,66 +90,63 @@ In logstash, you'll want to use the [lumberjack](http://logstash.net/docs/latest
       }
     }
 
-## Goals
-
-* minimize resource usage where possible (cpu, memory, network)
-* secure transmission of logs
-* configurable event data
-* easy to deploy with minimal moving parts.
-
-Simple inputs only:
-
-* follow files, respect rename/truncation conditions
-* stdin, useful for things like 'varnishlog | lumberjack ...'
-
 ## Implementation details 
 
 Below is valid as of 2012/09/19
 
 ### Minimize resource usage
 
-* sets small resource limits (memory, open files) on start up based on the
-  number of files being watched
-* cpu: sleeps when there is nothing to do
-* network/cpu: sleeps if there is a network failure
-* network: uses zlib for compression
+* Sets small resource limits (memory, open files) on start up based on the
+  number of files being watched.
+* CPU: sleeps when there is nothing to do.
+* Network/CPU: sleeps if there is a network failure.
+* Network: uses zlib for compression.
 
-### secure transmission
+### Secure transmission
 
-* uses openssl to transport logs. Currently supports verifying the server
-  certificate only (so you know who you are sending to).
+* Uses OpenSSL to verify the server certificates (so you know who you
+  are sending to).
+* Uses OpenSSL to transport logs.
 
-### configurable event data
+### Configurable event data
 
-* the protocol lumberjack uses supports sending a string:string map
-* the lumberjack tool lets you specify arbitrary extra data with `--field name=value`
+* The protocol lumberjack uses supports sending a `string:string` map.
+* The lumberjack tool lets you specify arbitrary extra data with
+  `--field name=value`.
 
-## easy deployment
+### Easy deployment
 
-* all dependencies are built at compile-time (openssl, jemalloc, etc) because many os distributions lack these dependencies.
-* 'make deb' (or make rpm) will package everything into a single deb (or rpm)
-* bin/lumberjack.sh makes sure the dependencies are found when run in production
+* All dependencies are built at compile-time (OpenSSL, jemalloc, etc) because many os distributions lack these dependencies.
+* The `make deb` or `make rpm` commands will package everything into a
+  single DEB or RPM.
+* The `bin/lumberjack.sh` script makes sure the dependencies are found
+  when run in production.
 
-## future functional features
+### Future functional features
 
-* re-evaluate globs periodically to look for new log files
-* track position of in the log
+* Re-evaluate globs periodically to look for new log files.
+* Track position of in the log.
 
-## future protocol discussion
+### Future protocol discussion
 
 I would love to not have a custom protocol, but nothing I've found implements
 what I need, which is: encrypted, trusted, compressed, latency-resilient, and
 reliable transport of events.
 
-* redis development refuses to accept encryption support, would likely reject
+* Redis development refuses to accept encryption support, would likely reject
   compression as well.
-* zeromq lacks authentication, encryption, and compression.
-* thrift also lacks authentication, encryption, and compression, and also is an
+* ZeroMQ lacks authentication, encryption, and compression.
+* Thrift also lacks authentication, encryption, and compression, and also is an
   RPC framework, not a streaming system.
-* websockets don't do authentication or compression, but support encrypted
+* Websockets don't do authentication or compression, but support encrypted
   channels with SSL. Websockets also require XORing the entire payload of all
   messages - wasted energy.
 * SPDY is still changing too frequently and is also RPC. Streaming requires
   custom framing.
-* HTTP is RPC and very high over head for small events (uncompressable headers,
+* HTTP is RPC and very high overhead for small events (uncompressable headers,
   etc). Streaming requires custom framing.
+
+## License 
+
+See LICENSE file.
+
