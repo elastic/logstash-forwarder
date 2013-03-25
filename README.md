@@ -32,7 +32,7 @@ Solution: lumberjack
 
         $ sudo gem install fpm
 
-2. Ensure you have outging FTP access to download OpenSS from
+2. Ensure you have outging FTP access to download OpenSSL from
 `ftp.openssl.org`.
 
 3. Compile lumberback
