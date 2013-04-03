@@ -1,4 +1,4 @@
-package lumberjack
+package liblumberjack
 
 import (
   "os" // for File and friends

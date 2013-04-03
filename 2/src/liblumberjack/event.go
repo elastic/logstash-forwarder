@@ -1,4 +1,4 @@
-package lumberjack
+package liblumberjack
 
 type FileEvent struct {
   Source *string `json:"source,omitempty"`

@@ -2,7 +2,7 @@ package main
 
 import (
   "log"
-  "lumberjack"
+  lumberjack "liblumberjack"
   "os"
   "time"
   "flag"
