@@ -125,6 +125,10 @@ build/include/jemalloc/jemalloc.h build/lib/libjemalloc.$(LIBEXT): | build
 	@echo " => Building jemalloc"
 	PATH=$$PWD:$$PATH $(MAKE) -C vendor/jemalloc/ install PREFIX=$$PWD/build DEBUG=$(DEBUG)
 
+build/include/sodium/sodium.h build/lib/libsodium.$(LIBEXT): | build
+	@echo " => Building libsodium"
+	PATH=$$PWD:$$PATH $(MAKE) -C vendor/libsodium/ install PREFIX=$$PWD/build DEBUG=$(DEBUG)
+
 build/include/lz4.h build/lib/liblz4.$(LIBEXT): | build
 	@echo " => Building lz4"
 	PATH=$$PWD:$$PATH $(MAKE) -C vendor/lz4/ install PREFIX=$$PWD/build DEBUG=$(DEBUG)
