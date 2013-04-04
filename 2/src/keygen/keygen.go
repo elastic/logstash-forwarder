@@ -7,15 +7,15 @@ import (
   "flag"
 )
 
-var output = flag.String("output", "nacl", "The output prefix to use. This will generate 'nacl.priv' and 'nacl.pub' for the private and public keys, respectively, where 'nacl' is the flag value you set.")
+var output = flag.String("output", "nacl", "The output prefix to use. This will generate 'nacl.secret' and 'nacl.public' for the secret and public keys, respectively, where 'nacl' is the flag value you set.")
 
 func main() {
   flag.Parse()
 
   pk, sk := sodium.CryptoBoxKeypair()
 
-  write(*output + ".pub", pk[:])
-  write(*output + ".priv", sk[:])
+  write(*output + ".public", pk[:])
+  write(*output + ".secret", sk[:])
 } /* main */
 
 func write(path string, value []byte) {
