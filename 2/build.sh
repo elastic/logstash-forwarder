@@ -10,6 +10,6 @@ go get github.com/alecthomas/gozmq
 #go install sodium
 
 echo "Building lumberjack"
-go install lumberjack 
+go install -ldflags '-r $ORIGIN/../lib' lumberjack 
 echo "Building keygen"
-go install keygen
+go install -ldflags '-r $ORIGIN/../lib' keygen

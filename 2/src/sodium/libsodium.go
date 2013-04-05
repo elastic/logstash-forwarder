@@ -2,11 +2,18 @@ package sodium
 // #include <sodium.h>
 // #cgo LDFLAGS: -lsodium
 import "C"
-import "fmt"
 import "unsafe"
 
 const PUBLICKEYBYTES int = 32
 const SECRETKEYBYTES int = 32
+
+const crypto_box_curve25519xsalsa20poly1305_ref_BEFORENMBYTES int = 32
+const crypto_box_BEFORENMBYTES int = 32
+const crypto_box_NONCEBYTES int = 24
+
+func init() {
+  C.randombytes_stir();
+}
 
 func CryptoBoxKeypair() (pk [SECRETKEYBYTES]byte, sk [PUBLICKEYBYTES]byte) {
   // From golang.org/cmd/cgo
@@ -22,15 +29,21 @@ func CryptoBoxKeypair() (pk [SECRETKEYBYTES]byte, sk [PUBLICKEYBYTES]byte) {
 }
 
 func CryptoBox(nonce []byte, plaintext string) {
-
+  //const unsigned char pk[crypto_box_PUBLICKEYBYTES];
+  //const unsigned char sk[crypto_box_SECRETKEYBYTES];
+  //const unsigned char n[crypto_box_NONCEBYTES];
+  //const unsigned char m[...]; unsigned long long mlen;
+  //unsigned char c[...];
+  //crypto_box(output (ciphertext), input (plaintext), input_len, nonce, receiver_pub, sender_secret);
+  //C.crypto_box_curve25519xsalsa20poly1305_ref
 }
 
 func CryptoOpen(nonce []byte, ciphertext string) {
-
-}
-
-func main() {
-  sk, pk := CryptoBoxKeypair()
-  fmt.Printf("sk: %v\n", sk)
-  fmt.Printf("pk: %v\n", pk)
+  //const unsigned char pk[crypto_box_PUBLICKEYBYTES];
+  //const unsigned char sk[crypto_box_SECRETKEYBYTES];
+  //const unsigned char n[crypto_box_NONCEBYTES];
+  //const unsigned char m[...]; unsigned long long mlen;
+  //unsigned char c[...];
+  //crypto_box_open(output (plaintext), input (ciphertext), input_len, nonce, receiver_pub, sender_secret);
+  //C.crypto_box_curve25519xsalsa20poly1305_ref_open
 }
