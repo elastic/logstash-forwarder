@@ -15,3 +15,5 @@ vendor/openssl/*/
 vendor/zeromq/*/
 vendor/libsodium/*/
 vendor/zlib/*/
+nacl.public
+nacl.secret
