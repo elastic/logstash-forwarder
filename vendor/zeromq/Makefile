@@ -1,4 +1,5 @@
-VERSION=2.2.0
+VERSION=3.2.2
+ABI=3.0.0
 URL=http://download.zeromq.org/zeromq-$(VERSION).tar.gz
 TARBALL=$(shell basename $(URL))
 WORKDIR=zeromq-$(VERSION)
@@ -27,18 +28,14 @@ $(WORKDIR)/src/.libs/libzmq.$(LIBEXT): | configure
 	$(MAKE) -C $(WORKDIR) CFLAGS=$(CFLAGS) CXXFLAGS=$(CXXFLAGS) LDFLAGS=$(LDFLAGS)
 
 install: | compile $(PREFIX)/lib $(PREFIX)/include
-ifeq ($(UNAME),Darwin)
-install: $(PREFIX)/lib/libzmq.1.$(LIBEXT) $(PREFIX)/lib/libzmq.$(LIBEXT)
-else
-install: $(PREFIX)/lib/libzmq.$(LIBEXT).1 $(PREFIX)/lib/libzmq.$(LIBEXT)
-endif
+install: $(PREFIX)/lib/libzmq.$(LIBEXT).$(ABI) $(PREFIX)/lib/libzmq.$(LIBEXT)
 install: $(PREFIX)/include/zmq.h $(PREFIX)/include/zmq_utils.h
 
-$(PREFIX)/lib/libzmq.$(LIBEXT).1: $(WORKDIR)/src/.libs/libzmq.$(LIBEXT)
-	cp $(WORKDIR)/src/.libs/libzmq.$(LIBEXT).1 $@
+$(PREFIX)/lib/libzmq.$(LIBEXT).$(ABI): $(WORKDIR)/src/.libs/libzmq.$(LIBEXT)
+	cp $(WORKDIR)/src/.libs/libzmq.$(LIBEXT).$(ABI) $@
 
-$(PREFIX)/lib/libzmq.$(LIBEXT): $(PREFIX)/lib/libzmq.$(LIBEXT).1
-	ln -sf libzmq.$(LIBEXT).1 $@
+$(PREFIX)/lib/libzmq.$(LIBEXT): $(PREFIX)/lib/libzmq.$(LIBEXT).$(ABI)
+	ln -sf libzmq.$(LIBEXT).$(ABI) $@
 
 $(PREFIX)/include/zmq.h:
 	cp $(WORKDIR)/include/zmq.h $(PREFIX)/include
