@@ -17,7 +17,8 @@ var idle_timeout = flag.Duration("idle-flush-time", 5 * time.Second, "Maximum ti
 var server_timeout = flag.Duration("server-timeout", 30 * time.Second, "Maximum time to wait for a request to a server before giving up and trying another.")
 var servers = flag.String("servers", "", "Server (or comma-separated list of servers) to send events to. Each server can be a 'host' or 'host:port'. If the port is not specified, port 5005 is assumed. One server is chosen of the list at random, and only on failure is another server used.")
 var their_public_key_path = flag.String("their-public-key", "", "the file containing the NaCl public key for the server you are talking to.")
-var our_secret_key_path = flag.String("my-private-key", "", "the file containing the NaCl private key for this process to encrypt with. If none is given, one is generated at runtime.")
+var our_secret_key_path = flag.String("my-secret-key", "", "the file containing the NaCl secret key for this process to encrypt with. If none is given, one is generated at runtime.")
+//var our_public_key_path = flag.String("my-public-key", "", "the file containing the NaCl public key for this process to encrypt with. If you specify this, you MUST specify -my-private-key.")
 
 func read_key(path string, key []byte) (err error) {
   file, err := os.Open(path)
