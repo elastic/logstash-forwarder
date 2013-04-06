@@ -16,8 +16,8 @@ var spool_size = flag.Uint64("spool-size", 1024, "Maximum number of events to sp
 var idle_timeout = flag.Duration("idle-flush-time", 5 * time.Second, "Maximum time to wait for a full spool before flushing anyway")
 var server_timeout = flag.Duration("server-timeout", 30 * time.Second, "Maximum time to wait for a request to a server before giving up and trying another.")
 var servers = flag.String("servers", "", "Server (or comma-separated list of servers) to send events to. Each server can be a 'host' or 'host:port'. If the port is not specified, port 5005 is assumed. One server is chosen of the list at random, and only on failure is another server used.")
-var public_key_path = flag.String("public-key", "", "the nacl public key file (generate one with the 'keygen' tool that comes with lumberjack)")
-var secret_key_path = flag.String("private-key", "", "the nacl secret key file (generate one with the 'keygen' tool that comes with lumberjack). If you don't provide one, lumberjack will generate one at runtime.")
+var their_public_key_path = flag.String("their-public-key", "", "the file containing the NaCl public key for the server you are talking to.")
+var our_secret_key_path = flag.String("my-private-key", "", "the file containing the NaCl private key for this process to encrypt with. If none is given, one is generated at runtime.")
 
 func read_key(path string, key []byte) (err error) {
   file, err := os.Open(path)
