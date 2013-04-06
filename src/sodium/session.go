@@ -15,7 +15,7 @@ type Session struct {
   k [crypto_box_BEFORENMBYTES]byte
 
   // The nonce generator.
-  nonce func() [crypto_box_NONCEBYTES]byte
+  Nonce func() [crypto_box_NONCEBYTES]byte
 }
 
 func NewSession(pk [PUBLICKEYBYTES]byte, sk [SECRETKEYBYTES]byte) (s *Session){
@@ -39,7 +39,7 @@ func (s *Session) Box(plaintext []byte) (ciphertext []byte, nonce [crypto_box_NO
   // XXX: ciphertext needs to be zero-padded at the start for crypto_box_ZEROBYTES
   // ZEROBYTES + len(plaintext) is ciphertext length
   ciphertext = make([]byte, crypto_box_ZEROBYTES + len(plaintext))
-  nonce = s.nonce()
+  nonce = s.Nonce()
 
   m := make([]byte, crypto_box_ZEROBYTES + len(plaintext))
   copy(m[crypto_box_ZEROBYTES:], plaintext)

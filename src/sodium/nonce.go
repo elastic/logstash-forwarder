@@ -1,4 +1,7 @@
 package sodium
+import (
+  "unsafe"
+)
 
 func RandomNonceStrategy() (func() [crypto_box_NONCEBYTES]byte) {
   return func () (nonce [crypto_box_NONCEBYTES]byte) {
@@ -15,7 +18,7 @@ func IncrementalNonceStrategy() (func() [crypto_box_NONCEBYTES]byte) {
   // help avoid collisions?
 
   return func() ([crypto_box_NONCEBYTES]byte) {
-    increment(nonce, 1)
+    increment(nonce[:], 1)
     return nonce
   }
 }
