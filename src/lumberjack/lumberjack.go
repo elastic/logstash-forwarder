@@ -47,8 +47,8 @@ func main() {
     }()
   }
 
-  if *public_key_path == "" {
-    log.Fatalf("No -public-key flag given")
+  if *their_public_key_path == "" {
+    log.Fatalf("No -their-public-key flag given")
   }
 
   // Turn 'host' and 'host:port' into 'tcp://host:port'
@@ -79,22 +79,22 @@ func main() {
 
   var public_key [sodium.PUBLICKEYBYTES]byte
 
-  err := read_key(*public_key_path, public_key[:])
+  err := read_key(*their_public_key_path, public_key[:])
   if err != nil {
     log.Fatalf("Unable to read public key path (%s): %s\n",
-               *public_key_path, err)
+               *their_public_key_path, err)
   }
 
   var secret_key [sodium.SECRETKEYBYTES]byte
-  if *secret_key_path  == "" {
+  if *our_secret_key_path  == "" {
     log.Printf("No secret key given; generating one.")
     _, secret_key = sodium.CryptoBoxKeypair()
   } else {
-    err := read_key(*secret_key_path, secret_key[:])
+    err := read_key(*our_secret_key_path, secret_key[:])
     if err != nil {
-      log.Printf("Unable to read private key (%s): %s\n",
-                 *public_key_path, err)
-      log.Printf("Generating a private key now.\n")
+      log.Printf("Unable to read secret key (%s): %s\n",
+                 *our_secret_key_path, err)
+      log.Printf("Generating a key pair now.\n")
       _, sk := sodium.CryptoBoxKeypair()
       copy(secret_key[:], sk[:])
     }
