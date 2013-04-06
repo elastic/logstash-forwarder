@@ -2,8 +2,6 @@ package liblumberjack
 
 import (
   "time"
-
-  //"fmt"
 )
 
 func Spool(input chan *FileEvent, 
