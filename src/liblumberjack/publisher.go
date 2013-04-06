@@ -8,10 +8,9 @@ import (
   "math/big"
   "syscall"
   "time"
-  //"syscall"
   "compress/zlib"
-  //"compress/flate"
   "crypto/rand"
+  "sodium"
 )
 
 var context *zmq.Context
@@ -157,11 +156,13 @@ func (s *FFS) fail_socket() {
   s.Close()
 }
 
-func Publish(input chan []*FileEvent, server_list []string,
-  server_timeout time.Duration) {
+func Publish(input chan []*FileEvent,
+             server_list []string,
+             public_key [sodium.PUBLICKEYBYTES]byte,
+             secret_key [sodium.SECRETKEYBYTES]byte,
+             server_timeout time.Duration) {
   var buffer bytes.Buffer
-  //key := "abcdefghijklmnop"
-  //cipher, err := aes.NewCipher([]byte(key))
+  session := sodium.NewSession(public_key, secret_key)
 
   socket := FFS{
     Endpoints:   server_list,
@@ -173,13 +174,11 @@ func Publish(input chan []*FileEvent, server_list []string,
 
   for events := range input {
     // got a bunch of events, ship them out.
-    log.Printf("Spooler gave me %d events\n", len(events))
+    log.Printf("Publisher received %d events\n", len(events))
 
-    // Serialize with msgpack
     data, err := json.Marshal(events)
-    // TODO(sissel): chefk error
+    // TODO(sissel): check error
     _ = err
-    //log.Printf("json serialized %d bytes\n", len(data))
 
     // Compress it
     // A new compressor is used for every payload of events so
@@ -190,14 +189,32 @@ func Publish(input chan []*FileEvent, server_list []string,
     _, err = compressor.Write(data)
     err = compressor.Flush()
     compressor.Close()
+
     //log.Printf("compressed %d bytes\n", buffer.Len())
     // TODO(sissel): check err
-
     // TODO(sissel): implement security/encryption/etc
 
     // Send full payload over zeromq REQ/REP
     // TODO(sissel): check error
     //buffer.Write(data)
+    ciphertext, nonce := session.Box(buffer.Bytes())
+
+    log.Printf("plaintext: %d\n", len(data))
+    log.Printf("compressed: %d\n", buffer.Len())
+    log.Printf("ciphertext: %d\n", len(ciphertext))
+    log.Printf("nonce: %d\n", len(nonce))
+
+    // TODO(sissel): figure out encoding for ciphertext + nonce
+    // TODO(sissel): Figure out the protocol for envelopes
+    //   - compression envelope:
+    //     - what compression system was used
+    //     - any parameters?
+    //     - payload
+    //   - encryption envelope:
+    //     - what encryption system was used
+    //     - any public parameters necessary to decrypt (public key, nonce)
+    //     - payload
+
 
     // Loop forever trying to send.
     // This will cause reconnects/etc on failures automatically
