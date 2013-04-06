@@ -19,6 +19,7 @@ func main() {
 } /* main */
 
 func write(path string, value []byte) {
+  log.Printf("Writing %s", path)
   file, err := os.OpenFile(path, os.O_WRONLY | os.O_CREATE, 0600)
   if err != nil {
     log.Fatalf("Failed to open file (%s) for writing: %s\n",
