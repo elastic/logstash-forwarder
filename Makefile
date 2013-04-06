@@ -14,6 +14,7 @@ LDFLAGS+=-Lbuild/lib -Wl,-rpath,'$$ORIGIN/../lib'
 
 default: build-all
 build-all: build/bin/lumberjack build/bin/lumberjack.sh
+build-all: build/bin/keygen
 include Makefile.ext
 
 clean:
@@ -41,7 +42,7 @@ rpm deb: | build-all
 		--exclude '*.a' --exclude 'lib/pkgconfig/zlib.pc' -C build \
 		--description "a log shipping tool" \
 		--url "https://github.com/jordansissel/lumberjack" \
-		bin/lumberjack bin/lumberjack.sh lib
+		bin/keygen bin/lumberjack bin/lumberjack.sh lib
 
 # Vendor'd dependencies
 # If VENDOR contains 'zeromq' download and build it.
@@ -52,33 +53,38 @@ src/github.com/alecthomas/gozmq/zmq.go: | build/lib/libzmq.$(LIBEXT)
 endif # zeromq
 
 ifeq ($(filter libsodium,$(VENDOR)),libsodium)
+bin/lumberjack: | build/bin build/lib/libsodium.$(LIBEXT)
 bin/keygen: | build/bin build/lib/libsodium.$(LIBEXT)
 endif # libsodium
 
 build/bin/lumberjack.sh: lumberjack.sh | build/bin
 	install -m 755 $^ $@
 
-build/bin/lumberjack: | build/bin bin/lumberjack
+build/bin/lumberjack: bin/lumberjack | build/bin
 	cp bin/lumberjack build/bin/lumberjack
+build/bin/keygen: bin/keygen | build/bin
+	cp bin/keygen build/bin/keygen
 
 bin/lumberjack: pkg/linux_amd64/github.com/alecthomas/gozmq.a
+bin/lumberjack: src/*/*.go
 	go install -ldflags '-r $$ORIGIN/../lib' lumberjack
+bin/keygen: src/*/*.go
+	go install -ldflags '-r $$ORIGIN/../lib' keygen
 
 # gozmq
 src/github.com/alecthomas/gozmq/zmq.go:
 	go get -d github.com/alecthomas/gozmq
-	#rm src/github.com/alecthomas/gozmq/zmq_2_*.go
-
 pkg/linux_amd64/github.com/alecthomas/gozmq.a: src/github.com/alecthomas/gozmq/zmq.go
 	PKG_CONFIG_PATH=$$PWD/build/lib/pkgconfig \
 	  go install -tags zmq_3_x github.com/alecthomas/gozmq
 
-bin/keygen:
-	go install -ldflags '-r $$ORIGIN/../lib' lumberjack
-
 build/include/zmq.h build/lib/libzmq.$(LIBEXT): | build
 	@echo " => Building zeromq"
 	PATH=$$PWD:$$PATH $(MAKE) -C vendor/zeromq/ install PREFIX=$$PWD/build DEBUG=$(DEBUG)
+
+build/include/sodium.h build/lib/libsodium.$(LIBEXT): | build
+	@echo " => Building libsodium"
+	PATH=$$PWD:$$PATH $(MAKE) -C vendor/libsodium/ install PREFIX=$$PWD/build DEBUG=$(DEBUG)
 
 build:
 	mkdir $@
