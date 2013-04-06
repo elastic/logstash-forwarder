@@ -25,6 +25,7 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
   log.Printf("Starting harvester: %s\n", h.Path)
 
   file := h.open()
+  info, _ := file.Stat() // TODO(sissel): Check error
   defer file.Close()
   //info, _ := file.Stat()
 
@@ -68,6 +69,7 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
       Offset: uint64(offset),
       Line: line,
       Text: text,
+      fileinfo: &info,
     }
     offset += int64(len(*event.Text)) + 1  // +1 because of the line terminator
 
