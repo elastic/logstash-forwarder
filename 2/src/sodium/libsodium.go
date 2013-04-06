@@ -8,8 +8,13 @@ const PUBLICKEYBYTES int = 32
 const SECRETKEYBYTES int = 32
 
 const crypto_box_curve25519xsalsa20poly1305_ref_BEFORENMBYTES int = 32
-const crypto_box_BEFORENMBYTES int = 32
-const crypto_box_NONCEBYTES int = 24
+const crypto_box_curve25519xsalsa20poly1305_ref_NONCEBYTES int = 24
+const crypto_box_curve25519xsalsa20poly1305_ref_ZEROBYTES int = 32
+const crypto_box_curve25519xsalsa20poly1305_ref_BOXZEROBYTES int = 16
+const crypto_box_BEFORENMBYTES int = crypto_box_curve25519xsalsa20poly1305_ref_BEFORENMBYTES
+const crypto_box_NONCEBYTES int = crypto_box_curve25519xsalsa20poly1305_ref_NONCEBYTES
+const crypto_box_ZEROBYTES int = crypto_box_curve25519xsalsa20poly1305_ref_ZEROBYTES
+const crypto_box_BOXZEROBYTES int = crypto_box_curve25519xsalsa20poly1305_ref_BOXZEROBYTES
 
 func init() {
   C.randombytes_stir();
