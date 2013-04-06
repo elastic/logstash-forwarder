@@ -1,12 +1,12 @@
 package liblumberjack
 
 import (
-  "log"
+  "bytes"
   "encoding/json"
   zmq "github.com/alecthomas/gozmq"
+  "log"
   "math/big"
   "syscall"
-  "bytes"
   "time"
   //"syscall"
   "compress/zlib"
@@ -14,7 +14,8 @@ import (
   "crypto/rand"
 )
 
-var context zmq.Context
+var context *zmq.Context
+
 func init() {
   context, _ = zmq.NewContext()
 }
@@ -30,9 +31,9 @@ type FFS struct {
   SendTimeout time.Duration
   RecvTimeout time.Duration
 
-  endpoint string // the current endpoint in use
-  socket zmq.Socket // the current zmq socket
-  connected bool // are we connected?
+  endpoint  string      // the current endpoint in use
+  socket    *zmq.Socket // the current zmq socket
+  connected bool        // are we connected?
 }
 
 func (s *FFS) Send(data []byte, flags zmq.SendRecvOption) (err error) {
@@ -40,18 +41,18 @@ func (s *FFS) Send(data []byte, flags zmq.SendRecvOption) (err error) {
     s.ensure_connect()
 
     pi := zmq.PollItems{zmq.PollItem{Socket: s.socket, Events: zmq.POLLOUT}}
-    count, err := zmq.Poll(pi, int64(s.SendTimeout.Nanoseconds() / 1000))
+    count, err := zmq.Poll(pi, s.SendTimeout)
     if count == 0 {
       // not ready in time, fail the socket and try again.
       log.Printf("%s: timed out waiting to Send(): %s\n",
-                 s.endpoint, err)
+        s.endpoint, err)
       s.fail_socket()
     } else {
       //log.Printf("%s: sending %d payload\n", s.endpoint, len(data))
       err = s.socket.Send(data, flags)
       if err != nil {
         log.Printf("%s: Failed to Send() %d byte message: %s\n",
-                   s.endpoint, len(data), err)
+          s.endpoint, len(data), err)
         s.fail_socket()
       } else {
         // Success!
@@ -66,20 +67,20 @@ func (s *FFS) Recv(flags zmq.SendRecvOption) (data []byte, err error) {
   s.ensure_connect()
 
   pi := zmq.PollItems{zmq.PollItem{Socket: s.socket, Events: zmq.POLLIN}}
-  count, err := zmq.Poll(pi, int64(s.RecvTimeout.Nanoseconds() / 1000))
+  count, err := zmq.Poll(pi, s.RecvTimeout)
   if count == 0 {
     // not ready in time, fail the socket and try again.
     s.fail_socket()
 
     err = syscall.ETIMEDOUT
     log.Printf("%s: timed out waiting to Recv(): %s\n",
-               s.endpoint, err)
+      s.endpoint, err)
     return nil, err
   } else {
     data, err = s.socket.Recv(flags)
     if err != nil {
       log.Printf("%s: Failed to Recv() %d byte message: %s\n",
-                 s.endpoint, len(data), err)
+        s.endpoint, len(data), err)
       s.fail_socket()
       return nil, err
     } else {
@@ -91,7 +92,9 @@ func (s *FFS) Recv(flags zmq.SendRecvOption) (data []byte, err error) {
 
 func (s *FFS) Close() (err error) {
   err = s.socket.Close()
-  if err != nil { return }
+  if err != nil {
+    return
+  }
 
   s.socket = nil
   s.connected = false
@@ -113,13 +116,13 @@ func (s *FFS) ensure_connect() {
   if s.SocketType == 0 {
     log.Panicf("No socket type set on zmq socket")
   }
-  if s.socket != nil { 
+  if s.socket != nil {
     s.socket.Close()
     s.socket = nil
   }
 
   var err error
-  s.socket, err = context.NewSocket(s.SocketType) 
+  s.socket, err = context.NewSocket(s.SocketType)
   if err != nil {
     log.Panicf("zmq.NewSocket(%d) failed: %s\n", s.SocketType, err)
   }
@@ -148,19 +151,21 @@ func (s *FFS) ensure_connect() {
 }
 
 func (s *FFS) fail_socket() {
-  if !s.connected { return }
+  if !s.connected {
+    return
+  }
   s.Close()
 }
 
 func Publish(input chan []*FileEvent, server_list []string,
-             server_timeout time.Duration) {
+  server_timeout time.Duration) {
   var buffer bytes.Buffer
   //key := "abcdefghijklmnop"
   //cipher, err := aes.NewCipher([]byte(key))
 
   socket := FFS{
-    Endpoints: server_list,
-    SocketType: zmq.REQ,
+    Endpoints:   server_list,
+    SocketType:  zmq.REQ,
     RecvTimeout: server_timeout,
     SendTimeout: server_timeout,
   }
@@ -210,5 +215,3 @@ func Publish(input chan []*FileEvent, server_list []string,
     // TODO(sissel): notify registrar of success
   } /* for each event payload */
 } // Publish
-
-
