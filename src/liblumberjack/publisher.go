@@ -2,7 +2,7 @@ package liblumberjack
 
 import (
   "log"
-  msgpack "github.com/ugorji/go-msgpack"
+  "encoding/json"
   zmq "github.com/alecthomas/gozmq"
   "math/big"
   "syscall"
@@ -171,10 +171,10 @@ func Publish(input chan []*FileEvent, server_list []string,
     log.Printf("Spooler gave me %d events\n", len(events))
 
     // Serialize with msgpack
-    data, err := msgpack.Marshal(events)
+    data, err := json.Marshal(events)
     // TODO(sissel): chefk error
     _ = err
-    //log.Printf("msgpack serialized %d bytes\n", len(data))
+    //log.Printf("json serialized %d bytes\n", len(data))
 
     // Compress it
     // A new compressor is used for every payload of events so

@@ -6,7 +6,6 @@ import (
   "bytes"
   "io"
   "bufio"
-  proto "code.google.com/p/goprotobuf/proto"
   "time"
 )
 
@@ -65,9 +64,9 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 
     line++
     event := &FileEvent{
-      Source: proto.String(h.Path),
-      Offset: proto.Uint64(uint64(offset)),
-      Line: proto.Uint64(line),
+      Source: &h.Path,
+      Offset: uint64(offset),
+      Line: line,
       Text: text,
     }
     offset += int64(len(*event.Text)) + 1  // +1 because of the line terminator
