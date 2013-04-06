@@ -18,6 +18,7 @@ include Makefile.ext
 
 clean:
 	-@rm -fr lumberjack unixsock *.o build
+
 deps-clean:
 	rm -fr src/code.google.com/
 	rm -fr src/github.com/ugorji/go-msgpack
