@@ -28,8 +28,9 @@ $(WORKDIR)/src/.libs/libzmq.$(LIBEXT): | configure
 	$(MAKE) -C $(WORKDIR) CFLAGS=$(CFLAGS) CXXFLAGS=$(CXXFLAGS) LDFLAGS=$(LDFLAGS)
 
 install: | compile $(PREFIX)/lib $(PREFIX)/include
-install: $(PREFIX)/lib/libzmq.$(LIBEXT).$(ABI) $(PREFIX)/lib/libzmq.$(LIBEXT)
-install: $(PREFIX)/include/zmq.h $(PREFIX)/include/zmq_utils.h
+	$(MAKE) -C $(WORKDIR) CFLAGS=$(CFLAGS) CXXFLAGS=$(CXXFLAGS) LDFLAGS=$(LDFLAGS) install
+#install: $(PREFIX)/lib/libzmq.$(LIBEXT).$(ABI) $(PREFIX)/lib/libzmq.$(LIBEXT)
+#install: $(PREFIX)/include/zmq.h $(PREFIX)/include/zmq_utils.h
 
 $(PREFIX)/lib/libzmq.$(LIBEXT).$(ABI): $(WORKDIR)/src/.libs/libzmq.$(LIBEXT)
 	cp $(WORKDIR)/src/.libs/libzmq.$(LIBEXT).$(ABI) $@
