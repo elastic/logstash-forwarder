@@ -54,7 +54,8 @@ func Prospect(paths []string, output chan *FileEvent) {
 
         // Check the current info against fileinfo[file]
         lastinfo, is_known := fileinfo[file]
-        // Track the stat data for this file for later comparison to check for rotation/etc
+        // Track the stat data for this file for later comparison to check for
+        // rotation/etc
         fileinfo[file] = info
 
         // Conditions for starting a new harvester:
