@@ -2,7 +2,7 @@ package liblumberjack
 
 import (
   "os" // for File and friends
-  "fmt"
+  "log"
   "bytes"
   "io"
   "bufio"
@@ -22,7 +22,7 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
   // TODO(sissel): Sleep when there's nothing to do
   // TODO(sissel): Quit if we think the file is dead (file dev/inode changed, no data in X seconds)
 
-  fmt.Printf("Starting harvester: %s\n", h.Path)
+  log.Printf("Starting harvester: %s\n", h.Path)
 
   file := h.open()
   defer file.Close()
@@ -51,12 +51,12 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
         // TODO(sissel): if last_read_time was more than 24 hours ago
         if age := time.Since(last_read_time); age > (24 * time.Hour) {
           // This file is idle for more than 24 hours. Give up and stop harvesting.
-          fmt.Printf("Stopping harvest of %s; last change was %d seconds ago\n", h.Path, age.Seconds())
+          log.Printf("Stopping harvest of %s; last change was %d seconds ago\n", h.Path, age.Seconds())
           return
         }
         continue
       } else {
-        fmt.Printf("Unexpected state reading from %s; error: %s\n", h.Path, err)
+        log.Printf("Unexpected state reading from %s; error: %s\n", h.Path, err)
         return
       }
     }
@@ -89,7 +89,7 @@ func (h *Harvester) open() *os.File {
 
     if err != nil {
       // retry on failure.
-      fmt.Printf("Failed opening %s: %s\n", h.Path, err)
+      log.Printf("Failed opening %s: %s\n", h.Path, err)
       time.Sleep(5 * time.Second)
     } else {
       break
@@ -121,7 +121,7 @@ func (h *Harvester) readline(reader *bufio.Reader, eof_timeout time.Duration) (*
         }
         continue
       } else {
-        fmt.Println(err)
+        log.Println(err)
         return nil, err // TODO(sissel): don't do this?
       }
     }
