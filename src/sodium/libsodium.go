@@ -7,6 +7,7 @@ import "unsafe"
 const PUBLICKEYBYTES int = 32
 const SECRETKEYBYTES int = 32
 
+// TODO(sissel): these can probably just be accessed as C.SOMECONSTANT
 const crypto_box_curve25519xsalsa20poly1305_ref_BEFORENMBYTES int = 32
 const crypto_box_curve25519xsalsa20poly1305_ref_NONCEBYTES int = 24
 const crypto_box_curve25519xsalsa20poly1305_ref_ZEROBYTES int = 32

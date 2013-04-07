@@ -3,6 +3,7 @@ package sodium
 // #cgo LDFLAGS: -lsodium
 import "C"
 import "unsafe"
+//import "fmt"
 
 type Session struct {
   // the public key of the agent who is sending you encrypted messages
@@ -40,7 +41,6 @@ func (s *Session) Box(plaintext []byte) (ciphertext []byte, nonce [crypto_box_NO
   // ZEROBYTES + len(plaintext) is ciphertext length
   ciphertext = make([]byte, crypto_box_ZEROBYTES + len(plaintext))
   nonce = s.Nonce()
-
   m := make([]byte, crypto_box_ZEROBYTES + len(plaintext))
   copy(m[crypto_box_ZEROBYTES:], plaintext)
 
@@ -50,18 +50,22 @@ func (s *Session) Box(plaintext []byte) (ciphertext []byte, nonce [crypto_box_NO
     (*C.uchar)(unsafe.Pointer(&nonce[0])),
     (*C.uchar)(unsafe.Pointer(&s.k[0])))
 
-  return ciphertext, nonce
+  //fmt.Printf("ciphertext: %v\n", ciphertext)
+  //fmt.Printf("ciphertext2: %v\n", ciphertext[crypto_box_BOXZEROBYTES:])
+  return ciphertext[crypto_box_BOXZEROBYTES:], nonce
 }
 
 func (s *Session) Open(nonce [crypto_box_NONCEBYTES]byte, ciphertext []byte) ([]byte) {
   // This function assumes the verbatim []byte given by Session.Box() is passed
-  plaintext := make([]byte, crypto_box_ZEROBYTES + len(ciphertext))
+  m := make([]byte, crypto_box_BOXZEROBYTES + len(ciphertext))
+  copy(m[crypto_box_BOXZEROBYTES:], ciphertext)
+  plaintext := make([]byte, len(m))
 
   C.crypto_box_curve25519xsalsa20poly1305_ref_open_afternm(
     (*C.uchar)(unsafe.Pointer(&plaintext[0])),
-    (*C.uchar)(unsafe.Pointer(&ciphertext[0])), (C.ulonglong)(len(ciphertext)),
+    (*C.uchar)(unsafe.Pointer(&m[0])), (C.ulonglong)(len(m)),
     (*C.uchar)(unsafe.Pointer(&nonce[0])),
     (*C.uchar)(unsafe.Pointer(&s.k[0])))
 
-  return plaintext[crypto_box_ZEROBYTES:len(ciphertext)]
+  return plaintext[crypto_box_ZEROBYTES:]
 }
