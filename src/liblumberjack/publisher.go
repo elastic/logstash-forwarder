@@ -198,10 +198,10 @@ func Publish(input chan []*FileEvent,
     //buffer.Write(data)
     ciphertext, nonce := session.Box(buffer.Bytes())
 
-    log.Printf("plaintext: %d\n", len(data))
-    log.Printf("compressed: %d\n", buffer.Len())
-    log.Printf("ciphertext: %d\n", len(ciphertext))
-    log.Printf("nonce: %d\n", len(nonce))
+    //log.Printf("plaintext: %d\n", len(data))
+    //log.Printf("compressed: %d\n", buffer.Len())
+    //log.Printf("ciphertext: %d %v\n", len(ciphertext), ciphertext[:20])
+    //log.Printf("nonce: %d\n", len(nonce))
 
     // TODO(sissel): figure out encoding for ciphertext + nonce
     // TODO(sissel): figure out encoding for ciphertext + nonce
@@ -209,7 +209,11 @@ func Publish(input chan []*FileEvent,
     // Loop forever trying to send.
     // This will cause reconnects/etc on failures automatically
     for {
-      err = socket.Send(buffer.Bytes(), 0)
+      err = socket.Send(nonce[:], zmq.SNDMORE)
+      if err != nil {
+        continue // send failed, retry!
+      }
+      err = socket.Send(ciphertext, 0)
       if err != nil {
         continue // send failed, retry!
       }
@@ -222,6 +226,6 @@ func Publish(input chan []*FileEvent,
     }
 
     // Tell the registrar that we've successfully sent these events
-    registrar <- events
+    //registrar <- events
   } /* for each event payload */
 } // Publish
