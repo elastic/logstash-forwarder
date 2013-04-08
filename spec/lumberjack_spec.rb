@@ -3,6 +3,7 @@ require "tempfile"
 require "lumberjack/server"
 require "insist"
 require "stud/try"
+require 'timeout'
 
 describe "lumberjack" do
   before :each do
@@ -62,6 +63,37 @@ describe "lumberjack" do
     count.times do |i|
       event = @event_queue.pop
       insist { event["line"] } == "hello #{i}"
+      insist { event["file"] } == @file.path
+      insist { event["host"] } == host
+    end
+    insist { @event_queue }.empty?
+  end
+
+  it "should follow a file with long lines and emit partial long lines as events" do
+    sleep 5 # let lumberjack start up.
+    count = 4 #rand(5000) + 25000
+    length = 16384
+    count.times do |i|
+      @file.puts("hello #{i} #{'q'*length}")
+    end
+    @file.close
+
+    # Wait for lumberjack to finish publishing data to us.
+    Stud::try(20.times) do
+      raise "have #{@event_queue.size}, want #{count}" if @event_queue.size < count
+    end
+
+    # Now verify that we have all the data and in the correct order.
+    insist { @event_queue.size } == (count* 2)-1
+    host = Socket.gethostname
+    count.times do |i|
+      header = "hello #{i}"
+      event = @event_queue.pop
+      insist { event["line"] } == "#{header} #{'q'*(length-header.length-3)}"
+      insist { event["file"] } == @file.path
+      insist { event["host"] } == host
+      event = @event_queue.pop
+      insist { event["line"] } == "#{'q'*(header.length + 2)}"
       insist { event["file"] } == @file.path
       insist { event["host"] } == host
     end

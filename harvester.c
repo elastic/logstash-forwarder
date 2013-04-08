@@ -116,7 +116,7 @@ void *harvest(void *arg) {
       printf("read(%d '%s') failed: %s\n", fd,
              config->path, strerror(errno));
       break;
-    } else if (bytes == 0) {
+    } else if (bytes == 0 && offset < BUFFERSIZE-1) {
       backoff(&sleeper);
       if (strcmp(config->path, "-") == 0) {
         /* stdin gave EOF, close out. */
@@ -131,11 +131,11 @@ void *harvest(void *arg) {
       char *septok = buf;
       char *start = NULL;
       while (start = septok, (line = strsep(&septok, "\n")) != NULL) {
-        if (septok == NULL) {
-          /* last token found, no terminator though */
-          offset = offset - (line - buf);
-          memmove(buf, line, strlen(line));
-        } else {
+        if (septok != NULL || line == buf) {
+          if (septok == NULL) {
+            septok = buf + offset;
+          }
+
           /* emit line as an event */
           /* 'septok' points at the start of the next token, so subtract one. */
           size_t line_len = septok - start - 1;
@@ -157,6 +157,15 @@ void *harvest(void *arg) {
           }, "zmq_send (harvesting file '%s')", config->path);
           insist(rc == 0, "zmq_send(event) failed: %s", zmq_strerror(rc));
           zmq_msg_close(&event);
+
+          if (septok == NULL) {
+            offset = 0;
+            break;
+          }
+        } else {
+          /* last token found, no terminator though */
+          offset = offset - (line - buf);
+          memmove(buf, line, strlen(line));
         }
       } /* for each token */
     }
