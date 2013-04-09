@@ -7,11 +7,12 @@ Gem::Specification.new do |gem|
 
   gem.files = %w{
     lib/lumberjack/server.rb
+    lib/lumberjack/server2.rb
     lib/lumberjack/client.rb
   }
 
   gem.test_files    = []
   gem.name          = "jls-lumberjack"
   gem.require_paths = ["lib"]
-  gem.version       = "0.0.18"
+  gem.version       = "0.0.19"
 end
