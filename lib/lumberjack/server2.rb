@@ -52,6 +52,9 @@ module Lumberjack
 
         # JSON
         events = JSON.parse(inflated)
+        events.each do |event|
+          yield event
+        end
 
         # TODO(sissel): yield each event
         count += events.count
