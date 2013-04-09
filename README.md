@@ -32,10 +32,10 @@ Solution: lumberjack
 
         $ sudo gem install fpm
 
-2. Ensure you have outging FTP access to download OpenSSL from
-`ftp.openssl.org`.
+2. Install [go](http://golang.org/doc/install)
 
-3. Compile lumberback
+
+3. Compile lumberjack
 
         $ git clone git://github.com/jordansissel/lumberjack.git
         $ cd lumberback
