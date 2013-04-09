@@ -18,11 +18,11 @@ module Lumberjack
         :their_public_key => nil,
       }.merge(options)
 
-      #[:my_secret_key, :their_public_key].each do |k|
-        #if @options[k].nil?
-          #raise "You must specify #{k} in Lumberjack::Server.new(...)"
-        #end
-      #end
+      [:my_secret_key, :their_public_key].each do |k|
+        if @options[k].nil?
+          raise "You must specify #{k} in Lumberjack::Server.new(...)"
+        end
+      end
 
       @context = ZMQ::Context.new
       @socket = @context.socket(ZMQ::REP)
