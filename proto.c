@@ -90,11 +90,11 @@ struct lumberjack *lumberjack_new(const char *host, unsigned short port, size_t 
   lumberjack->ssl_context = SSL_CTX_new(SSLv23_client_method());
   SSL_CTX_set_verify(lumberjack->ssl_context, SSL_VERIFY_PEER, NULL);
 
-  lumberjack->io_buffer = str_new_size(16384); /* TODO(sissel): tunable */
+  lumberjack->io_buffer = str_new_size(16384+256); /* TODO(sissel): tunable */
 
   /* zlib provides compressBound() to give a 'worst case' compressed
    * payload size on a input payload of a given size. */
-  lumberjack->compression_buffer = str_new_size(compressBound(16384));
+  lumberjack->compression_buffer = str_new_size(compressBound(16384+256));
   return lumberjack;
 } /* lumberjack_new */
 
@@ -350,7 +350,7 @@ int lumberjack_write(struct lumberjack *lumberjack, struct str *payload) {
   //seq = ntohl(seq);
   //flog(stdout, "io_buffer: %.*s", str_length(lumberjack->io_buffer), str_data(lumberjack->io_buffer));
 
-  if (str_length(lumberjack->io_buffer) > 16384) {
+  if (str_length(lumberjack->io_buffer) > 16384) { // XXX This is an off-by-one, as the buffer is allocated to be 16384 bytes
     //flog(stdout, "io_buffer large enough (%d), flushing",
          //str_length(lumberjack->io_buffer));
     return lumberjack_flush(lumberjack);
