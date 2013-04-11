@@ -160,12 +160,14 @@ void *harvest(void *arg) {
 
           if (septok == NULL) {
             offset = 0;
+            memset(buf+offset, 0, BUFFERSIZE - offset - 1);
             break;
           }
         } else {
           /* last token found, no terminator though */
           offset = offset - (line - buf);
           memmove(buf, line, strlen(line));
+	  memset(buf+offset, 0, BUFFERSIZE - offset - 1);
         }
       } /* for each token */
     }
