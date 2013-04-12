@@ -1,0 +1,10 @@
+prefix=/home/jls/projects/lumberjack/build
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: sodium
+Description: libsodium
+Version: 0.0.3
+Libs: -L${libdir} -lsodium
+Cflags: -I${includedir}

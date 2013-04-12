@@ -66,17 +66,30 @@ build/bin/keygen: bin/keygen | build/bin
 	cp bin/keygen build/bin/keygen
 
 bin/lumberjack: pkg/linux_amd64/github.com/alecthomas/gozmq.a
-bin/lumberjack:
-	go install -ldflags '-r $$ORIGIN/../lib' lumberjack
-bin/keygen:
-	go install -ldflags '-r $$ORIGIN/../lib' keygen
+bin/lumberjack: | build/lib/pkgconfig/sodium.pc
+	PKG_CONFIG_PATH=$$PWD/build/lib/pkgconfig \
+		go install -ldflags '-r $$ORIGIN/../lib' lumberjack
+bin/keygen: | build/lib/pkgconfig/sodium.pc
+	PKG_CONFIG_PATH=$$PWD/build/lib/pkgconfig \
+		go install -ldflags '-r $$ORIGIN/../lib' keygen
 
 # Mark these phony; 'go install' takes care of knowing how and when to rebuild.
 .PHONY: bin/keygen bin/lumberjack
 
+build/lib/pkgconfig/sodium.pc: src/sodium/sodium.pc | build/lib/pkgconfig
+	cp $< $@
+
+build/lib/pkgconfig: | build/lib
+	mkdir $@
+build/lib: | build
+	mkdir $@
+
+
+
 # gozmq
 src/github.com/alecthomas/gozmq/zmq.go:
 	go get -d github.com/alecthomas/gozmq
+pkg/linux_amd64/github.com/alecthomas/gozmq.a: | build/lib/libzmq.$(LIBEXT)
 pkg/linux_amd64/github.com/alecthomas/gozmq.a: src/github.com/alecthomas/gozmq/zmq.go
 	PKG_CONFIG_PATH=$$PWD/build/lib/pkgconfig \
 	  go install -tags zmq_3_x github.com/alecthomas/gozmq

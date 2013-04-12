@@ -1,6 +1,6 @@
 package sodium
 // #include <sodium.h>
-// #cgo LDFLAGS: -lsodium
+// #cgo pkg-config: sodium
 import "C"
 import "unsafe"
 
