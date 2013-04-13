@@ -15,4 +15,6 @@ Gem::Specification.new do |gem|
   gem.name          = "jls-lumberjack"
   gem.require_paths = ["lib"]
   gem.version       = "0.0.19"
+
+  gem.add_runtime_dependency "ffi-rzmq", "~> 1.0.0"
 end
