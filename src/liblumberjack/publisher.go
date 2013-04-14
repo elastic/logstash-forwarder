@@ -136,6 +136,7 @@ func (s *FFS) ensure_connect() {
     var max *big.Int = big.NewInt(int64(len(s.Endpoints)))
     i, _ := rand.Int(rand.Reader, max)
     s.endpoint = s.Endpoints[i.Int64()]
+    log.Printf("Connecting to %s\n", s.endpoint)
     err := s.socket.Connect(s.endpoint)
     if err != nil {
       log.Printf("%s: Error connecting: %s\n", s.endpoint, err)
