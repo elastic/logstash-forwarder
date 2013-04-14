@@ -18,7 +18,7 @@ build-all: build/bin/keygen
 include Makefile.ext
 
 clean:
-	-@rm -fr lumberjack unixsock *.o build
+	-@rm -fr build bin pkg
 
 deps-clean:
 	rm -fr src/code.google.com/
@@ -94,7 +94,7 @@ pkg/linux_amd64/github.com/alecthomas/gozmq.a: src/github.com/alecthomas/gozmq/z
 	PKG_CONFIG_PATH=$$PWD/build/lib/pkgconfig \
 	  go install -tags zmq_3_x github.com/alecthomas/gozmq
 
-build/include/zmq.h build/lib/libzmq.$(LIBEXT): | build
+build/include/zmq.h build/lib/libzmq.$(LIBEXT): | build/include build/lib
 	@echo " => Building zeromq"
 	PATH=$$PWD:$$PATH $(MAKE) -C vendor/zeromq/ install PREFIX=$$PWD/build DEBUG=$(DEBUG)
 
