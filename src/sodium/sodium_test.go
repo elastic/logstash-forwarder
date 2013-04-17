@@ -2,6 +2,7 @@ package sodium
 
 import "fmt"
 import "testing"
+import "bytes"
 
 func ExampleBox() {
   pk, sk := CryptoBoxKeypair()
@@ -30,7 +31,7 @@ func TestNonceGeneration(t *testing.T) {
   _, nonce := s.Box([]byte(original))
   _, nonce2 := s.Box([]byte(original))
 
-  if nonce == nonce2 {
+  if bytes.Equal(nonce, nonce2) {
     t.Fatal("Two Box() calls generated the same nonce")
   }
 }

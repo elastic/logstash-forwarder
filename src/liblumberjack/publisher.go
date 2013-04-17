@@ -175,7 +175,7 @@ func Publish(input chan []*FileEvent,
 
   for events := range input {
     // got a bunch of events, ship them out.
-    log.Printf("Publisher received %d events\n", len(events))
+    //log.Printf("Publisher received %d events\n", len(events))
 
     data, _ := json.Marshal(events)
     // TODO(sissel): check error
@@ -210,7 +210,7 @@ func Publish(input chan []*FileEvent,
     // Loop forever trying to send.
     // This will cause reconnects/etc on failures automatically
     for {
-      err = socket.Send(nonce[:], zmq.SNDMORE)
+      err = socket.Send(nonce, zmq.SNDMORE)
       if err != nil {
         continue // send failed, retry!
       }

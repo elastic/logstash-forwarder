@@ -53,10 +53,11 @@ module Lumberjack
     end
 
     def run(&block)
-      setup_proxy(@context)
+      #setup_proxy(@context)
 
       threads = @options[:workers].times.collect do |i|
         Thread.new do
+          puts "Starting worker #{i}"
           run_worker(@context, &block)
         end
       end
@@ -67,7 +68,8 @@ module Lumberjack
     def run_worker(context, &block)
       socket = context.socket(ZMQ::REP)
       Stud::try(10.times) do
-        rc = socket.connect(@options[:worker_endpoint])
+        #rc = socket.connect(@options[:worker_endpoint])
+        rc = socket.bind(@options[:endpoint])
         if rc < 0
           raise "connect to #{@options[:worker_endpoint]} failed"
         end
@@ -85,25 +87,26 @@ module Lumberjack
         socket.recv_string(ciphertext)
 
         # Decrypt
-        plaintext = @cryptobox.open(nonce, ciphertext)
+        #plaintext = @cryptobox.open(nonce, ciphertext)
 
         # decompress
-        inflated = Zlib::Inflate.inflate(plaintext)
+        #inflated = Zlib::Inflate.inflate(plaintext)
 
         # JSON
-        events = JSON.parse(inflated)
+        #events = JSON.parse(inflated)
         #events.each do |event|
           #yield event
         #end
 
         # TODO(sissel): yield each event
-        count += events.count
+        #count += events.count
+        count += 1
 
         # Reply to acknowledge.
         # Currently there is no response message to put.
         socket.send_string("")
 
-        if count > 100000
+        if count > 100
           puts :rate => (count / (Time.now - start))
           count = 0
           start = Time.now
@@ -115,15 +118,15 @@ end # module Lumberjack
 
 if __FILE__ == $0
   a = Lumberjack::Server2.new(
-    :workers => 4,
+    :workers => 1,
     :endpoint => "tcp://127.0.0.1:12345",
     :their_public_key => File.read("../../nacl.public").force_encoding("BINARY"),
     :my_secret_key => File.read("../../nacl.secret").force_encoding("BINARY"))
 
   count = 0
-  start = Time.now
-  require "thread"
-  q = Queue.new
+  #start = Time.now
+  #require "thread"
+  #q = Queue.new
   #q = java.util.concurrent.LinkedBlockingQueue.new
   #Thread.new { a.run { |e| q.put(e) } }
   a.run { |e| }

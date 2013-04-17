@@ -3,23 +3,24 @@ import (
   "unsafe"
 )
 
-func RandomNonceStrategy() (func() [crypto_box_NONCEBYTES]byte) {
-  return func () (nonce [crypto_box_NONCEBYTES]byte) {
+func RandomNonceStrategy() (func() []byte) {
+  return func () ([]byte) {
+    var nonce [crypto_box_NONCEBYTES]byte
     Randombytes(nonce[:])
-    return
+    return nonce[:]
   }
 }
 
-func IncrementalNonceStrategy() (func() [crypto_box_NONCEBYTES]byte) {
+func IncrementalNonceStrategy() (func() []byte) {
   var nonce [crypto_box_NONCEBYTES]byte
   Randombytes(nonce[:])
 
   // TODO(sissel): Make the high-8 bytes of the nonce based on current time to
   // help avoid collisions?
 
-  return func() ([crypto_box_NONCEBYTES]byte) {
+  return func() ([]byte) {
     increment(nonce[:], 1)
-    return nonce
+    return nonce[:]
   }
 }
 
