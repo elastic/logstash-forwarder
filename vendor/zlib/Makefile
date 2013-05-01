@@ -1,4 +1,4 @@
-VERSION=1.2.7
+VERSION=1.2.8
 URL=http://zlib.net/zlib-$(VERSION).tar.gz
 TARBALL=$(shell basename $(URL))
 WORKDIR=zlib-$(VERSION)
