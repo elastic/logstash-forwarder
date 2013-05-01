@@ -1,4 +1,4 @@
-VERSION=1.2.7
+VERSION=1.2.8
 URL=http://downloads.sourceforge.net/project/libpng/zlib/$(VERSION)/zlib-$(VERSION).tar.gz
 TARBALL=$(shell basename $(URL))
 WORKDIR=zlib-$(VERSION)
