@@ -116,10 +116,10 @@ func main() {
   // Harvesters dump events into the spooler.
   go lumberjack.Spool(event_chan, publisher_chan, *spool_size, *idle_timeout)
 
-  lumberjack.Publish(publisher_chan, registrar_chan, server_list,
+  go lumberjack.Publish(publisher_chan, registrar_chan, server_list,
                      public_key, secret_key, *server_timeout)
 
   // TODO(sissel): registrar db path
   // TODO(sissel): registrar records last acknowledged positions in all files.
-  //lumberjack.Registrar(registrar_chan)
+  lumberjack.Registrar(registrar_chan)
 } /* main */

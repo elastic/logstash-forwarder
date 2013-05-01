@@ -227,6 +227,6 @@ func Publish(input chan []*FileEvent,
     }
 
     // Tell the registrar that we've successfully sent these events
-    //registrar <- events
+    registrar <- events
   } /* for each event payload */
 } // Publish
