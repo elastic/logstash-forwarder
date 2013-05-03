@@ -188,7 +188,7 @@ void track_rotation(int *fd, const char *path) {
     close(*fd);
     /* start reading the new file! */
     *fd = rc; 
-  } else if (pathstat.st_size < fdstat.st_size) {
+  } else if (fdstat.st_size < lseek(*fd, 0, SEEK_CUR)) {
     /* the file was truncated, jump back to the beginning */
     lseek(*fd, 0, SEEK_SET);
   }
