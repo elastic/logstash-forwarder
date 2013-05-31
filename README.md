@@ -35,10 +35,10 @@ Solution: lumberjack
 2. Ensure you have outging FTP access to download OpenSSL from
 `ftp.openssl.org`.
 
-3. Compile lumberback
+3. Compile lumberjack
 
         git clone git://github.com/jordansissel/lumberjack.git
-        cd lumberback
+        cd lumberjack
         make
 
 4. Make packages, either:
