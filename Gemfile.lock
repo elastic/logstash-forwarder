@@ -1,5 +1,5 @@
 GEM
-  remote: http://rubygems.org/
+  remote: https://rubygems.org/
   specs:
     bouncy-castle-java (1.5.0146.1)
     diff-lcs (1.1.3)
