@@ -30,24 +30,24 @@ Solution: lumberjack
 
 1. Install [FPM](https://github.com/jordansissel/fpm)
 
-        $ sudo gem install fpm
+        sudo gem install fpm
 
 2. Ensure you have outging FTP access to download OpenSSL from
 `ftp.openssl.org`.
 
-3. Compile lumberback
+3. Compile lumberjack
 
-        $ git clone git://github.com/jordansissel/lumberjack.git
-        $ cd lumberback
-        $ make
+        git clone git://github.com/jordansissel/lumberjack.git
+        cd lumberjack
+        make
 
 4. Make packages, either:
 
-        $ make rpm
+        make rpm
 
     Or:
 
-        $ make deb
+        make deb
 
 ## Installing it
 
@@ -59,7 +59,7 @@ need.
 
 Generally:
 
-    $ lumberjack.sh --host somehost --port 12345 /var/log/messages
+    lumberjack.sh --host somehost --port 12345 /var/log/messages
 
 See `lumberjack.sh --help` for all the flags
 
