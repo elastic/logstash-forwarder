@@ -26,6 +26,25 @@ Solution: lumberjack
   * Follows files and respects rename/truncation conditions.
   * Accepts `STDIN`, useful for things like `varnishlog | lumberjack...`.
 
+### Design
+
+Lumberjack is designed to guarantee that every event will be sent.
+To do this, it can sometimes send a event repeatedly.
+The reason for this is lumberjack spools a few hundred events up before sending them off -
+if that full spool is not acknowledged, it is resent.
+If logstash receives 1000 events in a lumberjack payload, and processes 500 of them before lumberjack
+think there's a timeout, lumberjack will reconnect and resend the full 1000, giving you the first 500 duplicated.
+
+#### Avoiding duplicates
+
+If you want to avoid duplicates, you can try setting '--window-size 1' on lumberjack so that each payload
+will only contain 1 event and lumberjack will wait for that event to be acknowledged before it sends another.
+You can still get duplicates in this situation, but the number of duplicates will be much reduced.
+
+Another way to prevent duplicate events is by setting a 'document_id' in the elasticsearch output.
+Done carefully, this causes duplicate events to overwrite themselves in elasticsearch instead of
+creating new items in elasticsearch.
+
 ## Building it
 
 1. Install [FPM](https://github.com/jordansissel/fpm)
