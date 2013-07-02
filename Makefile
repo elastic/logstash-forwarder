@@ -60,21 +60,16 @@ endif # libsodium
 build/bin/lumberjack.sh: lumberjack.sh | build/bin
 	install -m 755 $^ $@
 
-build/bin/lumberjack: bin/lumberjack | build/bin
-	cp bin/lumberjack build/bin/lumberjack
-build/bin/keygen: bin/keygen | build/bin
-	cp bin/keygen build/bin/keygen
-
-bin/lumberjack: pkg/linux_amd64/github.com/alecthomas/gozmq.a
-bin/lumberjack: | build/lib/pkgconfig/sodium.pc
+build/bin/lumberjack: pkg/linux_amd64/github.com/alecthomas/gozmq.a
+build/bin/lumberjack: | build/lib/pkgconfig/sodium.pc
 	PKG_CONFIG_PATH=$$PWD/build/lib/pkgconfig \
-		go install -ldflags '-r $$ORIGIN/../lib' lumberjack
-bin/keygen: | build/lib/pkgconfig/sodium.pc
+		go build -ldflags '-r $$ORIGIN/../lib' -v -o $@
+build/bin/keygen: | build/lib/pkgconfig/sodium.pc
 	PKG_CONFIG_PATH=$$PWD/build/lib/pkgconfig \
-		go install -ldflags '-r $$ORIGIN/../lib' keygen
+		go install -ldflags '-r $$ORIGIN/../lib' -o $@
 
 # Mark these phony; 'go install' takes care of knowing how and when to rebuild.
-.PHONY: bin/keygen bin/lumberjack
+.PHONY: build/bin/keygen build/bin/lumberjack
 
 build/lib/pkgconfig/sodium.pc: src/sodium/sodium.pc | build/lib/pkgconfig
 	cp $< $@
@@ -83,8 +78,6 @@ build/lib/pkgconfig: | build/lib
 	mkdir $@
 build/lib: | build
 	mkdir $@
-
-
 
 # gozmq
 src/github.com/alecthomas/gozmq/zmq.go:

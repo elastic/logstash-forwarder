@@ -1,4 +1,4 @@
-package liblumberjack
+package main
 
 import (
   "time"
@@ -8,23 +8,11 @@ import (
   "log"
 )
 
-func Prospect(paths []string, output chan *FileEvent) {
-  // Scan for "-" to do stdin special handling.
-  for i, path := range paths {
-    if path == "-" {
-      harvester := Harvester{Path: path}
-      go harvester.Harvest(output)
-
-      // remove "-" from the paths list
-      paths = append(paths[0:i], paths[i+1:]...)
-      break
-    }
-  }
-
+func Prospect(fileconfig FileConfig, output chan *FileEvent) {
   fileinfo := make(map[string]os.FileInfo)
   for {
-    for _, path := range paths {
-      prospector_scan(path, fileinfo, output)
+    for _, path := range fileconfig.Paths {
+      prospector_scan(path, fileconfig.Fields, fileinfo, output)
     }
 
     // Defer next scan for a bit.
@@ -32,7 +20,8 @@ func Prospect(paths []string, output chan *FileEvent) {
   }
 } /* Prospect */
 
-func prospector_scan(path string, fileinfo map[string]os.FileInfo,
+func prospector_scan(path string, fields map[string]string, 
+                     fileinfo map[string]os.FileInfo,
                      output chan *FileEvent) {
   log.Printf("Prospecting %s\n", path)
 
@@ -98,7 +87,7 @@ func prospector_scan(path string, fileinfo map[string]os.FileInfo,
 
         if !renamed {
           log.Printf("Launching harvester on new file: %s\n", file)
-          harvester := Harvester{Path: file}
+          harvester := Harvester{Path: file, Fields: fields}
           go harvester.Harvest(output)
         }
       }
@@ -112,7 +101,7 @@ func prospector_scan(path string, fileinfo map[string]os.FileInfo,
         log.Printf("Launching harvester on rotated file: %s\n", file)
         // TODO(sissel): log 'file rotated' or osmething
         // Start a harvester on the path; a new file appeared with the same name.
-        harvester := Harvester{Path: file}
+        harvester := Harvester{Path: file, Fields: fields}
         go harvester.Harvest(output)
       }
     }

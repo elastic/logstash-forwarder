@@ -1,4 +1,4 @@
-package liblumberjack
+package main
 
 import (
   "os" // for File and friends
@@ -11,6 +11,7 @@ import (
 
 type Harvester struct {
   Path string /* the file path to harvest */
+  Fields map[string]string
 
   file os.File /* the file being watched */
 }
@@ -69,6 +70,7 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
       Offset: uint64(offset),
       Line: line,
       Text: text,
+      Fields: &h.Fields,
       fileinfo: &info,
     }
     offset += int64(len(*event.Text)) + 1  // +1 because of the line terminator

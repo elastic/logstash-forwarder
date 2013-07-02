@@ -1,4 +1,4 @@
-package liblumberjack
+package main
 
 import (
   "time"
