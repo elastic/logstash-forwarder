@@ -54,9 +54,16 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
     if err != nil {
       if err == io.EOF {
         // timed out waiting for data, got eof.
-        // TODO(sissel): Check to see if the file was truncated
-        // TODO(sissel): if last_read_time was more than 24 hours ago
-        if age := time.Since(last_read_time); age > (24 * time.Hour) {
+        // Check to see if the file was truncated
+        info, _ := h.file.Stat()
+        if info.Size() < offset {
+          log.Printf("File truncated, seeking to beginning: %s\n", h.Path)
+          h.file.Seek(0, os.SEEK_SET)
+          offset = 0
+        } else if age := time.Since(last_read_time); age > (24 * time.Hour) {
+          // if last_read_time was more than 24 hours ago, this file is probably
+          // dead. Stop watching it.
+          // TODO(sissel): Make this time configurable
           // This file is idle for more than 24 hours. Give up and stop harvesting.
           log.Printf("Stopping harvest of %s; last change was %d seconds ago\n", h.Path, age.Seconds())
           return
