@@ -4,21 +4,25 @@ import (
   "encoding/json"
   "os"
   "log"
+  "time"
 )
 
 type Config struct {
-  Network NetworkConfig "json:network"
-  Files []FileConfig "json:files"
+  Network NetworkConfig `json:network`
+  Files []FileConfig `json:files`
 }
 
 type NetworkConfig struct {
-  Servers []string "json:servers"
-  SSLCertificate string "json:ssl certificate"
-}
+  Servers []string `json:servers`
+  SSLCertificate string `json:"ssl certificate"`
+  SSLKey string `json:"ssl key"`
+  SSLCA string `json:"ssl ca"`
+  Timeout time.Duration `json:timeout`
+} 
 
 type FileConfig struct {
-  Paths []string "json:paths"
-  Fields map[string]string "json:fields"
+  Paths []string `json:paths`
+  Fields map[string]string `json:fields`
 }
 
 func LoadConfig(path string) (config Config, err error) {
@@ -43,6 +47,10 @@ func LoadConfig(path string) (config Config, err error) {
   if err != nil {
     log.Printf("Failed unmarshalling json: %s\n", err)
     return
+  }
+
+  if config.Network.Timeout == 0 {
+    config.Network.Timeout = 5 * time.Second
   }
 
   return
