@@ -62,10 +62,8 @@ func main() {
   // Harvesters dump events into the spooler.
   go Spool(event_chan, publisher_chan, *spool_size, *idle_timeout)
 
-  //go Publish(publisher_chan, registrar_chan, server_list,
-                     //public_key, secret_key, *server_timeout)
+  go Publishv1(publisher_chan, registrar_chan, &config.Network)
 
-  // TODO(sissel): registrar db path
-  // TODO(sissel): registrar records last acknowledged positions in all files.
+  // registrar records last acknowledged positions in all files.
   Registrar(registrar_chan)
 } /* main */
