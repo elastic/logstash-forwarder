@@ -12,6 +12,7 @@ import (
 type Harvester struct {
   Path string /* the file path to harvest */
   Fields map[string]string
+  Offset int64
 
   file os.File /* the file being watched */
 }
@@ -23,7 +24,11 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
   // TODO(sissel): Sleep when there's nothing to do
   // TODO(sissel): Quit if we think the file is dead (file dev/inode changed, no data in X seconds)
 
-  log.Printf("Starting harvester: %s\n", h.Path)
+  if h.Offset > 0 {
+    log.Printf("Starting harvester at position %d: %s\n", h.Offset, h.Path)
+  } else {
+    log.Printf("Starting harvester: %s\n", h.Path)
+  }
 
   file := h.open()
   info, _ := file.Stat() // TODO(sissel): Check error
@@ -67,7 +72,7 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
     line++
     event := &FileEvent{
       Source: &h.Path,
-      Offset: uint64(offset),
+      Offset: offset,
       Line: line,
       Text: text,
       Fields: &h.Fields,
@@ -100,9 +105,12 @@ func (h *Harvester) open() *os.File {
     }
   }
 
-  // TODO(sissel): In the future, use the registrary to determine where to seek.
   // TODO(sissel): Only seek if the file is a file, not a pipe or socket.
-  file.Seek(0, os.SEEK_END)
+  if h.Offset > 0 {
+    file.Seek(h.Offset, os.SEEK_SET)
+  } else {
+    file.Seek(0, os.SEEK_END)
+  }
 
   return file
 }
