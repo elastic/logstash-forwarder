@@ -13,6 +13,7 @@ func Registrar(input chan []*FileEvent) {
     log.Printf("Registrar received %d events\n", len(events))
     // Take the last event found for each file source
     for _, event := range events {
+      // skip stdin
       if *event.Source == "-" {
         continue
       }
@@ -22,7 +23,9 @@ func Registrar(input chan []*FileEvent) {
       fstat := (*(event.fileinfo)).Sys().(*syscall.Stat_t)
       state[*event.Source] = &FileState{
         Source: event.Source,
-        Offset: event.Offset + uint64(len(*event.Text)),
+        // take the offset + length of the line + newline char and
+        // save it as the new starting offset.
+        Offset: event.Offset + int64(len(*event.Text)) + 1,
         Inode: fstat.Ino,
         Device: fstat.Dev,
       }
@@ -37,7 +40,6 @@ func Registrar(input chan []*FileEvent) {
 
 func write(state map[string]*FileState) {
   log.Printf("Saving registrar state.\n")
-
   // Open tmp file, write, flush, rename
   file, err := os.Create(".lumberjack.new")
   if err != nil {
