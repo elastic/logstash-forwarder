@@ -14,7 +14,7 @@ LDFLAGS+=-Lbuild/lib -Wl,-rpath,'$$ORIGIN/../lib'
 
 default: build-all
 build-all: build/bin/lumberjack build/bin/lumberjack.sh
-build-all: build/bin/keygen
+#build-all: build/bin/keygen
 include Makefile.ext
 
 clean:
