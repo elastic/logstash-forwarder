@@ -11,7 +11,6 @@ import (
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 var spool_size = flag.Uint64("spool-size", 1024, "Maximum number of events to spool before a flush is forced.")
 var idle_timeout = flag.Duration("idle-flush-time", 5 * time.Second, "Maximum time to wait for a full spool before flushing anyway")
-var server_timeout = flag.Duration("server-timeout", 30 * time.Second, "Maximum time to wait for a request to a server before giving up and trying another.")
 var config_file = flag.String("config", "", "The config file to load")
 
 func main() {
