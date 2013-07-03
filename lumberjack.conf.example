@@ -1,0 +1,20 @@
+{
+  "network": {
+    "servers": [ "localhost:5043" ],
+    "ssl certificate": "./lumberjack.crt",
+    "ssl key": "./lumberjack.key",
+    "ssl ca": "./lumberjack_ca.crt"
+  },
+  "files": [
+    {
+      "paths": [ 
+        "/var/log/*.log",
+        "/var/log/messages"
+      ],
+      "fields": { "type": "syslog" }
+    }, {
+      "paths": [ "/var/log/apache2/access.log" ],
+      "fields": { "type": "apache" }
+    }
+  ]
+}
