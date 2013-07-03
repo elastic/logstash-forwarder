@@ -17,3 +17,6 @@ vendor/libsodium/*/
 vendor/zlib/*/
 nacl.public
 nacl.secret
+.lumberjack
+.lumberjack.new
+.rbx
