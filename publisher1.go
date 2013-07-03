@@ -49,6 +49,11 @@ func Publishv1(input chan []*FileEvent,
 
     // Send buffer until we're successful...
     oops := func(err error) {
+      // TODO(sissel): Track how frequently we timeout and reconnect. If we're
+      // timing out too frequently, there's really no point in timing out since
+      // basically everything is slow or down. We'll want to ratchet up the 
+      // timeout value slowly until things improve, then ratchet it down once
+      // things seem healthy.
       log.Printf("Socket error, will reconnect: %s\n", err)
       time.Sleep(1 * time.Second)
       socket.Close()
@@ -58,7 +63,7 @@ func Publishv1(input chan []*FileEvent,
     SendPayload: for {
       // Abort if our whole request takes longer than the configured
       // network timeout.
-      socket.SetDeadline(time.Now().Add(config.Timeout))
+      socket.SetDeadline(time.Now().Add(config.timeout))
 
       // Set the window size to the length of this payload in events.
       _, err = socket.Write([]byte("1W"))
@@ -139,7 +144,7 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
     address := config.Servers[rand.Int() % len(config.Servers)]
     log.Printf("Connecting to %s\n", address)
 
-    tcpsocket, err := net.DialTimeout("tcp", address, config.Timeout)
+    tcpsocket, err := net.DialTimeout("tcp", address, config.timeout)
     if err != nil {
       log.Printf("Failure connecting to %s: %s\n", address, err)
       time.Sleep(1 * time.Second)
@@ -147,7 +152,7 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
     }
 
     socket = tls.Client(tcpsocket, &tlsconfig)
-    socket.SetDeadline(time.Now().Add(config.Timeout))
+    socket.SetDeadline(time.Now().Add(config.timeout))
     err = socket.Handshake()
     if err != nil {
       log.Printf("Failed to tls handshake with %s %s\n", address, err)

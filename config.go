@@ -17,7 +17,8 @@ type NetworkConfig struct {
   SSLCertificate string `json:"ssl certificate"`
   SSLKey string `json:"ssl key"`
   SSLCA string `json:"ssl ca"`
-  Timeout time.Duration `json:timeout`
+  Timeout int64 `json:timeout`
+  timeout time.Duration
 } 
 
 type FileConfig struct {
@@ -51,8 +52,10 @@ func LoadConfig(path string) (config Config, err error) {
   }
 
   if config.Network.Timeout == 0 {
-    config.Network.Timeout = 5 * time.Second
+    config.Network.Timeout = 15
   }
+
+  config.Network.timeout = time.Duration(config.Network.Timeout) * time.Second
 
   //for _, fileconfig := range config.Files {
     //if fileconfig.DeadTime == 0 {
