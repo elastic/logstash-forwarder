@@ -23,6 +23,7 @@ type NetworkConfig struct {
 type FileConfig struct {
   Paths []string `json:paths`
   Fields map[string]string `json:fields`
+  //DeadTime time.Duration `json:"dead time"`
 }
 
 func LoadConfig(path string) (config Config, err error) {
@@ -52,6 +53,12 @@ func LoadConfig(path string) (config Config, err error) {
   if config.Network.Timeout == 0 {
     config.Network.Timeout = 5 * time.Second
   }
+
+  //for _, fileconfig := range config.Files {
+    //if fileconfig.DeadTime == 0 {
+      //fileconfig.DeadTime = 24 * time.Hour
+    //}
+  //}
 
   return
 }
