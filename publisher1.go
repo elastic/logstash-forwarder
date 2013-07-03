@@ -1,6 +1,7 @@
 package main
 
 import (
+  "math/rand"
   "bytes"
   "encoding/binary"
   "encoding/pem"
@@ -133,8 +134,11 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
     tlsconfig.RootCAs.AddCert(cert)
   }
 
-  address := "127.0.0.1:3333"
   for {
+    // Pick a random server from the list.
+    address := config.Servers[rand.Int() % len(config.Servers)]
+    log.Printf("Connecting to %s\n", address)
+
     tcpsocket, err := net.DialTimeout("tcp", address, config.Timeout)
     if err != nil {
       log.Printf("Failure connecting to %s: %s\n", address, err)
