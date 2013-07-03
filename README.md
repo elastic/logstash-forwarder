@@ -12,9 +12,65 @@ list.
 
 A tool to collect logs locally in preparation for processing elsewhere!
 
-Problem: logstash jar releases are too fat for constrained systems.
+Problem: logstash jar releases are too fat for constrained systems. Until we can comfortably promise logstash executing with less resource usage...
 
 Solution: lumberjack
+
+## Configuring
+
+lumberjack is configured with a json file you specify with thei -config flag:
+
+`lumberjack -config yourstuff.json`
+
+Here's a sample, with comments in-line to describe the settings. Please please
+please keep in mind that comments are technically invalid in JSON, so you can't
+include them in your config.:
+
+    {
+      # The network section covers network configuration :)
+      "network": {
+        # A list of downstream servers listening for our messages.
+        # lumberjack will pick one at random and only switch if
+        # the selected one appears to be dead or unresponsive
+        "servers": [ "localhost:5043" ],
+
+        # The path to your client ssl certificate (optional)
+        "ssl certificate": "./lumberjack.crt",
+        # The path to your client ssl key (optional)
+        "ssl key": "./lumberjack.key",
+
+        # The path to your trusted ssl CA file. This is used
+        # to authenticate your downstream server.
+        "ssl ca": "./lumberjack_ca.crt"
+      },
+
+      # The list of files configurations
+      "files": [
+        # An array of hashes. Each hash tells what paths to watch and
+        # what fields to annotate on events from those paths.
+        {
+          "paths": [ 
+            # single paths are fine
+            "/var/log/messages",
+            # globs are fine too, they will be periodically evaluated
+            # to see if any new files match the wildcard.
+            "/var/log/*.log"
+          ],
+
+          # A dictionary of fields to annotate on each event.
+          "fields": { "type": "syslog" }
+        }, {
+          # A path of "-" means stdin.
+          "paths": [ "-" ],
+          "fields": { "type": "stdin" }
+        }, {
+          "paths": [
+            "/var/log/apache/httpd-*.log"
+          ],
+          "fields": { "type: "apache" }
+        }
+      ]
+    }
 
 ### Goals
 
