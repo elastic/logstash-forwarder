@@ -2,7 +2,8 @@ VERSION=0.1.0
 
 # By default, all dependencies (zeromq, etc) will be downloaded and installed
 # locally. You can change this if you are deploying your own.
-VENDOR?=zeromq libsodium
+#VENDOR?=zeromq libsodium
+VENDOR=
 
 # Where to install to.
 PREFIX?=/opt/lumberjack
@@ -47,24 +48,25 @@ rpm deb: | build-all
 # Vendor'd dependencies
 # If VENDOR contains 'zeromq' download and build it.
 ifeq ($(filter zeromq,$(VENDOR)),zeromq)
-bin/lumberjack: | build/bin build/lib/libzmq.$(LIBEXT)
+build/bin/lumberjack: | build/bin build/lib/libzmq.$(LIBEXT)
 pkg/linux_amd64/github.com/alecthomas/gozmq.a: | build/lib/libzmq.$(LIBEXT)
 src/github.com/alecthomas/gozmq/zmq.go: | build/lib/libzmq.$(LIBEXT)
 endif # zeromq
 
 ifeq ($(filter libsodium,$(VENDOR)),libsodium)
-bin/lumberjack: | build/bin build/lib/libsodium.$(LIBEXT)
-bin/keygen: | build/bin build/lib/libsodium.$(LIBEXT)
+build/bin/lumberjack: | build/bin build/lib/libsodium.$(LIBEXT)
+build/bin/lumberjack: | build/lib/pkgconfig/sodium.pc
+build/bin/keygen: | build/lib/pkgconfig/sodium.pc
+build/bin/keygen: | build/bin build/lib/libsodium.$(LIBEXT)
 endif # libsodium
 
 build/bin/lumberjack.sh: lumberjack.sh | build/bin
 	install -m 755 $^ $@
 
-build/bin/lumberjack: pkg/linux_amd64/github.com/alecthomas/gozmq.a
-build/bin/lumberjack: | build/lib/pkgconfig/sodium.pc
+build/bin/lumberjack: | build/bin
 	PKG_CONFIG_PATH=$$PWD/build/lib/pkgconfig \
 		go build -ldflags '-r $$ORIGIN/../lib' -v -o $@
-build/bin/keygen: | build/lib/pkgconfig/sodium.pc
+build/bin/keygen:  | build/bin
 	PKG_CONFIG_PATH=$$PWD/build/lib/pkgconfig \
 		go install -ldflags '-r $$ORIGIN/../lib' -o $@
 
