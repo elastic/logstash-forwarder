@@ -20,7 +20,6 @@ var hostname string
 func init() {
   log.Printf("publisher init\n")
   hostname, _ = os.Hostname()
-
 }
 
 func Publishv1(input chan []*FileEvent,
@@ -168,9 +167,10 @@ func writeDataFrame(event *FileEvent, sequence uint32, output io.Writer) {
   // sequence number
   binary.Write(output, binary.BigEndian, uint32(sequence))
   // 'pair' count
-  binary.Write(output, binary.BigEndian, uint32(len(*event.Fields) + 3))
+  binary.Write(output, binary.BigEndian, uint32(len(*event.Fields) + 4))
 
   writeKV("file", *event.Source, output)
+  writeKV("host", hostname, output)
   writeKV("offset", strconv.FormatInt(event.Offset, 10), output)
   writeKV("line", *event.Text, output)
   for k, v := range(*event.Fields) {
