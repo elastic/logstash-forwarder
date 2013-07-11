@@ -51,7 +51,7 @@ creating new items in elasticsearch.
 
         sudo gem install fpm
 
-2. Ensure you have outging FTP access to download OpenSSL from
+2. Ensure you have outgoing FTP access to download OpenSSL from
 `ftp.openssl.org`.
 
 3. Compile lumberjack
