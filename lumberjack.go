@@ -5,6 +5,7 @@ import (
   "os"
   "time"
   "flag"
+  "log/syslog"
   "runtime/pprof"
 )
 
@@ -12,6 +13,7 @@ var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 var spool_size = flag.Uint64("spool-size", 1024, "Maximum number of events to spool before a flush is forced.")
 var idle_timeout = flag.Duration("idle-flush-time", 5 * time.Second, "Maximum time to wait for a full spool before flushing anyway")
 var config_file = flag.String("config", "", "The config file to load")
+var use_syslog = flag.Bool("log-to-syslog", false, "Log to syslog instead of stdout")
 
 func main() {
   flag.Parse()
@@ -28,8 +30,6 @@ func main() {
       panic("done")
     }()
   }
-
-  log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
 
   config, err := LoadConfig(*config_file)
   if err != nil {
@@ -52,6 +52,15 @@ func main() {
   // - registrar: records positions of files read
   // Finally, prospector uses the registrar information, on restart, to
   // determine where in each file to resume a harvester.
+  
+  log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
+  if *use_syslog {
+    writer, err := syslog.New(syslog.LOG_INFO | syslog.LOG_DAEMON, "lumberjack")
+    if err != nil {
+      log.Fatalf("Failed to open syslog: %s\n", err)
+    }
+    log.SetOutput(writer)
+  }
 
   // Prospect the globs/paths given on the command line and launch harvesters
   for _, fileconfig := range config.Files {
