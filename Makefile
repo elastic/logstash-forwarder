@@ -38,13 +38,14 @@ vendor-clean:
 	$(MAKE) -C vendor/zeromq/ clean
 	$(MAKE) -C vendor/zlib/ clean
 
+rpm deb: PREFIX=/opt/lumberjack
 rpm deb: | build-all
-	fpm -s dir -t $@ -n lumberjack -v $(VERSION) --prefix /opt/lumberjack \
-		--exclude '*.a' --exclude 'lib/pkgconfig/zlib.pc' -C build \
+	fpm -s dir -t $@ -n lumberjack -v $(VERSION) \
+		--exclude '*.a' --exclude 'lib/pkgconfig/zlib.pc' \
 		--description "a log shipping tool" \
 		--url "https://github.com/jordansissel/lumberjack" \
-		bin/lumberjack bin/lumberjack.sh
-		#bin/keygen bin/lumberjack bin/lumberjack.sh lib
+		build/bin/lumberjack=$(PREFIX)/bin/ build/bin/lumberjack.sh=$(PREFIX)/bin/ \
+		lumberjack.init=/etc/init.d/lumberjack
 
 # Vendor'd dependencies
 # If VENDOR contains 'zeromq' download and build it.
