@@ -21,19 +21,20 @@ DAEMON_ARGS="-config /opt/lumberjack/lumberjack.conf -spool-size 100 -log-to-sys
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
+COMMAND="cd /var/run; exec $DAEMON $DAEMON_ARGS"
+
 [ -r /etc/default/$NAME ] && . /etc/default/$NAME
 . /lib/init/vars.sh
 . /lib/lsb/init-functions
 
 do_start() {
   # Skip if it's already running
-  start-stop-daemon --start --quiet --pidfile $PIDFILE  \
-    --exec $DAEMON --test > /dev/null || return 1
+  start-stop-daemon --start --quiet --pidfile $PIDFILE --exec /bin/sh --test > /dev/null || return 1
 
   cd /var/run
   # Actually start it now.
   start-stop-daemon --start --quiet --make-pidfile --background \
-    --pidfile $PIDFILE --exec $DAEMON -- $DAEMON_ARGS || return 2
+    --pidfile $PIDFILE --exec /bin/sh -- -c "$COMMAND" || return 2
 }
 
 do_stop()

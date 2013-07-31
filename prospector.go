@@ -73,7 +73,7 @@ func resume_tracking(fileconfig FileConfig, fileinfo map[string]os.FileInfo, out
 func prospector_scan(path string, fields map[string]string, 
                      fileinfo map[string]os.FileInfo,
                      output chan *FileEvent) {
-  log.Printf("Prospecting %s\n", path)
+  //log.Printf("Prospecting %s\n", path)
 
   // Evaluate the path as a wildcards/shell glob
   matches, err := filepath.Glob(path)
