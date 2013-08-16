@@ -41,7 +41,14 @@ include them in your config.:
 
         # The path to your trusted ssl CA file. This is used
         # to authenticate your downstream server.
-        "ssl ca": "./lumberjack_ca.crt"
+        "ssl ca": "./lumberjack_ca.crt",
+
+        # Network timeout in seconds. This is most important for lumberjack
+        # determining whether to stop waiting for an acknowledgement from the
+        # downstream server. If an timeout is reached, lumberjack will assume
+        # the connection or server is bad and will connect to a server chosen
+        # at random from the servers list.
+        "timeout": 15
       },
 
       # The list of files configurations
