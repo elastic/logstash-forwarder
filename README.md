@@ -67,7 +67,7 @@ include them in your config.:
           "paths": [
             "/var/log/apache/httpd-*.log"
           ],
-          "fields": { "type:" "apache" }
+          "fields": { "type": "apache" }
         }
       ]
     }
