@@ -16,9 +16,51 @@ Problem: logstash jar releases are too fat for constrained systems. Until we can
 
 Solution: lumberjack
 
-## Configuring
 
-lumberjack is configured with a json file you specify with thei -config flag:
+
+### Goals
+
+* Minimize resource usage where possible (CPU, memory, network).
+* Secure transmission of logs.
+* Configurable event data.
+* Easy to deploy with minimal moving parts.
+* Simple inputs only:
+  * Follows files and respects rename/truncation conditions.
+  * Accepts `STDIN`, useful for things like `varnishlog | lumberjack...`.
+
+## Building it
+
+1. Install [FPM](https://github.com/jordansissel/fpm)
+
+        $ sudo gem install fpm
+
+2. Install [go](http://golang.org/doc/install)
+
+
+3. Compile lumberjack
+
+        $ git clone git://github.com/jordansissel/lumberjack.git
+        $ cd lumberback
+        $ make
+
+4. Make packages, either:
+
+        $ make rpm
+
+    Or:
+
+        $ make deb
+
+## Installing it
+
+Packages install to `/opt/lumberjack`. Lumberjack builds all necessary
+dependencies itself, so there should be no run-time dependencies you
+need.
+
+## Running it
+### Create the config.json file first
+
+lumberjack is configured with a json file you specify with they -config flag:
 
 `lumberjack -config yourstuff.json`
 
@@ -79,57 +121,13 @@ include them in your config.:
       ]
     }
 
-### Goals
-
-* Minimize resource usage where possible (CPU, memory, network).
-* Secure transmission of logs.
-* Configurable event data.
-* Easy to deploy with minimal moving parts.
-* Simple inputs only:
-  * Follows files and respects rename/truncation conditions.
-  * Accepts `STDIN`, useful for things like `varnishlog | lumberjack...`.
-
-## Building it
-
-1. Install [FPM](https://github.com/jordansissel/fpm)
-
-        $ sudo gem install fpm
-
-2. Install [go](http://golang.org/doc/install)
-
-
-3. Compile lumberjack
-
-        $ git clone git://github.com/jordansissel/lumberjack.git
-        $ cd lumberback
-        $ make
-
-4. Make packages, either:
-
-        $ make rpm
-
-    Or:
-
-        $ make deb
-
-## Installing it
-
-Packages install to `/opt/lumberjack`. Lumberjack builds all necessary
-dependencies itself, so there should be no run-time dependencies you
-need.
-
-## Running it
-
-Generally:
-
-    $ lumberjack.sh --host somehost --port 12345 /var/log/messages
-
+###More params:
 See `lumberjack.sh --help` for all the flags
 
 ### Key points
 
 * You'll need an SSL CA to verify the server (host) with.
-* You can specify custom fields with the `--field foo=bar`. Any number of these
+* You can specify custom fields. Any number of these
   may be specified. I use them to set fields like `type` and other custom
   attributes relevant to each log.
 * Any non-flag argument after is considered a file path. You can watch any
@@ -153,10 +151,6 @@ In logstash, you'll want to use the [lumberjack](http://logstash.net/docs/latest
       }
     }
 
-## Implementation details 
-
-Below is valid as of 2012/09/19
-
 ### Minimize resource usage
 
 * Sets small resource limits (memory, open files) on start up based on the
@@ -171,11 +165,13 @@ Below is valid as of 2012/09/19
   are sending to).
 * Uses OpenSSL to transport logs.
 
+Can create your certificate with:
+ `openssl req -x509 -batch -nodes -newkey rsa:2048 -keyout lumberjack.key -out lumberjack.crt`
+ 
 ### Configurable event data
 
 * The protocol lumberjack uses supports sending a `string:string` map.
-* The lumberjack tool lets you specify arbitrary extra data with
-  `--field name=value`.
+* The lumberjack tool lets you specify arbitrary extra into the config file
 
 ### Easy deployment
 
