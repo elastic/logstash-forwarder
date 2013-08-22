@@ -122,18 +122,18 @@ need.
 
 Generally:
 
-    $ lumberjack.sh --host somehost --port 12345 /var/log/messages
+    $ lumberjack.sh -config lumberjack.conf
 
-See `lumberjack.sh --help` for all the flags
+See `lumberjack.sh -help` for all the flags
+
+The config file is documented further up in this file.
 
 ### Key points
 
 * You'll need an SSL CA to verify the server (host) with.
-* You can specify custom fields with the `--field foo=bar`. Any number of these
-  may be specified. I use them to set fields like `type` and other custom
-  attributes relevant to each log.
-* Any non-flag argument after is considered a file path. You can watch any
-  number of files.
+* You can specify custom fields for each set of paths in the config file. Any
+  number of these may be specified. I use them to set fields like `type` and
+  other custom attributes relevant to each log.
 
 ## Use with logstash
 
@@ -174,8 +174,6 @@ Below is valid as of 2012/09/19
 ### Configurable event data
 
 * The protocol lumberjack uses supports sending a `string:string` map.
-* The lumberjack tool lets you specify arbitrary extra data with
-  `--field name=value`.
 
 ### Easy deployment
 
