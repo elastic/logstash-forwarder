@@ -1,0 +1,84 @@
+#!/bin/sh
+#
+# lumberjack - this script starts and stops the lumberjack daemon
+#
+# chkconfig:   - 85 16
+# description:  Lumberjack log service
+# processname: lumberjack
+# config:      /etc/lumberjack/lumberjack.conf
+# pidfile:     /var/run/lumberjack.pid
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+LUMBERJACK_BIN="/opt/lumberjack/bin/lumberjack"
+LUMBERJACK_CONF="/etc/lumberjack/lumberjack.conf"
+LUMBERJACK_OPTIONS="-config /etc/lumberjack/${LUMBERJACK_CONF}"
+LUMBERJACK_LOG="/var/log/lumberjack.log"
+PROG="$(basename ${LUMBERJACK_BIN})"
+
+[ -f /etc/sysconfig/lumberjack ] && . /etc/sysconfig/lumberjack
+
+LOCKFILE=/var/lock/subsys/${PROG}
+
+start() {
+    [ -x ${LUMBERJACK_BIN} ] || exit 5
+    [ -f ${LUMBERJACK_CONF} ] || exit 6
+    echo -n $"Starting ${PROG}: "
+    export LD_LIBRARY_PATH=$(dirname ${LUMBERJACK_BIN})/../lib
+    daemon ${LUMBERJACK_BIN} ${LUMBERJACK_OPTIONS} &> ${LUMBERJACK_LOG} &
+    RETVAL=$?
+    echo
+    [ ${RETVAL} -eq 0 ] && touch ${LOCKFILE}
+    return ${RETVAL}
+}
+
+stop() {
+    echo -n $"Stopping ${PROG}: "
+    killproc ${PROG}
+    RETVAL=$?
+    echo
+    [ ${RETVAL} -eq 0 ] && rm -f ${LOCKFILE}
+    return ${RETVAL}
+}
+
+restart() {
+    configtest_q || configtest || return 6
+    stop
+    start
+}
+
+reload() {
+    configtest_q || configtest || return 6
+    echo -n $"Reloading ${PROG}: "
+    killproc ${PROG} -HUP
+    echo
+}
+
+rh_status() {
+    status ${PROG}
+}
+
+rh_status_q() {
+    rh_status >/dev/null 2>&1
+}
+
+case "$1" in
+    start)
+        rh_status_q && exit 0
+        $1
+        ;;
+    stop)
+        rh_status_q || exit 0
+        $1
+        ;;
+    restart)
+        $1
+        ;;
+    status|status_q)
+        rh_$1
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop|restart|status}"
+        exit 2
+esac

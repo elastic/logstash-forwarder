@@ -13,6 +13,14 @@ MAKE?=make
 CFLAGS+=-Ibuild/include 
 LDFLAGS+=-Lbuild/lib -Wl,-rpath,'$$ORIGIN/../lib'
 
+# Conditional for RHEL based init script
+INIT_SCRIPT := lumberjack.init
+IS_RHEL ?= $(shell if grep -q 6.[0-9] /etc/redhat-release; then echo true; \
+ elif grep -q 5.[0-9] /etc/redhat-release;then echo true;else false; fi)
+ifneq "$(IS_RHEL)" ""
+	INIT_SCRIPT	:= lumberjack.rhel.init
+endif
+
 default: build-all
 build-all: build/bin/lumberjack build/bin/lumberjack.sh
 #build-all: build/bin/keygen
@@ -45,7 +53,7 @@ rpm deb: | build-all
 		--description "a log shipping tool" \
 		--url "https://github.com/jordansissel/lumberjack" \
 		build/bin/lumberjack=$(PREFIX)/bin/ build/bin/lumberjack.sh=$(PREFIX)/bin/ \
-		lumberjack.init=/etc/init.d/lumberjack
+		$(INIT_SCRIPT)=/etc/init.d/lumberjack
 
 # Vendor'd dependencies
 # If VENDOR contains 'zeromq' download and build it.
@@ -104,3 +112,4 @@ build:
 
 build/include build/bin build/test: | build
 	mkdir $@
+
