@@ -13,7 +13,7 @@
 
 LUMBERJACK_BIN="/opt/lumberjack/bin/lumberjack"
 LUMBERJACK_CONF="/etc/lumberjack/lumberjack.conf"
-LUMBERJACK_OPTIONS="-config /etc/lumberjack/${LUMBERJACK_CONF}"
+LUMBERJACK_OPTIONS="-config ${LUMBERJACK_CONF}"
 LUMBERJACK_LOG="/var/log/lumberjack.log"
 PROG="$(basename ${LUMBERJACK_BIN})"
 
