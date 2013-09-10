@@ -27,7 +27,7 @@ func Registrar(input chan []*FileEvent) {
         // save it as the new starting offset.
         Offset: event.Offset + int64(len(*event.Text)) + 1,
         Inode: fstat.Ino,
-        Device: fstat.Dev,
+        Device: uint64(fstat.Dev),
       }
     }
 
