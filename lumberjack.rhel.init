@@ -43,7 +43,7 @@ stop() {
 }
 
 restart() {
-    configtest_q || configtest || return 6
+    #configtest_q || configtest || return 6
     stop
     start
 }
