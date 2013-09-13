@@ -135,6 +135,19 @@ The config file is documented further up in this file.
   number of these may be specified. I use them to set fields like `type` and
   other custom attributes relevant to each log.
 
+### Generating an ssl certificate
+
+Logstash supports all certificates, including self-signed certificates. To generate a certificate, you can run the following command:
+
+    $ openssl req -x509 -batch -nodes -newkey rsa:2048 -keyout lumberjack.key -out lumberjack.crt
+
+This will generate a key at `lumberjack.key` and the certificate at `lumberjack.crt`. Both the server that is running lumberjack as well as the logstash instances receiving logs will require these files on disk to verify the authenticity of messages.
+
+Recommended file locations:
+
+- certificates: `/etc/pki/tls/certs`
+- keys: `/etc/pki/tls/private`
+
 ## Use with logstash
 
 In logstash, you'll want to use the [lumberjack](http://logstash.net/docs/latest/inputs/lumberjack) input, something like:
