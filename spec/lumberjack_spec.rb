@@ -75,7 +75,8 @@ describe "lumberjack" do
     count = rand(50) + 1000
     count.times do |i|
       @file.puts("fizzle #{i}")
-
+      #keep's file active?  test failed withoutn this
+      @file.size
       # Start fast, then go slower after 80% of the events
       if i > (count * 0.8)
         sleep(rand * 0.200) # sleep up to 200ms
