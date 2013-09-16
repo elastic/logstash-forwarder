@@ -14,6 +14,7 @@ var spool_size = flag.Uint64("spool-size", 1024, "Maximum number of events to sp
 var idle_timeout = flag.Duration("idle-flush-time", 5 * time.Second, "Maximum time to wait for a full spool before flushing anyway")
 var config_file = flag.String("config", "", "The config file to load")
 var use_syslog = flag.Bool("log-to-syslog", false, "Log to syslog instead of stdout")
+var from_beginning = flag.Bool("from-beginning", false, "Read new files from the beginning, instead of the end")
 
 func main() {
   flag.Parse()
