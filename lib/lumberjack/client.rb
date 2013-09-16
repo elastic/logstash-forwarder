@@ -100,7 +100,7 @@ module Lumberjack
     public
     def write_hash(hash)
       frame = to_frame(hash, inc)
-      ack if (@sequence - @last_ack) >= @window_size
+      ack if (@sequence - (@last_ack + 1)) >= @window_size
       write frame
     end
 
@@ -110,7 +110,7 @@ module Lumberjack
       type = @socket.read(1)
       raise "Whoa we shouldn't get this frame: #{type}" if type != "A"
       @last_ack = @socket.read(4).unpack("N").first
-      ack if (@sequence - @last_ack) >= @window_size
+      ack if (@sequence - (@last_ack + 1)) >= @window_size
     end
 
     private
