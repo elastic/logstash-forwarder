@@ -53,7 +53,7 @@ func resume_tracking(fileconfig FileConfig, fileinfo map[string]os.FileInfo, out
       if err != nil { continue }
 
       fstat := info.Sys().(*syscall.Stat_t)
-      if fstat.Ino != state.Inode && fstat.Dev == state.Device {
+      if fstat.Ino == state.Inode && fstat.Dev == state.Device {
         // same file, seek to last known position
         fileinfo[path] = info
 
