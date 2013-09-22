@@ -41,7 +41,7 @@ func resume_tracking(fileconfig FileConfig, fileinfo map[string]os.FileInfo, out
   history, err := os.Open(".lumberjack")
   if err == nil {
     historical_state := make(map[string]*FileState)
-    log.Printf("Loading registrar data\n")
+    log.Printf("Loading registrar data %s\n", fileconfig.Paths)
     decoder := json.NewDecoder(history)
     decoder.Decode(&historical_state)
     history.Close()
