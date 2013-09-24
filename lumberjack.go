@@ -16,6 +16,8 @@ var config_file = flag.String("config", "", "The config file to load")
 var use_syslog = flag.Bool("log-to-syslog", false, "Log to syslog instead of stdout")
 var from_beginning = flag.Bool("from-beginning", false, "Read new files from the beginning, instead of the end")
 
+var appconfig *AppConfig
+
 func main() {
   flag.Parse()
 
@@ -34,8 +36,10 @@ func main() {
 
   config, err := LoadConfig(*config_file)
   if err != nil {
-    return
+    log.Println(err)
+    os.Exit(1)
   }
+  appconfig = &config.Lumberjack
 
   event_chan := make(chan *FileEvent, 16)
   publisher_chan := make(chan []*FileEvent, 1)
@@ -65,9 +69,9 @@ func main() {
 
   //Ensure there is a register file, if not create one.
   // TODO Verify we can write to the file
-  if _, err := os.Stat(".lumberjack"); os.IsNotExist(err) {
+  if _, err := os.Stat(appconfig.RegistrarFile); os.IsNotExist(err) {
       log.Print("Creating new registrar file.")
-      _, err := os.Create(".lumberjack")
+      _, err := os.Create(appconfig.RegistrarFile)
       if err != nil {
         //Fatal if we cant create a regiser file we can correct track files, better to know now.
         log.Fatal("Error creating registrar file: ", err)

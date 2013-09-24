@@ -38,7 +38,7 @@ func Prospect(fileconfig FileConfig, output chan *FileEvent) {
 
 func resume_tracking(fileconfig FileConfig, fileinfo map[string]os.FileInfo, output chan *FileEvent) {
   // Start up with any registrar data.
-  history, err := os.Open(".lumberjack")
+  history, err := os.Open(appconfig.RegistrarFile)
   if err == nil {
     historical_state := make(map[string]*FileState)
     log.Printf("Loading registrar data %s\n", fileconfig.Paths)
@@ -111,11 +111,10 @@ func prospector_scan(path string, fields map[string]string,
     // Conditions for starting a new harvester:
     // - file path hasn't been seen before
     // - the file's inode or device changed
-    if !is_known { 
-      // TODO(sissel): Skip files with modification dates older than N
-      // TODO(sissel): Make the 'ignore if older than N' tunable
-      if time.Since(info.ModTime()) > 24*time.Hour {
-        log.Printf("Skipping old file: %s\n", file)
+    if !is_known {
+      // Skip files that are too old.  "-1" is never skip.
+      if appconfig.IgnoreAfter!=-1 && (time.Since(info.ModTime()) > time.Duration(appconfig.IgnoreAfter) * time.Hour) {
+       log.Printf("Skipping file (older than %s): %s\n", time.Duration(appconfig.IgnoreAfter) * time.Hour, file)
       } else {
         // Check to see if this file was simply renamed (known inode+dev)
         stat := info.Sys().(*syscall.Stat_t)
