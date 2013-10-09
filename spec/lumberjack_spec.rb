@@ -3,6 +3,7 @@ require "tempfile"
 require "lumberjack/server"
 require "insist"
 require "stud/try"
+require "json"
 
 describe "lumberjack" do
   before :each do
@@ -11,6 +12,7 @@ describe "lumberjack" do
     @ssl_cert = Tempfile.new("lumberjack-test-file")
     @ssl_key = Tempfile.new("lumberjack-test-file")
     @ssl_csr = Tempfile.new("lumberjack-test-file")
+    @config_file = Tempfile.new("lumberjack-test-file")
 
     # Generate the ssl key
     system("openssl genrsa -out #{@ssl_key.path} 1024")
@@ -21,10 +23,10 @@ describe "lumberjack" do
       :ssl_certificate => @ssl_cert.path,
       :ssl_key => @ssl_key.path
     )
-    @lumberjack = IO.popen("build/bin/lumberjack --host localhost " \
-                           "--port #{@server.port} " \
-                           "--ssl-ca-path #{@ssl_cert.path} #{@file.path}",
-                           "r")
+    config = { "network" => { "servers"=> [ "localhost:#{@server.port}"], "ssl ca"=>@ssl_cert.path }, "files"=>[{ "paths"=>[@file.path] }] }
+    @config_file.write config.to_json
+    @config_file.close
+    @lumberjack = IO.popen("build/bin/lumberjack --config #{@config_file.path}", "r")
 
     @event_queue = Queue.new
     @server_thread = Thread.new do
@@ -73,7 +75,8 @@ describe "lumberjack" do
     count = rand(50) + 1000
     count.times do |i|
       @file.puts("fizzle #{i}")
-
+      #keep's file active?  test failed withoutn this
+      @file.size
       # Start fast, then go slower after 80% of the events
       if i > (count * 0.8)
         sleep(rand * 0.200) # sleep up to 200ms
