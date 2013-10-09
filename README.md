@@ -1,5 +1,7 @@
 # lumberjack
 
+[![Continuous Integration status](https://secure.travis-ci.org/jordansissel/lumberjack.png)](http://travis-ci.org/jordansissel/lumberjack)
+
 o/~ I'm a lumberjack and I'm ok! I sleep when idle, then I ship logs all day! I parse your logs, I eat the JVM agent for lunch! o/~
 
 ## Questions and support
