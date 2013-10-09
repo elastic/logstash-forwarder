@@ -104,3 +104,6 @@ build:
 
 build/include build/bin build/test: | build
 	mkdir $@
+
+test:
+	rspec
