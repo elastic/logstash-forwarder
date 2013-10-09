@@ -63,6 +63,17 @@ func main() {
     log.SetOutput(writer)
   }
 
+  //Ensure there is a register file, if not create one.
+  // TODO Verify we can write to the file
+  if _, err := os.Stat(".lumberjack"); os.IsNotExist(err) {
+      log.Print("Creating new registrar file.")
+      _, err := os.Create(".lumberjack")
+      if err != nil {
+        //Fatal if we cant create a regiser file we can correct track files, better to know now.
+        log.Fatal("Error creating registrar file: ", err)
+      }
+  }
+
   // Prospect the globs/paths given on the command line and launch harvesters
   for _, fileconfig := range config.Files {
     go Prospect(fileconfig, event_chan)
