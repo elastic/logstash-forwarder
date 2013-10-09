@@ -10,7 +10,7 @@ import (
 func Registrar(input chan []*FileEvent) {
   for events := range input {
     state := make(map[string]*FileState)
-    log.Printf("Registrar received %d events\n", len(events))
+    log.Printf("Registrar received %d events for %s\n", len(events), *events[0].Source)
     // Take the last event found for each file source
     for _, event := range events {
       // skip stdin
@@ -33,21 +33,41 @@ func Registrar(input chan []*FileEvent) {
 
     if len(state) > 0 {
       write(state)
-      os.Rename(".lumberjack.new", ".lumberjack")
     }
   }
 }
 
 func write(state map[string]*FileState) {
-  log.Printf("Saving registrar state.\n")
+  var newTempRegistrarFile string = appconfig.RegistrarFile + ".new"
   // Open tmp file, write, flush, rename
-  file, err := os.Create(".lumberjack.new")
+  log.Printf("Saving registrar state.\n")
+
+  //read the current state file and overwrite the current state vaules
+  historical_state := make(map[string]*FileState)
+  history, err := os.Open(appconfig.RegistrarFile)
   if err != nil {
-    log.Printf("Failed to open .lumberjack.new for writing: %s\n", err)
+    log.Printf("Registar was unable to read privous states. Error: %s\n", err)
+    return
+  }
+  decoder := json.NewDecoder(history)
+  decoder.Decode(&historical_state)
+  history.Close()
+
+
+  //loop though the sate for the file, should be a map of lenght 1
+  for path, new_state := range state {
+    historical_state[path] = new_state
+  }
+
+  file, err := os.Create(newTempRegistrarFile)
+  if err != nil {
+    log.Printf("Failed to open %s for writing new state: %s\n", newTempRegistrarFile, err)
     return
   }
 
   encoder := json.NewEncoder(file)
-  encoder.Encode(state)
+  encoder.Encode(historical_state)
   file.Close()
+
+  os.Rename(newTempRegistrarFile, appconfig.RegistrarFile)
 }

@@ -1,4 +1,9 @@
 {
+  "lumberjack": {
+    "registrar file": ".lumberjack",
+    "ignore after": 24
+    "dead time": 24
+  },
   "network": {
     "servers": [ "localhost:5043" ],
     "ssl certificate": "./lumberjack.crt",

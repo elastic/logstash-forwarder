@@ -27,6 +27,17 @@ please keep in mind that comments are technically invalid in JSON, so you can't
 include them in your config.:
 
     {
+      # lumberjack application config
+      "lumberjack": {
+        # The file that lumberjack uses to track the filies its
+        # watching and the current offset position in those files
+        "registrar file": ".lumberjack"
+        # Skip files with modification dates older than N hours
+        # (set to -1 to never skip)
+        "ignore after": 24
+        # Watched file idle for more than N hours. Give up and stop harvesting.
+        "dead time": 24
+      }
       # The network section covers network configuration :)
       "network": {
         # A list of downstream servers listening for our messages.
