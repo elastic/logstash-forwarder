@@ -18,7 +18,7 @@ Solution: lumberjack
 
 ## Configuring
 
-lumberjack is configured with a json file you specify with thei -config flag:
+lumberjack is configured with a json file you specify with the -config flag:
 
 `lumberjack -config yourstuff.json`
 
