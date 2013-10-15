@@ -1,5 +1,6 @@
 package main
 
+// +build !windows
 import (
   "log"
   "log/syslog"

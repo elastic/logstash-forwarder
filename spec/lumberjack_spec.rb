@@ -7,10 +7,10 @@ require "stud/try"
 describe "lumberjack" do
   before :each do
     # TODO(sissel): Generate a self-signed SSL cert
-    @file = Tempfile.new("lumberjack-test-file")
-    @ssl_cert = Tempfile.new("lumberjack-test-file")
-    @ssl_key = Tempfile.new("lumberjack-test-file")
-    @ssl_csr = Tempfile.new("lumberjack-test-file")
+    @file = Stud::Temporary.file("lumberjack-test-file")
+    @ssl_cert = Stud::Temporary.file("lumberjack-test-file")
+    @ssl_key = Stud::Temporary.file("lumberjack-test-file")
+    @ssl_csr = Stud::Temporary.file("lumberjack-test-file")
 
     # Generate the ssl key
     system("openssl genrsa -out #{@ssl_key.path} 1024")
@@ -35,10 +35,10 @@ describe "lumberjack" do
   end # before each
 
   after :each do
-    @file.close
-    @ssl_cert.close
-    @ssl_key.close
-    @ssl_csr.close
+    [@file, @ssl_cert, @ssl_key, @ssl_csr].each do |f|
+      f.close
+      File.unlink(f.path)
+    end
     Process::kill("KILL", @lumberjack.pid)
     Process::wait(@lumberjack.pid)
   end
