@@ -4,7 +4,6 @@ import (
   "time"
   "path/filepath"
   "encoding/json"
-  "syscall"
   "os"
   "log"
 )
@@ -52,8 +51,7 @@ func resume_tracking(fileconfig FileConfig, fileinfo map[string]os.FileInfo, out
       info, err := os.Stat(path)
       if err != nil { continue }
 
-      fstat := info.Sys().(*syscall.Stat_t)
-      if fstat.Ino != state.Inode && fstat.Dev == state.Device {
+      if is_file_same(path, info, state) {
         // same file, seek to last known position
         fileinfo[path] = info
 
@@ -116,44 +114,20 @@ func prospector_scan(path string, fields map[string]string,
       // TODO(sissel): Make the 'ignore if older than N' tunable
       if time.Since(info.ModTime()) > 24*time.Hour {
         log.Printf("Skipping old file: %s\n", file)
-      } else {
+      } else if is_file_renamed(file, info, fileinfo) {
         // Check to see if this file was simply renamed (known inode+dev)
-        stat := info.Sys().(*syscall.Stat_t)
-        renamed := false
-
-        for kf, ki := range fileinfo {
-          if kf == file {
-            continue
-          }
-          ks := ki.Sys().(*syscall.Stat_t)
-          if stat.Dev == ks.Dev && stat.Ino == ks.Ino {
-            log.Printf("Skipping %s (old known name: %s)\n", file, kf)
-            renamed = true
-            // Delete the old entry
-            delete(fileinfo, kf)
-            break
-          }
-        }
-
-        if !renamed {
-          log.Printf("Launching harvester on new file: %s\n", file)
-          harvester := Harvester{Path: file, Fields: fields}
-          go harvester.Harvest(output)
-        }
-      }
-    } else {
-      // TODO(sissel): FileInfo.Sys() can be nil on unsupported platforms.
-      laststat := lastinfo.Sys().(*syscall.Stat_t)
-      stat := info.Sys().(*syscall.Stat_t)
-      // Compare inode and device; it's a 'new file' if either have changed.
-      // aka, the file was rotated/renamed/whatever
-      if stat.Dev != laststat.Dev || stat.Ino != laststat.Ino {
-        log.Printf("Launching harvester on rotated file: %s\n", file)
-        // TODO(sissel): log 'file rotated' or osmething
-        // Start a harvester on the path; a new file appeared with the same name.
+      } else {
+        // Most likely a new file. Harvest it!
+        log.Printf("Launching harvester on new file: %s\n", file)
         harvester := Harvester{Path: file, Fields: fields}
         go harvester.Harvest(output)
       }
+    } else if !is_fileinfo_same(lastinfo, info) {
+      log.Printf("Launching harvester on rotated file: %s\n", file)
+      // TODO(sissel): log 'file rotated' or osmething
+      // Start a harvester on the path; a new file appeared with the same name.
+      harvester := Harvester{Path: file, Fields: fields}
+      go harvester.Harvest(output)
     }
   } // for each file matched by the glob
 }

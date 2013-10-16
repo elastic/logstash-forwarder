@@ -3,7 +3,6 @@ package main
 import (
   "log"
   "os"
-  "syscall"
   "encoding/json"
 )
 
@@ -20,14 +19,14 @@ func Registrar(input chan []*FileEvent) {
       // have to dereference the FileInfo here because os.FileInfo is an
       // interface, not a struct, so Go doesn't have smarts to call the Sys()
       // method on a pointer to os.FileInfo. :(
-      fstat := (*(event.fileinfo)).Sys().(*syscall.Stat_t)
+      ino, dev := file_ids(event.fileinfo)
       state[*event.Source] = &FileState{
         Source: event.Source,
         // take the offset + length of the line + newline char and
         // save it as the new starting offset.
         Offset: event.Offset + int64(len(*event.Text)) + 1,
-        Inode: fstat.Ino,
-        Device: fstat.Dev,
+        Inode: ino,
+        Device: dev,
       }
     }
 
