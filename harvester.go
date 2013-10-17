@@ -34,6 +34,8 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
   // get current offset in file
   offset, _ := h.file.Seek(0, os.SEEK_CUR)
 
+  log.Printf("Current file offset: %d\n", offset)
+
   // TODO(sissel): Make the buffer size tunable at start-time
   reader := bufio.NewReaderSize(h.file, 16<<10) // 16kb buffer by default
 

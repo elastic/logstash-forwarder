@@ -2,8 +2,6 @@ package main
 
 import (
   "log"
-  "os"
-  "encoding/json"
 )
 
 func Registrar(input chan []*FileEvent) {
@@ -28,25 +26,12 @@ func Registrar(input chan []*FileEvent) {
         Inode: ino,
         Device: dev,
       }
+      log.Printf("State %s: %d\n", *event.Source, event.Offset)
     }
 
     if len(state) > 0 {
-      write(state)
-      os.Rename(".lumberjack.new", ".lumberjack")
+      WriteRegistry(state, ".lumberjack")
     }
   }
 }
 
-func write(state map[string]*FileState) {
-  log.Printf("Saving registrar state.\n")
-  // Open tmp file, write, flush, rename
-  file, err := os.Create(".lumberjack.new")
-  if err != nil {
-    log.Printf("Failed to open .lumberjack.new for writing: %s\n", err)
-    return
-  }
-
-  encoder := json.NewEncoder(file)
-  encoder.Encode(state)
-  file.Close()
-}
