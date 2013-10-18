@@ -133,11 +133,10 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
       log.Fatalf("This is not a certificate file: %s\n", config.SSLCA)
     }
 
-    cert, err := x509.ParseCertificate(block.Bytes)
-    if err != nil {
-      log.Fatalf("Failed to parse a certificate: %s\n", config.SSLCA)
+    ok := tlsconfig.RootCAs.AppendCertsFromPEM(pemdata)
+    if ok != true {
+      log.Fatalf("Failed to load any certificates from file: %s\n", config.SSLCA)
     }
-    tlsconfig.RootCAs.AddCert(cert)
   }
 
   for {
