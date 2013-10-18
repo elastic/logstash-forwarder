@@ -26,7 +26,7 @@ func Registrar(input chan []*FileEvent) {
         Inode: ino,
         Device: dev,
       }
-      log.Printf("State %s: %d\n", *event.Source, event.Offset)
+      //log.Printf("State %s: %d\n", *event.Source, event.Offset)
     }
 
     if len(state) > 0 {
