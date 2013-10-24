@@ -18,6 +18,12 @@ build-all: build/bin/lumberjack build/bin/lumberjack.sh
 #build-all: build/bin/keygen
 include Makefile.ext
 
+.PHONY: go-check
+go-check:
+	@go version > /dev/null || (echo "Go not found. You need to install go: http://golang.org/doc/install"; false)
+	@go version | grep -q 'go version go1.1' || (echo "Go version 1.1.x required, you have a version of go that is too old See http://golang.org/doc/install for upgrading."; false)
+
+
 clean:
 	-@rm -fr build bin pkg
 
@@ -65,10 +71,10 @@ endif # libsodium
 build/bin/lumberjack.sh: lumberjack.sh | build/bin
 	install -m 755 $^ $@
 
-build/bin/lumberjack: | build/bin
+build/bin/lumberjack: | build/bin go-check
 	PKG_CONFIG_PATH=$$PWD/build/lib/pkgconfig \
 		go build -ldflags '-r $$ORIGIN/../lib' -v -o $@
-build/bin/keygen:  | build/bin
+build/bin/keygen:  | build/bin go-check
 	PKG_CONFIG_PATH=$$PWD/build/lib/pkgconfig \
 		go install -ldflags '-r $$ORIGIN/../lib' -o $@
 
@@ -84,7 +90,7 @@ build/lib: | build
 	mkdir $@
 
 # gozmq
-src/github.com/alecthomas/gozmq/zmq.go:
+src/github.com/alecthomas/gozmq/zmq.go: go-check
 	go get -d github.com/alecthomas/gozmq
 pkg/linux_amd64/github.com/alecthomas/gozmq.a: | build/lib/libzmq.$(LIBEXT)
 pkg/linux_amd64/github.com/alecthomas/gozmq.a: src/github.com/alecthomas/gozmq/zmq.go
