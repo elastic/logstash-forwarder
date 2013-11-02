@@ -12,9 +12,20 @@ list.
 
 A tool to collect logs locally in preparation for processing elsewhere!
 
-Problem: logstash jar releases are too fat for constrained systems. Until we can comfortably promise logstash executing with less resource usage...
+### Resource Usage Concerns
 
-Solution: lumberjack
+Perceived Problems: Some users view logstash releases as "large" or have a generalized fear of Java.
+
+Actual Problems: Logstash, for right now, runs with a footprint that is not
+friendly to underprovisioned systems such as EC2 micro instances; on other
+systems it is fine. Lumberjack will exist until that is resolved.
+
+### Transport Problems
+
+Few log transport mechanisms provide security, low latency, and reliability.
+
+lumberjack exists to provide a network protocol for transmission that is
+secure, low latency, low resource usage, and reliable.
 
 ## Configuring
 
@@ -102,7 +113,7 @@ include them in your config.:
 
         $ git clone git://github.com/jordansissel/lumberjack.git
         $ cd lumberback
-        $ make
+        $ go build
 
 4. Make packages, either:
 
@@ -112,7 +123,9 @@ include them in your config.:
 
         $ make deb
 
-## Installing it
+## Installing it (via packages only)
+
+If you don't use rpm or deb make targets as above, you can skip this section.
 
 Packages install to `/opt/lumberjack`. Lumberjack builds all necessary
 dependencies itself, so there should be no run-time dependencies you
@@ -190,16 +203,8 @@ Below is valid as of 2012/09/19
 
 ### Easy deployment
 
-* All dependencies are built at compile-time (OpenSSL, jemalloc, etc) because many os distributions lack these dependencies.
 * The `make deb` or `make rpm` commands will package everything into a
   single DEB or RPM.
-* The `bin/lumberjack.sh` script makes sure the dependencies are found
-  when run in production.
-
-### Future functional features
-
-* Re-evaluate globs periodically to look for new log files.
-* Track position of in the log.
 
 ### Future protocol discussion
 
