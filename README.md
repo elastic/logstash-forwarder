@@ -152,9 +152,9 @@ The config file is documented further up in this file.
 
 Logstash supports all certificates, including self-signed certificates. To generate a certificate, you can run the following command:
 
-    $ openssl req -x509 -batch -nodes -newkey rsa:2048 -keyout lumberjack.key -out lumberjack.crt
+    $ openssl req -x509 -batch -days 999 -nodes -newkey rsa:2048 -keyout lumberjack.key -out lumberjack.crt
 
-This will generate a key at `lumberjack.key` and the certificate at `lumberjack.crt`. Both the server that is running lumberjack as well as the logstash instances receiving logs will require these files on disk to verify the authenticity of messages.
+This will generate a key at `lumberjack.key` and the certificate at `lumberjack.crt` for 999 days. Both the server that is running lumberjack as well as the logstash instances receiving logs will require these files on disk to verify the authenticity of messages.  After the period (-day 999) the certificate will become invalid and the lumberjack instance using it will not be able to connect to logstash so be sure to refresh the certificate.
 
 Recommended file locations:
 
