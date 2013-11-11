@@ -142,8 +142,18 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
 
   for {
     // Pick a random server from the list.
-    address := config.Servers[rand.Int() % len(config.Servers)]
-    log.Printf("Connecting to %s\n", address)
+    host := config.Servers[rand.Int() % len(config.Servers)]
+    addresses, err := net.LookupHost(host)
+
+    if err != nil {
+      log.Printf("DNS lookup failure \"%s\": %s\n", host, err);
+      time.Sleep(1 * time.Second)
+      continue
+    }
+
+    address := addresses[rand.Int() % len(addresses)]
+
+    log.Printf("Connecting to %s (%s) \n", address, host)
 
     tcpsocket, err := net.DialTimeout("tcp", address, config.timeout)
     if err != nil {
