@@ -10,7 +10,7 @@ func WriteRegistry(state map[string]*FileState, path string) {
   tmp := path + ".new"
   file, err := os.Create(tmp)
   if err != nil {
-    log.Printf("Failed to open .lumberjack.new for writing: %s\n", err)
+    log.Printf("Failed to open .logstash-forwarder.new for writing: %s\n", err)
     return
   }
 

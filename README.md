@@ -1,4 +1,4 @@
-# lumberjack
+# logstash-forwarder
 
 o/~ I'm a lumberjack and I'm ok! I sleep when idle, then I ship logs all day! I parse your logs, I eat the JVM agent for lunch! o/~
 
@@ -18,20 +18,21 @@ Perceived Problems: Some users view logstash releases as "large" or have a gener
 
 Actual Problems: Logstash, for right now, runs with a footprint that is not
 friendly to underprovisioned systems such as EC2 micro instances; on other
-systems it is fine. Lumberjack will exist until that is resolved.
+systems it is fine. This project will exist until that is resolved.
 
 ### Transport Problems
 
 Few log transport mechanisms provide security, low latency, and reliability.
 
-lumberjack exists to provide a network protocol for transmission that is
-secure, low latency, low resource usage, and reliable.
+The lumberjack protocol used by this project exists to provide a network
+protocol for transmission that is secure, low latency, low resource usage, and
+reliable.
 
 ## Configuring
 
-lumberjack is configured with a json file you specify with the -config flag:
+logstash-forwarder is configured with a json file you specify with the -config flag:
 
-`lumberjack -config yourstuff.json`
+`logstash-forwarder -config yourstuff.json`
 
 Here's a sample, with comments in-line to describe the settings. Please please
 please keep in mind that comments are technically invalid in JSON, so you can't
@@ -41,24 +42,24 @@ include them in your config.:
       # The network section covers network configuration :)
       "network": {
         # A list of downstream servers listening for our messages.
-        # lumberjack will pick one at random and only switch if
+        # logstash-forwarder will pick one at random and only switch if
         # the selected one appears to be dead or unresponsive
         "servers": [ "localhost:5043" ],
 
         # The path to your client ssl certificate (optional)
-        "ssl certificate": "./lumberjack.crt",
+        "ssl certificate": "./logstash-forwarder.crt",
         # The path to your client ssl key (optional)
-        "ssl key": "./lumberjack.key",
+        "ssl key": "./logstash-forwarder.key",
 
         # The path to your trusted ssl CA file. This is used
         # to authenticate your downstream server.
-        "ssl ca": "./lumberjack_ca.crt",
+        "ssl ca": "./logstash-forwarder.crt",
 
-        # Network timeout in seconds. This is most important for lumberjack
-        # determining whether to stop waiting for an acknowledgement from the
-        # downstream server. If an timeout is reached, lumberjack will assume
-        # the connection or server is bad and will connect to a server chosen
-        # at random from the servers list.
+        # Network timeout in seconds. This is most important for
+        # logstash-forwarder determining whether to stop waiting for an
+        # acknowledgement from the downstream server. If an timeout is reached,
+        # logstash-forwarder will assume the connection or server is bad and
+        # will connect to a server chosen at random from the servers list.
         "timeout": 15
       },
 
@@ -98,46 +99,49 @@ include them in your config.:
 * Easy to deploy with minimal moving parts.
 * Simple inputs only:
   * Follows files and respects rename/truncation conditions.
-  * Accepts `STDIN`, useful for things like `varnishlog | lumberjack...`.
+  * Accepts `STDIN`, useful for things like `varnishlog | logstash-forwarder...`.
 
 ## Building it
 
-1. Install [FPM](https://github.com/jordansissel/fpm)
+1. Install [go](http://golang.org/doc/install)
 
-        $ sudo gem install fpm
+2. Compile logstash-forwarder
 
-2. Install [go](http://golang.org/doc/install)
+        git clone git://github.com/elasticsearch/logstash-forwarder.git
+        cd logstash-forwarder
+        go build
 
+## Packaging it (optional)
 
-3. Compile lumberjack
+You can make native packages of logstash-forwarder.
 
-        $ git clone git://github.com/jordansissel/lumberjack.git
-        $ cd lumberback
-        $ go build
+To build the packages, you will need ruby and fpm installed.
 
-4. Make packages, either:
+    gem install fpm
 
-        $ make rpm
+Now build an rpm:
 
-    Or:
+        make rpm
 
-        $ make deb
+Or:
+
+        make deb
 
 ## Installing it (via packages only)
 
 If you don't use rpm or deb make targets as above, you can skip this section.
 
-Packages install to `/opt/lumberjack`. Lumberjack builds all necessary
-dependencies itself, so there should be no run-time dependencies you
-need.
+Packages install to `/opt/logstash-forwarder`. 
+
+There are no run-time dependencies.
 
 ## Running it
 
 Generally:
 
-    $ lumberjack.sh -config lumberjack.conf
+    logstash-forwarder -config lumberjack.conf
 
-See `lumberjack.sh -help` for all the flags
+See `logstash-forwarder -help` for all the flags
 
 The config file is documented further up in this file.
 
@@ -152,9 +156,9 @@ The config file is documented further up in this file.
 
 Logstash supports all certificates, including self-signed certificates. To generate a certificate, you can run the following command:
 
-    $ openssl req -x509 -batch -nodes -newkey rsa:2048 -keyout lumberjack.key -out lumberjack.crt
+    $ openssl req -x509 -batch -nodes -newkey rsa:2048 -keyout logstash-forwarder.key -out logstash-forwarder.crt
 
-This will generate a key at `lumberjack.key` and the certificate at `lumberjack.crt`. Both the server that is running lumberjack as well as the logstash instances receiving logs will require these files on disk to verify the authenticity of messages.
+This will generate a key at `logstash-forwarder.key` and the certificate at `logstash-forwarder.crt`. Both the server that is running logstash-forwarder as well as the logstash instances receiving logs will require these files on disk to verify the authenticity of messages.
 
 Recommended file locations:
 
@@ -199,7 +203,7 @@ Below is valid as of 2012/09/19
 
 ### Configurable event data
 
-* The protocol lumberjack uses supports sending a `string:string` map.
+* The protocol supports sending a `string:string` map.
 
 ### Easy deployment
 

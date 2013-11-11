@@ -20,3 +20,5 @@ nacl.secret
 .lumberjack
 .lumberjack.new
 .rbx
+lumberjack
+logstash-forwarder

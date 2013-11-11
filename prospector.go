@@ -37,7 +37,7 @@ func Prospect(fileconfig FileConfig, output chan *FileEvent) {
 
 func resume_tracking(fileconfig FileConfig, fileinfo map[string]os.FileInfo, output chan *FileEvent) {
   // Start up with any registrar data.
-  history, err := os.Open(".lumberjack")
+  history, err := os.Open(".logstash-forwarder")
   if err == nil {
     historical_state := make(map[string]*FileState)
     log.Printf("Loading registrar data\n")
