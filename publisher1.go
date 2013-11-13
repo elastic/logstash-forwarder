@@ -15,6 +15,7 @@ import (
   "time"
   "compress/zlib"
   "strconv"
+  "strings"
 )
 
 var hostname string
@@ -141,8 +142,9 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
   }
 
   for {
-    // Pick a random server from the list.
-    host := config.Servers[rand.Int() % len(config.Servers)]
+    // Pick a random server from the list. 
+    fullhost := strings.Split(config.Servers[rand.Int() % len(config.Servers)],":")
+    host, port := fullhost[0], fullhost[1]
     addresses, err := net.LookupHost(host)
 
     if err != nil {
@@ -153,9 +155,9 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
 
     address := addresses[rand.Int() % len(addresses)]
 
-    log.Printf("Connecting to %s (%s) \n", address, host)
+    log.Printf("Connecting to %s:%s (%s) \n", address, port, host)
 
-    tcpsocket, err := net.DialTimeout("tcp", address, config.timeout)
+    tcpsocket, err := net.DialTimeout("tcp", address + ":" + port, config.timeout)
     if err != nil {
       log.Printf("Failure connecting to %s: %s\n", address, err)
       time.Sleep(1 * time.Second)
