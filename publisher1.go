@@ -15,9 +15,13 @@ import (
   "time"
   "compress/zlib"
   "strconv"
+  "regexp"
+  "fmt"
 )
 
 var hostname string
+var hostport_re, _ = regexp.Compile("^(.+):([0-9]+)$")
+
 func init() {
   log.Printf("publisher init\n")
   hostname, _ = os.Hostname()
@@ -142,7 +146,13 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
 
   for {
     // Pick a random server from the list.
-    host := config.Servers[rand.Int() % len(config.Servers)]
+    hostport := config.Servers[rand.Int() % len(config.Servers)]
+    submatch := hostport_re.FindSubmatch([]byte(hostport))
+    if submatch == nil {
+      log.Fatalf("Invalid host:port given: %s", hostport)
+    }
+    host := string(submatch[1])
+    port := string(submatch[2])
     addresses, err := net.LookupHost(host)
 
     if err != nil {
@@ -152,10 +162,11 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
     }
 
     address := addresses[rand.Int() % len(addresses)]
+    addressport := fmt.Sprintf("%s:%s", address, port)
 
-    log.Printf("Connecting to %s (%s) \n", address, host)
+    log.Printf("Connecting to %s (%s) \n", addressport, host)
 
-    tcpsocket, err := net.DialTimeout("tcp", address, config.timeout)
+    tcpsocket, err := net.DialTimeout("tcp", addressport, config.timeout)
     if err != nil {
       log.Printf("Failure connecting to %s: %s\n", address, err)
       time.Sleep(1 * time.Second)
