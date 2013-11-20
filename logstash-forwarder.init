@@ -15,9 +15,9 @@
 # PATH should only include /usr/* if it runs after the mountnfs.sh script
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC="log shipper"
-NAME=lumberjack
-DAEMON=/opt/lumberjack/bin/lumberjack.sh
-DAEMON_ARGS="-config /etc/lumberjack.conf -spool-size 100 -log-to-syslog"
+NAME=logstash-forwarder
+DAEMON=/opt/logstash-forwarder/bin/logstash-forwarder
+DAEMON_ARGS="-config /etc/logstash-forwarder -spool-size 100 -log-to-syslog"
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 

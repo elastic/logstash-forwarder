@@ -6,7 +6,7 @@ VERSION=0.3.1
 VENDOR=
 
 # Where to install to.
-PREFIX?=/opt/lumberjack
+PREFIX?=/opt/logstash-forwarder
 
 FETCH=sh fetch.sh
 MAKE?=make
@@ -14,7 +14,7 @@ CFLAGS+=-Ibuild/include
 LDFLAGS+=-Lbuild/lib -Wl,-rpath,'$$ORIGIN/../lib'
 
 default: build-all
-build-all: build/bin/lumberjack build/bin/lumberjack.sh
+build-all: build/bin/logstash-forwarder build/bin/logstash-forwarder.sh
 #build-all: build/bin/keygen
 include Makefile.ext
 
@@ -44,34 +44,36 @@ vendor-clean:
 	$(MAKE) -C vendor/zeromq/ clean
 	$(MAKE) -C vendor/zlib/ clean
 
-rpm deb: PREFIX=/opt/lumberjack
+rpm deb: PREFIX=/opt/logstash-forwarder
 rpm deb: | build-all
-	fpm -s dir -t $@ -n lumberjack -v $(VERSION) \
+	fpm -s dir -t $@ -n logstash-forwarder -v $(VERSION) \
+		--replaces lumberjack \
 		--exclude '*.a' --exclude 'lib/pkgconfig/zlib.pc' \
 		--description "a log shipping tool" \
-		--url "https://github.com/jordansissel/lumberjack" \
-		build/bin/lumberjack=$(PREFIX)/bin/ build/bin/lumberjack.sh=$(PREFIX)/bin/ \
-		lumberjack.init=/etc/init.d/lumberjack
+		--url "https://github.com/elasticsearch/logstash-forwarder" \
+		build/bin/logstash-forwarder=$(PREFIX)/bin/ \
+		build/bin/logstash-forwarder.sh=$(PREFIX)/bin/ \
+		logstash-forwarder.init=/etc/init.d/logstash-forwarder
 
 # Vendor'd dependencies
 # If VENDOR contains 'zeromq' download and build it.
 ifeq ($(filter zeromq,$(VENDOR)),zeromq)
-build/bin/lumberjack: | build/bin build/lib/libzmq.$(LIBEXT)
+build/bin/logstash-forwarder: | build/bin build/lib/libzmq.$(LIBEXT)
 pkg/linux_amd64/github.com/alecthomas/gozmq.a: | build/lib/libzmq.$(LIBEXT)
 src/github.com/alecthomas/gozmq/zmq.go: | build/lib/libzmq.$(LIBEXT)
 endif # zeromq
 
 ifeq ($(filter libsodium,$(VENDOR)),libsodium)
-build/bin/lumberjack: | build/bin build/lib/libsodium.$(LIBEXT)
-build/bin/lumberjack: | build/lib/pkgconfig/sodium.pc
+build/bin/logstash-forwarder: | build/bin build/lib/libsodium.$(LIBEXT)
+build/bin/logstash-forwarder: | build/lib/pkgconfig/sodium.pc
 build/bin/keygen: | build/lib/pkgconfig/sodium.pc
 build/bin/keygen: | build/bin build/lib/libsodium.$(LIBEXT)
 endif # libsodium
 
-build/bin/lumberjack.sh: lumberjack.sh | build/bin
+build/bin/logstash-forwarder.sh: logstash-forwarder.sh | build/bin
 	install -m 755 $^ $@
 
-build/bin/lumberjack: | build/bin go-check
+build/bin/logstash-forwarder: | build/bin go-check
 	PKG_CONFIG_PATH=$$PWD/build/lib/pkgconfig \
 		go build -ldflags '-r $$ORIGIN/../lib' -v -o $@
 build/bin/keygen:  | build/bin go-check
@@ -79,7 +81,7 @@ build/bin/keygen:  | build/bin go-check
 		go install -ldflags '-r $$ORIGIN/../lib' -o $@
 
 # Mark these phony; 'go install' takes care of knowing how and when to rebuild.
-.PHONY: build/bin/keygen build/bin/lumberjack
+.PHONY: build/bin/keygen build/bin/logstash-forwarder
 
 build/lib/pkgconfig/sodium.pc: src/sodium/sodium.pc | build/lib/pkgconfig
 	cp $< $@
