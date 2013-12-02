@@ -1,6 +1,9 @@
 # logstash-forwarder
 
-o/~ I'm a lumberjack and I'm ok! I sleep when idle, then I ship logs all day! I parse your logs, I eat the JVM agent for lunch! o/~
+♫ I'm a lumberjack and I'm ok! I sleep when idle, then I ship logs all day! I parse your logs, I eat the JVM agent for lunch! ♫
+
+(This project was recently renamed from 'lumberjack' to 'logstash-forwarder' to
+make its intended use clear)
 
 ## Questions and support
 
@@ -139,7 +142,7 @@ There are no run-time dependencies.
 
 Generally:
 
-    logstash-forwarder -config lumberjack.conf
+    logstash-forwarder -config logstash-forwarder.conf
 
 See `logstash-forwarder -help` for all the flags
 

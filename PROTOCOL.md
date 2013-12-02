@@ -1,4 +1,4 @@
-# Protocol
+# The Lumberjack Protocol
 
 The needs that lead to this protocol are:
 
