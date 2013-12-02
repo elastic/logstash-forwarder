@@ -3,7 +3,7 @@
 ♫ I'm a lumberjack and I'm ok! I sleep when idle, then I ship logs all day! I parse your logs, I eat the JVM agent for lunch! ♫
 
 (This project was recently renamed from 'lumberjack' to 'logstash-forwarder' to
-make its intended use clear)
+make its intended use clear. The 'lumberjack' name now remains as the network protocol, and 'logstash-forwarder' is the name of the program. It's still the same lovely log forwarding program you love.)
 
 ## Questions and support
 
