@@ -1,12 +1,14 @@
 # logstash-forwarder
 
-o/~ I'm a lumberjack and I'm ok! I sleep when idle, then I ship logs all day! I parse your logs, I eat the JVM agent for lunch! o/~
+o/~ I'm a logstash-forwarder and I'm ok! I sleep when idle, then I ship logs all day! I parse your logs, I eat the JVM agent for lunch! o/~
 
 ## Questions and support
 
 If you have questions and cannot find answers, please join the #logstash irc
 channel on freenode irc or ask on the logstash-users@googlegroups.com mailing
 list.
+
+logstash-forwarder was formally named lumberjack.
 
 ## What is this?
 
