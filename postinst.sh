@@ -1,21 +1,25 @@
 #!/bin/sh
 
-export PATH='/bin:/sbin:/usr/bin:/usr/sbin'
-
-check_service () {
-  # In-between solution whilst renaming
-  service $1 status > /dev/null 2>&1
-  case $? in
-    0) # Running
-       service $1 restart
-       exit $?
-       ;;
-    *) exit 0;; # not running so just don't do anything
-  esac
-}
-
 if [ "$1" = configure ] ; then
-  for x in {lumberjack,logstash-forwarder}; do
-    check_service $x
-  done
+  SHOULD_START='no'
+
+  # If we upgrade from lumberjack to logstash-forwarder, the
+  # pre-install script created this file if lumberjack was
+  # running. So start logstash-forwarder.
+  if [ -f /tmp/lumberjack-running ]; then
+    rm -f /tmp/lumberjack-running
+    SHOULD_START='yes'
+  fi
+
+  # If logstash-forwarder is running, than restart it afterward
+  /usr/sbin/service logstash-forwarder status > /dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    SHOULD_START='yes'
+  fi
+
+  if [ $SHOULD_START = 'yes' ]; then
+    /usr/sbin/service logstash-forwarder restart
+  fi
+
+  exit 0
 fi
