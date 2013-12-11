@@ -1,13 +1,13 @@
 #! /bin/sh
 ### BEGIN INIT INFO
-# Provides:          lumberjack
+# Provides:          logstash-forwarder
 # Required-Start:    $remote_fs $syslog
 # Required-Stop:     $remote_fs $syslog
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
-# Short-Description: Lumberjack logshipper
-# Description:       Lumberjack is a log-shipper designed for use with the
-#                    logstash logging pipeline
+# Short-Description: Logstash Forwarder
+# Description:       Logstash Forwarder is a lightweight shipper that forwards
+#                    logs to logstash via the lumberjack protocol
 ### END INIT INFO
 
 # Author: Jordan Sissel <jordan.sissel@dreamhost.com>
