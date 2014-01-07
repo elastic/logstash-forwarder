@@ -19,6 +19,9 @@ func WriteRegistry(state map[string]*FileState, path string) {
   file.Close()
 
   old := path + ".old"
+  if _, err := os.Stat(old); err == nil {
+    os.Remove(old)
+  }  
   os.Rename(path, old)
   os.Rename(tmp, path)
 }
