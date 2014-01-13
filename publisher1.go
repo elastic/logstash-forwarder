@@ -16,11 +16,10 @@ import (
   "compress/zlib"
   "strconv"
   "regexp"
-  "fmt"
 )
 
 var hostname string
-var hostport_re, _ = regexp.Compile("^(.+):([0-9]+)$")
+var hostport_re, _ = regexp.Compile(`^\[?([^]]+)\]?:([0-9]+)$`)
 
 func init() {
   log.Printf("publisher init\n")
@@ -162,7 +161,7 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
     }
 
     address := addresses[rand.Int() % len(addresses)]
-    addressport := fmt.Sprintf("%s:%s", address, port)
+    addressport := net.JoinHostPort(address, port)
 
     log.Printf("Connecting to %s (%s) \n", addressport, host)
 
