@@ -173,7 +173,16 @@ module Lumberjack
       @value = get
 
       @data_count -= 1
-      @data[@key] = @value
+      myhash = @data
+      mykey = @key
+      if mykey =~ /\./
+        keysplit = mykey.split('.')
+        keysplit[0..-2].each do |key|
+          myhash = (myhash[key] ||= {})
+        end
+        mykey = keysplit[-1]
+      end
+      myhash[mykey] = @value
 
       if @data_count > 0
         transition(:data_field_key_len, 4)
