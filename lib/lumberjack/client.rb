@@ -138,7 +138,7 @@ module Lumberjack
 
     private
     def deep_get(hash, key="")
-      return hash if key.nil?
+      return hash.to_s if key.nil?
       deep_get(
         hash[key.split('.').first],
         key[key.split('.').first.length+1..key.length]
@@ -149,8 +149,8 @@ module Lumberjack
     def deep_keys(hash, prefix="")
       keys = []
       hash.each do |k,v|
-        keys << "#{prefix}#{k}" if v.class == String
-        keys << deep_keys(hash[k], "#{k}.") if v.class == Hash
+        keys << "#{prefix}#{k}" if v.class != Hash
+        keys << deep_keys(hash[k], "#{prefix}#{k}.") if v.class == Hash
       end
       keys.flatten
     end
