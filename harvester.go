@@ -118,7 +118,6 @@ func (h *Harvester) open() *os.File {
 
 func (h *Harvester) readline(reader *bufio.Reader, eof_timeout time.Duration) (*string, int64, error) {
   var buffer bytes.Buffer
-  var linelength int64 = 0
   var additional_eol_chars int64 = 0
   start_time := time.Now()
   for {
@@ -147,7 +146,6 @@ func (h *Harvester) readline(reader *bufio.Reader, eof_timeout time.Duration) (*
         *str = buffer.String()
         return str, additional_eol_chars, err
       }
-      linelength++
     } else {
       time.Sleep(1 * time.Second)
     }
