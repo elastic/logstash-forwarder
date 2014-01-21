@@ -93,7 +93,7 @@ func (h *Harvester) open() *os.File {
 
   for {
     var err error
-    h.file, err = os.Open(h.Path)
+    h.file, err = SharedOpen(h.Path)
 
     if err != nil {
       // retry on failure.
