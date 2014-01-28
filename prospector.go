@@ -109,12 +109,8 @@ func prospector_scan(path string, fields map[string]string,
     // Conditions for starting a new harvester:
     // - file path hasn't been seen before
     // - the file's inode or device changed
-    if !is_known { 
-      // TODO(sissel): Skip files with modification dates older than N
-      // TODO(sissel): Make the 'ignore if older than N' tunable
-      if time.Since(info.ModTime()) > 24*time.Hour {
-        log.Printf("Skipping old file: %s\n", file)
-      } else if is_file_renamed(file, info, fileinfo) {
+    if !is_known {
+      if is_file_renamed(file, info, fileinfo) {
         // Check to see if this file was simply renamed (known inode+dev)
       } else {
         // Most likely a new file. Harvest it!
