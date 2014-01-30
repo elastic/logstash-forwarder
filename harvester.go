@@ -42,7 +42,7 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
   var read_timeout = 10 * time.Second
   last_read_time := time.Now()
   for {
-    text, err := h.readline(reader, read_timeout)
+    text, additional_eol_bytes, err := h.readline(reader, read_timeout)
 
     if err != nil {
       if err == io.EOF {
@@ -78,7 +78,7 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
       Fields: &h.Fields,
       fileinfo: &info,
     }
-    offset += int64(len(*event.Text)) + 1  // +1 because of the line terminator
+    offset += int64(len(*event.Text)) + 1 + additional_eol_bytes // +1 because of the \n line terminator
 
     output <- event // ship the new event downstream
   } /* forever */
@@ -93,7 +93,7 @@ func (h *Harvester) open() *os.File {
 
   for {
     var err error
-    h.file, err = os.Open(h.Path)
+    h.file, err = SharedOpen(h.Path)
 
     if err != nil {
       // retry on failure.
@@ -116,38 +116,42 @@ func (h *Harvester) open() *os.File {
   return h.file
 }
 
-func (h *Harvester) readline(reader *bufio.Reader, eof_timeout time.Duration) (*string, error) {
+func (h *Harvester) readline(reader *bufio.Reader, eof_timeout time.Duration) (*string, int64, error) {
   var buffer bytes.Buffer
+  var additional_eol_chars int64 = 0
   start_time := time.Now()
   for {
-    segment, is_partial, err := reader.ReadLine()
-
-    if err != nil {
-      if err == io.EOF {
-        time.Sleep(1 * time.Second) // TODO(sissel): Implement backoff
-
-        // Give up waiting for data after a certain amount of time.
-        // If we time out, return the error (eof)
-        if time.Since(start_time) > eof_timeout {
-          return nil, err
+    // try and read a byte into our buffer
+    curchar, err := reader.ReadByte()
+    // if there was no error
+    if err == nil {
+      buffer.WriteByte(curchar)
+      // if the last byte read was a \n (LF)
+      if curchar == '\n' {
+        // remove the \n
+        buffer.ReadByte()
+        // check the preceding character if it was a \r (CR)
+        curchar, buffer_err := buffer.ReadByte()
+        // Will get buffer_error if we have an empty line
+        if buffer_err == nil {
+          if curchar =='\r' {
+            additional_eol_chars++
+          }else{
+            // put it back it's not a \r
+            buffer.UnreadByte()
+          }
         }
-        continue
-      } else {
-        log.Println(err)
-        return nil, err // TODO(sissel): don't do this?
+        // return our line
+        str := new(string)
+        *str = buffer.String()
+        return str, additional_eol_chars, err
       }
+    } else {
+      time.Sleep(1 * time.Second)
     }
-
-    // TODO(sissel): if buffer exceeds a certain length, maybe report an error condition? chop it?
-    buffer.Write(segment)
-
-    if !is_partial {
-      // If we got a full line, return the whole line.
-      str := new(string)
-      *str = buffer.String()
-      return str, nil
+    // give up waiting for data after a certain amount of time
+    if time.Since(start_time) > eof_timeout {
+      return nil, 0, err
     }
-  } /* forever read chunks */
-
-  return nil, nil
+  }
 }

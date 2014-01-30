@@ -21,3 +21,11 @@ func WriteRegistry(state map[string]*FileState, path string) {
 
   os.Rename(".logstash-forwarder.new", path)
 }
+
+func NewFileState(info *os.FileInfo, source *string, offset int64) (fileState *FileState) {
+    ino, dev := file_ids(info)
+	return &FileState{Source: source,
+                      Offset: offset,
+			          Inode: ino,
+        			  Device: dev}
+}

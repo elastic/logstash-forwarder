@@ -19,6 +19,18 @@ func WriteRegistry(state map[string]*FileState, path string) {
   file.Close()
 
   old := path + ".old"
+  if _, err := os.Stat(old); err == nil {
+     os.Remove(old)
+  }  
   os.Rename(path, old)
   os.Rename(tmp, path)
+}
+
+func NewFileState(info *os.FileInfo, source *string, offset int64) (fileState *FileState) {
+  idxhi, idxlo, vol := FileIdentifiers(*info);
+  return &FileState{Source: source, 
+            Offset: offset, 
+            Vol: vol,
+            Idxhi: idxhi,
+            Idxlo: idxlo}
 }
