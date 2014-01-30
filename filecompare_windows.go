@@ -17,19 +17,14 @@ func is_fileinfo_same(a os.FileInfo, b os.FileInfo) bool {
 }
 
 func is_file_renamed(file string, info os.FileInfo, fileinfo map[string]os.FileInfo) bool {
-
-  // Get details
-  thisIdxhi, thisIdxlo, thisVol := FileIdentifiers(info)
-  
+ 
   for kf, ki := range fileinfo {
     if kf == file {
       continue
     }
 
-    thatIdxhi, thatIdxlo, thatVol := FileIdentifiers(ki)
-
-    if thisIdxhi == thatIdxhi && thisIdxlo == thatIdxlo && thisVol == thatVol {
-      return true
+    if os.SameFile(ki, info) {
+      return true;
     }
   }
   
@@ -37,9 +32,9 @@ func is_file_renamed(file string, info os.FileInfo, fileinfo map[string]os.FileI
 }
 
 func FileIdentifiers(info os.FileInfo) (uint64, uint64, uint64) {
-
   value := reflect.ValueOf(info).Elem() // Elem() as it's a pointer
-  idxhiField := value.FieldByName("idxhi")
+  // idxhiField := value.FieldByName("idxhi")
+  idxhiField := value.Field(6)
   idxloField := value.FieldByName("idxlo")
   volField := value.FieldByName("vol")
   return idxhiField.Uint(), idxloField.Uint(), volField.Uint()

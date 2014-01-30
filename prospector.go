@@ -116,6 +116,7 @@ func prospector_scan(path string, fields map[string]string,
         log.Printf("Skipping old file: %s\n", file)
       } else if is_file_renamed(file, info, fileinfo) {
         // Check to see if this file was simply renamed (known inode+dev)
+        log.Printf("Skipping renamed file: %s\n", file)
       } else {
         // Most likely a new file. Harvest it!
         log.Printf("Launching harvester on new file: %s\n", file)
