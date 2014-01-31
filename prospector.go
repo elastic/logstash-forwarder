@@ -8,7 +8,7 @@ import (
   "log"
 )
 
-func Prospect(fileconfig FileConfig, output chan *FileEvent) {
+func Prospect(fileconfig FileConfig, oldfilehours uint64, output chan *FileEvent) {
   fileinfo := make(map[string]os.FileInfo)
 
   // Handle any "-" (stdin) paths
@@ -27,7 +27,7 @@ func Prospect(fileconfig FileConfig, output chan *FileEvent) {
 
   for {
     for _, path := range fileconfig.Paths {
-      prospector_scan(path, fileconfig.Fields, fileinfo, output)
+      prospector_scan(path, fileconfig.Fields, fileinfo, oldfilehours, output)
     }
 
     // Defer next scan for a bit.
@@ -70,6 +70,7 @@ func resume_tracking(fileconfig FileConfig, fileinfo map[string]os.FileInfo, out
 
 func prospector_scan(path string, fields map[string]string, 
                      fileinfo map[string]os.FileInfo,
+                     oldfilehours uint64,
                      output chan *FileEvent) {
   //log.Printf("Prospecting %s\n", path)
 
@@ -110,9 +111,9 @@ func prospector_scan(path string, fields map[string]string,
     // - file path hasn't been seen before
     // - the file's inode or device changed
     if !is_known { 
-      // TODO(sissel): Skip files with modification dates older than N
-      // TODO(sissel): Make the 'ignore if older than N' tunable
-      if time.Since(info.ModTime()) > 24*time.Hour {
+      // Skip files with modification dates older than N hours
+      hours := time.Hour * time.Duration(oldfilehours)
+      if time.Since(info.ModTime()) > hours {
         log.Printf("Skipping old file: %s\n", file)
       } else if is_file_renamed(file, info, fileinfo) {
         // Check to see if this file was simply renamed (known inode+dev)

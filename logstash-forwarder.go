@@ -14,6 +14,7 @@ var idle_timeout = flag.Duration("idle-flush-time", 5 * time.Second, "Maximum ti
 var config_file = flag.String("config", "", "The config file to load")
 var use_syslog = flag.Bool("log-to-syslog", false, "Log to syslog instead of stdout")
 var from_beginning = flag.Bool("from-beginning", false, "Read new files from the beginning, instead of the end")
+var old_file_hours = flag.Uint64("old-files-hours", 24, "This is how long a file has been modified before we declare it as old and ignore it for harvesting.")
 
 func main() {
   flag.Parse()
@@ -60,7 +61,7 @@ func main() {
 
   // Prospect the globs/paths given on the command line and launch harvesters
   for _, fileconfig := range config.Files {
-    go Prospect(fileconfig, event_chan)
+    go Prospect(fileconfig, *old_file_hours, event_chan)
   }
 
   // Harvesters dump events into the spooler.
