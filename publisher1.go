@@ -60,7 +60,7 @@ func Publishv1(input chan []*FileEvent,
       // timeout value slowly until things improve, then ratchet it down once
       // things seem healthy.
       log.Printf("Socket error, will reconnect: %s\n", err)
-      time.Sleep(1 * time.Second)
+      time.Sleep(config.reconnect)
       socket.Close()
       socket = connect(config)
     }
@@ -92,6 +92,7 @@ func Publishv1(input chan []*FileEvent,
         if err != nil {
           log.Printf("Read error looking for ack: %s\n", err)
           socket.Close()
+          time.Sleep(config.reconnect)
           socket = connect(config)
           continue SendPayload // retry sending on new connection
         } else {
@@ -157,7 +158,7 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
 
     if err != nil {
       log.Printf("DNS lookup failure \"%s\": %s\n", host, err);
-      time.Sleep(1 * time.Second)
+      time.Sleep(config.reconnect)
       continue
     }
 
@@ -169,7 +170,7 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
     tcpsocket, err := net.DialTimeout("tcp", addressport, config.timeout)
     if err != nil {
       log.Printf("Failure connecting to %s: %s\n", address, err)
-      time.Sleep(1 * time.Second)
+      time.Sleep(config.reconnect)
       continue
     }
 
@@ -178,7 +179,7 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
     err = socket.Handshake()
     if err != nil {
       log.Printf("Failed to tls handshake with %s %s\n", address, err)
-      time.Sleep(1 * time.Second)
+      time.Sleep(config.reconnect)
       socket.Close()
       continue
     }

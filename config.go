@@ -20,6 +20,8 @@ type NetworkConfig struct {
   SSLCA string `json:"ssl ca"`
   Timeout int64 `json:timeout`
   timeout time.Duration
+  Reconnect int64 `json:reconnect`
+  reconnect time.Duration
 } 
 
 type FileConfig struct {
@@ -68,6 +70,11 @@ func LoadConfig(path string) (config Config, err error) {
       //fileconfig.DeadTime = 24 * time.Hour
     //}
   //}
+  if config.Network.Reconnect == 0 {
+    config.Network.Reconnect = 1
+  }
+
+  config.Network.reconnect = time.Duration(config.Network.Reconnect) * time.Second
 
   return
 }
