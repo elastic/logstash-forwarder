@@ -15,7 +15,8 @@ func is_fileinfo_same(a os.FileInfo, b os.FileInfo) bool {
   return true
 }
 
-func is_file_renamed(file string, info os.FileInfo, fileinfo map[string]os.FileInfo) bool {
+func is_file_renamed(file string, info os.FileInfo, fileinfo map[string]ProspectorInfo, missingfiles map[string]os.FileInfo) string {
   // Can we detect if a file was renamed on Windows?
-  return false
+  // NOTE(driskell): What about using golang's func os.SameFile(fi1, fi2 FileInfo) bool?
+  return ""
 }

@@ -4,9 +4,9 @@ import (
   "log"
 )
 
-func Registrar(input chan []*FileEvent) {
+func Registrar(new_state map[string]*FileState, input chan []*FileEvent) {
+  state := new_state
   for events := range input {
-    state := make(map[string]*FileState)
     log.Printf("Registrar received %d events\n", len(events))
     // Take the last event found for each file source
     for _, event := range events {

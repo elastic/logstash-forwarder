@@ -6,6 +6,7 @@ import (
   "time"
   "flag"
   "runtime/pprof"
+  "encoding/json"
 )
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
@@ -36,6 +37,9 @@ func main() {
     return
   }
 
+  statereturn_chan := make(chan *FileState)
+  statereturns := 0
+
   event_chan := make(chan *FileEvent, 16)
   publisher_chan := make(chan []*FileEvent, 1)
   registrar_chan := make(chan []*FileEvent, 1)
@@ -58,10 +62,45 @@ func main() {
     configureSyslog()
   }
 
+  // Load the previous log file locations now, for use in prospector
+  historical_state := make(map[string]*FileState)
+  history, err := os.Open(".logstash-forwarder")
+  if err == nil {
+    wd, err := os.Getwd()
+    if err != nil {
+      wd = ""
+    }
+    log.Printf("Loading registrar data from %s/.logstash-forwarder\n", wd)
+
+    decoder := json.NewDecoder(history)
+    decoder.Decode(&historical_state)
+    history.Close()
+  }
+
   // Prospect the globs/paths given on the command line and launch harvesters
   for _, fileconfig := range config.Files {
-    go Prospect(fileconfig, event_chan)
+    go Prospect(fileconfig, historical_state, statereturn_chan, event_chan)
+    statereturns++
   }
+
+  // Now determine which states we need to re-save by pulling the events from the prospectors
+  // When we hit a nil source a prospector had finished so we decrease the expected events
+  log.Printf("Waiting for %d prospectors to process loaded registrar data\n", statereturns)
+  new_state := make(map[string]*FileState)
+
+  for event := range statereturn_chan {
+    if event.Source == nil {
+      statereturns--
+      if statereturns == 0 {
+        break
+      }
+      continue
+    }
+    new_state[*event.Source] = event
+    log.Printf("Registrar will re-save state for %s\n", *event.Source)
+  }
+
+  log.Printf("All prospectors have been initialised with %d states to re-save to registrar data\n", len(new_state))
 
   // Harvesters dump events into the spooler.
   go Spool(event_chan, publisher_chan, *spool_size, *idle_timeout)
@@ -69,5 +108,5 @@ func main() {
   go Publishv1(publisher_chan, registrar_chan, &config.Network)
 
   // registrar records last acknowledged positions in all files.
-  Registrar(registrar_chan)
+  Registrar(new_state, registrar_chan)
 } /* main */

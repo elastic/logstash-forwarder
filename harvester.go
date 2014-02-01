@@ -11,23 +11,21 @@ import (
 
 type Harvester struct {
   Path string /* the file path to harvest */
-  Fields map[string]string
+  FileConfig FileConfig
   Offset int64
+  FinishChan chan int64
 
   file *os.File /* the file being watched */
 }
 
 func (h *Harvester) Harvest(output chan *FileEvent) {
-  if h.Offset > 0 {
-    log.Printf("Starting harvester at position %d: %s\n", h.Offset, h.Path)
-  } else {
-    log.Printf("Starting harvester: %s\n", h.Path)
-  }
-
   h.open()
   info, _ := h.file.Stat() // TODO(sissel): Check error
   defer h.file.Close()
   //info, _ := file.Stat()
+
+  // On completion, push offset so we can continue where we left off if we relaunch on the same file
+  defer func() { h.FinishChan <- h.Offset }()
 
   // NOTE(driskell): How would we know line number if from_beginning is false and we SEEK_END? Or would we scan,count,skip?
   var line uint64 = 0 // Ask registrar about the line number
@@ -35,7 +33,15 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
   // get current offset in file
   offset, _ := h.file.Seek(0, os.SEEK_CUR)
 
-  log.Printf("Current file offset: %d\n", offset)
+  if h.Offset > 0 {
+    log.Printf("Started harvester at position %d (current offset now %d): %s\n", h.Offset, offset, h.Path)
+  } else if *from_beginning {
+    log.Printf("Started harvester from beginning of file (current offset now %d): %s\n", offset, h.Path)
+  } else {
+    log.Printf("Started harvester at end of file (current offset now %d): %s\n", offset, h.Path)
+  }
+
+  h.Offset = offset
 
   // TODO(sissel): Make the buffer size tunable at start-time
   reader := bufio.NewReaderSize(h.file, 16<<10) // 16kb buffer by default
@@ -50,16 +56,14 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
         // timed out waiting for data, got eof.
         // Check to see if the file was truncated
         info, _ := h.file.Stat()
-        if info.Size() < offset {
+        if info.Size() < h.Offset {
           log.Printf("File truncated, seeking to beginning: %s\n", h.Path)
           h.file.Seek(0, os.SEEK_SET)
-          offset = 0
-        } else if age := time.Since(last_read_time); age > (24 * time.Hour) {
-          // if last_read_time was more than 24 hours ago, this file is probably
+          h.Offset = 0
+        } else if age := time.Since(last_read_time); age > h.FileConfig.deadtime {
+          // if last_read_time was more than dead time, this file is probably
           // dead. Stop watching it.
-          // TODO(sissel): Make this time configurable
-          // This file is idle for more than 24 hours. Give up and stop harvesting.
-          log.Printf("Stopping harvest of %s; last change was %d seconds ago\n", h.Path, age.Seconds())
+          log.Printf("Stopping harvest of %s; last change was %v ago\n", h.Path, age)
           return
         }
         continue
@@ -73,13 +77,13 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
     line++
     event := &FileEvent{
       Source: &h.Path,
-      Offset: offset,
+      Offset: h.Offset,
       Line: line,
       Text: text,
-      Fields: &h.Fields,
+      Fields: &h.FileConfig.Fields,
       fileinfo: &info,
     }
-    offset += int64(len(*event.Text)) + 1  // +1 because of the line terminator
+    h.Offset += int64(len(*event.Text)) + 1  // +1 because of the line terminator
 
     output <- event // ship the new event downstream
   } /* forever */
