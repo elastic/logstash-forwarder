@@ -5,6 +5,7 @@ import (
   "os"
   "log"
   "time"
+  "errors"
 )
 
 type Config struct {
@@ -34,8 +35,13 @@ func LoadConfig(path string) (config Config, err error) {
     return
   }
 
-  fi, _ := config_file.Stat()
+  fi, err := config_file.Stat()
+  if err != nil {
+    log.Printf("Stat failed for config file. Aborting. Config file was '%s'.\n", path)
+    return
+  }
   if fi.Size() > (10 << 20) {
+    err = errors.New("Config file too large?")
     log.Printf("Config file too large? Aborting, just in case. '%s' is %d bytes\n",
                path, fi)
     return
