@@ -81,6 +81,7 @@ func prospector_scan(path string, fields map[string]string,
   }
 
   // If the glob matches nothing, use the path itself as a literal.
+  // NOTE(driskell): This doesn't seem to make sense?
   if len(matches) == 0 && path == "-" {
     matches = append(matches, path)
   }

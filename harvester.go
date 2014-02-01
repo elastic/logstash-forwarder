@@ -29,6 +29,7 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
   defer h.file.Close()
   //info, _ := file.Stat()
 
+  // NOTE(driskell): How would we know line number if from_beginning is false and we SEEK_END? Or would we scan,count,skip?
   var line uint64 = 0 // Ask registrar about the line number
 
   // get current offset in file
