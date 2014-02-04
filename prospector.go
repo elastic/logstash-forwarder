@@ -1,11 +1,11 @@
 package main
 
 import (
-  "time"
-  "path/filepath"
   "encoding/json"
-  "os"
   "log"
+  "os"
+  "path/filepath"
+  "time"
 )
 
 func Prospect(fileconfig FileConfig, output chan *FileEvent) {
@@ -49,7 +49,9 @@ func resume_tracking(fileconfig FileConfig, fileinfo map[string]os.FileInfo, out
       // if the file is the same inode/device as we last saw,
       // start a harvester on it at the last known position
       info, err := os.Stat(path)
-      if err != nil { continue }
+      if err != nil {
+        continue
+      }
 
       if is_file_same(path, info, state) {
         // same file, seek to last known position
@@ -58,7 +60,7 @@ func resume_tracking(fileconfig FileConfig, fileinfo map[string]os.FileInfo, out
         for _, pathglob := range fileconfig.Paths {
           match, _ := filepath.Match(pathglob, path)
           if match {
-            harvester := Harvester{Path: path, Fields: fileconfig.Fields, Offset: state.Offset }
+            harvester := Harvester{Path: path, Fields: fileconfig.Fields, Offset: state.Offset}
             go harvester.Harvest(output)
             break
           }
@@ -68,9 +70,9 @@ func resume_tracking(fileconfig FileConfig, fileinfo map[string]os.FileInfo, out
   }
 }
 
-func prospector_scan(path string, fields map[string]string, 
-                     fileinfo map[string]os.FileInfo,
-                     output chan *FileEvent) {
+func prospector_scan(path string, fields map[string]string,
+  fileinfo map[string]os.FileInfo,
+  output chan *FileEvent) {
   //log.Printf("Prospecting %s\n", path)
 
   // Evaluate the path as a wildcards/shell glob
@@ -109,7 +111,7 @@ func prospector_scan(path string, fields map[string]string,
     // Conditions for starting a new harvester:
     // - file path hasn't been seen before
     // - the file's inode or device changed
-    if !is_known { 
+    if !is_known {
       // TODO(sissel): Skip files with modification dates older than N
       // TODO(sissel): Make the 'ignore if older than N' tunable
       if time.Since(info.ModTime()) > 24*time.Hour {

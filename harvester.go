@@ -1,16 +1,16 @@
 package main
 
 import (
-  "os" // for File and friends
-  "log"
+  "bufio"
   "bytes"
   "io"
-  "bufio"
+  "log"
+  "os" // for File and friends
   "time"
 )
 
 type Harvester struct {
-  Path string /* the file path to harvest */
+  Path   string /* the file path to harvest */
   Fields map[string]string
   Offset int64
 
@@ -71,14 +71,14 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 
     line++
     event := &FileEvent{
-      Source: &h.Path,
-      Offset: offset,
-      Line: line,
-      Text: text,
-      Fields: &h.Fields,
+      Source:   &h.Path,
+      Offset:   offset,
+      Line:     line,
+      Text:     text,
+      Fields:   &h.Fields,
       fileinfo: &info,
     }
-    offset += int64(len(*event.Text)) + 1  // +1 because of the line terminator
+    offset += int64(len(*event.Text)) + 1 // +1 because of the line terminator
 
     output <- event // ship the new event downstream
   } /* forever */
@@ -89,7 +89,7 @@ func (h *Harvester) open() *os.File {
   if h.Path == "-" {
     h.file = os.Stdin
     return h.file
-  } 
+  }
 
   for {
     var err error

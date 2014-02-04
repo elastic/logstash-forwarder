@@ -1,16 +1,16 @@
 package main
 
 import (
+  "flag"
   "log"
   "os"
-  "time"
-  "flag"
   "runtime/pprof"
+  "time"
 )
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 var spool_size = flag.Uint64("spool-size", 1024, "Maximum number of events to spool before a flush is forced.")
-var idle_timeout = flag.Duration("idle-flush-time", 5 * time.Second, "Maximum time to wait for a full spool before flushing anyway")
+var idle_timeout = flag.Duration("idle-flush-time", 5*time.Second, "Maximum time to wait for a full spool before flushing anyway")
 var config_file = flag.String("config", "", "The config file to load")
 var use_syslog = flag.Bool("log-to-syslog", false, "Log to syslog instead of stdout")
 var from_beginning = flag.Bool("from-beginning", false, "Read new files from the beginning, instead of the end")
@@ -21,7 +21,7 @@ func main() {
   if *cpuprofile != "" {
     f, err := os.Create(*cpuprofile)
     if err != nil {
-        log.Fatal(err)
+      log.Fatal(err)
     }
     pprof.StartCPUProfile(f)
     go func() {
@@ -52,7 +52,7 @@ func main() {
   // - registrar: records positions of files read
   // Finally, prospector uses the registrar information, on restart, to
   // determine where in each file to resume a harvester.
-  
+
   log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
   if *use_syslog {
     configureSyslog()
