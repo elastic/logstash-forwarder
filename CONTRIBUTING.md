@@ -1,4 +1,4 @@
-# Contributing to lumberjack
+# Contributing to logstash-forwarder
 
 All contributions are welcome: ideas, patches, documentation, bug reports,
 complaints, etc!
@@ -10,7 +10,7 @@ That said, some basic guidelines, which you are free to ignore :)
 
 ## Want to learn?
 
-Want to lurk about and see what others are doing with logstash and lumberjack? 
+Want to lurk about and see what others are doing with logstash and lumberjack?
 
 * The irc channel (#logstash on irc.freenode.org) is a good place for this
 * The [mailing list](http://groups.google.com/group/logstash-users) is also
@@ -19,7 +19,7 @@ Want to lurk about and see what others are doing with logstash and lumberjack?
 ## Got Questions?
 
 Have a problem or a question?
- 
+
 * You can email the [mailing list](http://groups.google.com/group/logstash-users)
 * alternately, you are welcome to join the IRC channel #logstash on
 irc.freenode.org and ask for help there!
@@ -34,7 +34,7 @@ irc.freenode.org and ask for help there!
 
 If you think you found a bug, it probably is a bug.
 
-* File it on [jira](https://github.com/jordansissel/lumberjack)
+* File it on [github issues](https://github.com/elasticsearch/logstash-forwarder/issues)
 * or the [mailing list](http://groups.google.com/group/logstash-users).
 
 # Contributing Documentation and Code Changes
@@ -43,7 +43,7 @@ If you have a bugfix or new feature that you would like to contribute to
 logstash, and you think it will take more than a few minutes to produce the fix
 (ie; write code), it is worth discussing the change with the logstash users and
 developers first! You can reach us via
-[jira](https://github.com/jordansissel/lumberjack), the [mailing
+[github issues](https://github.com/elasticsearch/logstash-forwarder/issues), the [mailing
 list](http://groups.google.com/group/logstash-users), or via IRC (#logstash on
 freenode irc)
 
