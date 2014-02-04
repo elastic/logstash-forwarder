@@ -49,14 +49,15 @@ freenode irc)
 
 ## Contribution Steps
 
-1. Test your changes! Run the test suite ('make test') 
-2. Please make sure you have signed our [Contributor License
+1. Test your changes! Run the test suite ('make test')
+1. `gofmt` your Go code: use `gofmt -w -tabs=false -tabwidth=2 .`
+1. Please make sure you have signed our [Contributor License
    Agreement](http://www.elasticsearch.org/contributor-agreement/). We are not
    asking you to assign copyright to us, but to give us the right to distribute
    your code without restriction. We ask this of all contributors in order to
    assure our users of the origin and continuing existence of the code. You
    only need to sign the CLA once.
-3. Send a pull request! Push your changes to your fork of the repository and
+1. Send a pull request! Push your changes to your fork of the repository and
    [submit a pull
    request](https://help.github.com/articles/using-pull-requests). In the pull
    request, describe what your changes do and mention any open issues related
