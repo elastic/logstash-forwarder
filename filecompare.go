@@ -32,4 +32,3 @@ func is_file_renamed(file string, info os.FileInfo, fileinfo map[string]os.FileI
   }
   return false
 }
-

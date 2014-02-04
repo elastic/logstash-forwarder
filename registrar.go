@@ -23,7 +23,7 @@ func Registrar(input chan []*FileEvent) {
         // take the offset + length of the line + newline char and
         // save it as the new starting offset.
         Offset: event.Offset + int64(len(*event.Text)) + 1,
-        Inode: ino,
+        Inode:  ino,
         Device: dev,
       }
       //log.Printf("State %s: %d\n", *event.Source, event.Offset)
@@ -34,4 +34,3 @@ func Registrar(input chan []*FileEvent) {
     }
   }
 }
-

@@ -2,27 +2,27 @@ package main
 
 import (
   "encoding/json"
-  "os"
   "log"
+  "os"
   "time"
 )
 
 type Config struct {
   Network NetworkConfig `json:network`
-  Files []FileConfig `json:files`
+  Files   []FileConfig  `json:files`
 }
 
 type NetworkConfig struct {
-  Servers []string `json:servers`
-  SSLCertificate string `json:"ssl certificate"`
-  SSLKey string `json:"ssl key"`
-  SSLCA string `json:"ssl ca"`
-  Timeout int64 `json:timeout`
-  timeout time.Duration
-} 
+  Servers        []string `json:servers`
+  SSLCertificate string   `json:"ssl certificate"`
+  SSLKey         string   `json:"ssl key"`
+  SSLCA          string   `json:"ssl ca"`
+  Timeout        int64    `json:timeout`
+  timeout        time.Duration
+}
 
 type FileConfig struct {
-  Paths []string `json:paths`
+  Paths  []string          `json:paths`
   Fields map[string]string `json:fields`
   //DeadTime time.Duration `json:"dead time"`
 }
@@ -37,7 +37,7 @@ func LoadConfig(path string) (config Config, err error) {
   fi, _ := config_file.Stat()
   if fi.Size() > (10 << 20) {
     log.Printf("Config file too large? Aborting, just in case. '%s' is %d bytes\n",
-               path, fi)
+      path, fi)
     return
   }
 
@@ -58,9 +58,9 @@ func LoadConfig(path string) (config Config, err error) {
   config.Network.timeout = time.Duration(config.Network.Timeout) * time.Second
 
   //for _, fileconfig := range config.Files {
-    //if fileconfig.DeadTime == 0 {
-      //fileconfig.DeadTime = 24 * time.Hour
-    //}
+  //if fileconfig.DeadTime == 0 {
+  //fileconfig.DeadTime = 24 * time.Hour
+  //}
   //}
 
   return

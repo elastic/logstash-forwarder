@@ -1,22 +1,22 @@
 package main
 
 import (
-  "math/rand"
   "bytes"
-  "encoding/binary"
-  "encoding/pem"
+  "compress/zlib"
   "crypto/tls"
   "crypto/x509"
-  "net"
+  "encoding/binary"
+  "encoding/pem"
+  "fmt"
   "io"
-  "os"
   "io/ioutil"
   "log"
-  "time"
-  "compress/zlib"
-  "strconv"
+  "math/rand"
+  "net"
+  "os"
   "regexp"
-  "fmt"
+  "strconv"
+  "time"
 )
 
 var hostname string
@@ -29,8 +29,8 @@ func init() {
 }
 
 func Publishv1(input chan []*FileEvent,
-               registrar chan []*FileEvent,
-               config *NetworkConfig) {
+  registrar chan []*FileEvent,
+  config *NetworkConfig) {
   var buffer bytes.Buffer
   var socket *tls.Conn
   var sequence uint32
@@ -56,7 +56,7 @@ func Publishv1(input chan []*FileEvent,
     oops := func(err error) {
       // TODO(sissel): Track how frequently we timeout and reconnect. If we're
       // timing out too frequently, there's really no point in timing out since
-      // basically everything is slow or down. We'll want to ratchet up the 
+      // basically everything is slow or down. We'll want to ratchet up the
       // timeout value slowly until things improve, then ratchet it down once
       // things seem healthy.
       log.Printf("Socket error, will reconnect: %s\n", err)
@@ -65,24 +65,40 @@ func Publishv1(input chan []*FileEvent,
       socket = connect(config)
     }
 
-    SendPayload: for {
+  SendPayload:
+    for {
       // Abort if our whole request takes longer than the configured
       // network timeout.
       socket.SetDeadline(time.Now().Add(config.timeout))
 
       // Set the window size to the length of this payload in events.
       _, err = socket.Write([]byte("1W"))
-      if err != nil { oops(err); continue }
+      if err != nil {
+        oops(err)
+        continue
+      }
       binary.Write(socket, binary.BigEndian, uint32(len(events)))
-      if err != nil { oops(err); continue }
+      if err != nil {
+        oops(err)
+        continue
+      }
 
       // Write compressed frame
       socket.Write([]byte("1C"))
-      if err != nil { oops(err); continue }
+      if err != nil {
+        oops(err)
+        continue
+      }
       binary.Write(socket, binary.BigEndian, uint32(len(compressed_payload)))
-      if err != nil { oops(err); continue }
+      if err != nil {
+        oops(err)
+        continue
+      }
       _, err = socket.Write(compressed_payload)
-      if err != nil { oops(err); continue }
+      if err != nil {
+        oops(err)
+        continue
+      }
 
       // read ack
       response := make([]byte, 0, 6)
@@ -114,7 +130,7 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
 
   if len(config.SSLCertificate) > 0 && len(config.SSLKey) > 0 {
     log.Printf("Loading client ssl certificate: %s and %s\n",
-               config.SSLCertificate, config.SSLKey)
+      config.SSLCertificate, config.SSLKey)
     cert, err := tls.LoadX509KeyPair(config.SSLCertificate, config.SSLKey)
     if err != nil {
       log.Fatalf("Failed loading client ssl certificate: %s\n", err)
@@ -127,7 +143,9 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
     tlsconfig.RootCAs = x509.NewCertPool()
 
     pemdata, err := ioutil.ReadFile(config.SSLCA)
-    if err != nil { log.Fatalf("Failure reading CA certificate: %s\n", err) }
+    if err != nil {
+      log.Fatalf("Failure reading CA certificate: %s\n", err)
+    }
 
     block, _ := pem.Decode(pemdata)
     if block == nil {
@@ -146,7 +164,7 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
 
   for {
     // Pick a random server from the list.
-    hostport := config.Servers[rand.Int() % len(config.Servers)]
+    hostport := config.Servers[rand.Int()%len(config.Servers)]
     submatch := hostport_re.FindSubmatch([]byte(hostport))
     if submatch == nil {
       log.Fatalf("Invalid host:port given: %s", hostport)
@@ -156,12 +174,12 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
     addresses, err := net.LookupHost(host)
 
     if err != nil {
-      log.Printf("DNS lookup failure \"%s\": %s\n", host, err);
+      log.Printf("DNS lookup failure \"%s\": %s\n", host, err)
       time.Sleep(1 * time.Second)
       continue
     }
 
-    address := addresses[rand.Int() % len(addresses)]
+    address := addresses[rand.Int()%len(addresses)]
     addressport := fmt.Sprintf("%s:%s", address, port)
 
     log.Printf("Connecting to %s (%s) \n", addressport, host)
@@ -198,13 +216,13 @@ func writeDataFrame(event *FileEvent, sequence uint32, output io.Writer) {
   // sequence number
   binary.Write(output, binary.BigEndian, uint32(sequence))
   // 'pair' count
-  binary.Write(output, binary.BigEndian, uint32(len(*event.Fields) + 4))
+  binary.Write(output, binary.BigEndian, uint32(len(*event.Fields)+4))
 
   writeKV("file", *event.Source, output)
   writeKV("host", hostname, output)
   writeKV("offset", strconv.FormatInt(event.Offset, 10), output)
   writeKV("line", *event.Text, output)
-  for k, v := range(*event.Fields) {
+  for k, v := range *event.Fields {
     writeKV(k, v, output)
   }
 }
