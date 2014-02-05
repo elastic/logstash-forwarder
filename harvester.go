@@ -46,15 +46,22 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 
   var read_timeout = 10 * time.Second
   last_read_time := time.Now()
+  fdstring := "/proc/self/fd/"+strconv.Itoa(int(fd))
+  r, reg_err := regexp.Compile(`\s\(deleted\)$`)
+  if  reg_err != nil {
+          log.Printf("No harvester of %s; got error of Regex call %s \n", h.Path, reg_err.Error())
+	  return
+  }
   for {
     text, err := h.readline(reader, read_timeout)
     if err != nil {
       if err == io.EOF {
         info, stat_err := h.file.Stat()
-	fdstring := "/proc/self/fd/"+strconv.Itoa(int(fd))
-	file ,_:= os.Readlink(fdstring)
-	r, _ := regexp.Compile(`\s\(deleted\)`)
-	deleted:= r.MatchString(file)
+	file ,link_err:= os.Readlink(fdstring)
+	var deleted bool = false
+	if link_err == nil {
+		deleted = r.MatchString(file)
+	}
         // timed out waiting for data, got eof.
         // Check to see if the file was truncated
 	if ( stat_err != nil ) {
@@ -103,7 +110,7 @@ func (h *Harvester) open() *os.File {
   if h.Path == "-" {
     h.file = os.Stdin
     return h.file
-  } 
+  }
 
   for {
     var err error
