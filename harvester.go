@@ -78,7 +78,7 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
       Fields:   &h.Fields,
       fileinfo: &info,
     }
-    offset += int64(len(*event.Text)) + 1 // +1 because of the line terminator
+    offset += int64(len(*text))
 
     output <- event // ship the new event downstream
   } /* forever */
@@ -118,12 +118,20 @@ func (h *Harvester) open() *os.File {
 
 func (h *Harvester) readline(reader *bufio.Reader, eof_timeout time.Duration) (*string, error) {
   var buffer bytes.Buffer
+  var is_partial bool = true
   start_time := time.Now()
   for {
-    segment, is_partial, err := reader.ReadLine()
+    segment, err := reader.ReadBytes('\n')
+
+    if segment != nil && len(segment) > 0 {
+      if segment[len(segment)-1] == '\n' {
+        // Found a complete line
+        is_partial = false
+      }
+    }
 
     if err != nil {
-      if err == io.EOF {
+      if err == io.EOF && is_partial {
         time.Sleep(1 * time.Second) // TODO(sissel): Implement backoff
 
         // Give up waiting for data after a certain amount of time.
@@ -142,9 +150,9 @@ func (h *Harvester) readline(reader *bufio.Reader, eof_timeout time.Duration) (*
     buffer.Write(segment)
 
     if !is_partial {
-      // If we got a full line, return the whole line.
+      // If we got a full line, return the whole line without the newline.
       str := new(string)
-      *str = buffer.String()
+      *str = buffer.String()[:len(segment)-1]
       return str, nil
     }
   } /* forever read chunks */
