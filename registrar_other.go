@@ -10,9 +10,9 @@ import (
 
 func WriteRegistry(state map[string]*FileState, path string) {
   // Open tmp file, write, flush, rename
-  file, err := os.Create(".logstash-forwarder.new")
+  file, err := os.Create("/var/lib/logstash-forwarder.state.new")
   if err != nil {
-    log.Printf("Failed to open .logstash-forwarder.new for writing: %s\n", err)
+    log.Printf("Failed to open /var/lib/logstash-forwarder.state.new for writing: %s\n", err)
     return
   }
   defer file.Close()
@@ -20,5 +20,5 @@ func WriteRegistry(state map[string]*FileState, path string) {
   encoder := json.NewEncoder(file)
   encoder.Encode(state)
 
-  os.Rename(".logstash-forwarder.new", path)
+  os.Rename("/var/lib/logstash-forwarder.state.new", path)
 }
