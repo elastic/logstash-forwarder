@@ -14,6 +14,7 @@ type Config struct {
 
 type NetworkConfig struct {
   Servers        []string `json:servers`
+  UseSRV         bool     `json:"use srv"`
   SSLCertificate string   `json:"ssl certificate"`
   SSLKey         string   `json:"ssl key"`
   SSLCA          string   `json:"ssl ca"`
