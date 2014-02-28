@@ -14,11 +14,12 @@ type Harvester struct {
   FileConfig FileConfig
   Offset     int64
   FinishChan chan int64
+  Initial bool
 
   file *os.File /* the file being watched */
 }
 
-func (h *Harvester) Harvest(output chan *FileEvent) {
+func (h *Harvester) Harvest(registrar_chan chan []*FileEvent, output chan *FileEvent) {
   h.open()
   info, _ := h.file.Stat() // TODO(sissel): Check error
   defer h.file.Close()
@@ -33,15 +34,29 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
   // get current offset in file
   offset, _ := h.file.Seek(0, os.SEEK_CUR)
 
-  if h.Offset > 0 {
-    log.Printf("Started harvester at position %d (current offset now %d): %s\n", h.Offset, offset, h.Path)
-  } else if *from_beginning {
-    log.Printf("Started harvester from beginning of file (current offset now %d): %s\n", offset, h.Path)
+  if h.Initial {
+    if *from_beginning {
+      log.Printf("Started harvester at position %d (requested beginning): %s\n", offset, h.Path)
+    } else {
+      log.Printf("Started harvester at position %d (requested end): %s\n", offset, h.Path)
+    }
   } else {
-    log.Printf("Started harvester at end of file (current offset now %d): %s\n", offset, h.Path)
+    log.Printf("Started harvester at position %d (requested %d): %s\n", offset, h.Offset, h.Path)
   }
 
   h.Offset = offset
+
+  // Shoot a dummy FileEvent to registrar so we get this offset stored ASAP in the state file, before any events are read
+  // Otherwise, if the file doesn't change, and we restart, we won't know about it when we start up again
+  // And if from-beginning is false... we'll start from the end during startup even if we started from the beginning just now
+  if h.Path != "-" {
+    event := &FileEvent{
+      Source:   &h.Path,
+      Offset:   h.Offset,
+      fileinfo: &info,
+    }
+    registrar_chan <- []*FileEvent{event}
+  }
 
   // TODO(sissel): Make the buffer size tunable at start-time
   reader := bufio.NewReaderSize(h.file, 16<<10) // 16kb buffer by default
@@ -60,6 +75,15 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
           log.Printf("File truncated, seeking to beginning: %s\n", h.Path)
           h.file.Seek(0, os.SEEK_SET)
           h.Offset = 0
+          // Shoot another dummy event to registrar to ensure we update the statefile regarding the truncation
+          if h.Path != "-" {
+            event := &FileEvent{
+              Source:   &h.Path,
+              Offset:   h.Offset,
+              fileinfo: &info,
+            }
+            registrar_chan <- []*FileEvent{event}
+          }
         } else if age := time.Since(last_read_time); age > h.FileConfig.deadtime {
           // if last_read_time was more than dead time, this file is probably
           // dead. Stop watching it.
@@ -75,6 +99,7 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
     last_read_time = time.Now()
 
     line++
+    h.Offset += int64(len(*text)) + 1 // +1 because of the line terminator
     event := &FileEvent{
       Source:   &h.Path,
       Offset:   h.Offset,
@@ -83,7 +108,6 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
       Fields:   &h.FileConfig.Fields,
       fileinfo: &info,
     }
-    h.Offset += int64(len(*event.Text)) + 1 // +1 because of the line terminator
 
     output <- event // ship the new event downstream
   } /* forever */
@@ -110,12 +134,19 @@ func (h *Harvester) open() *os.File {
   }
 
   // TODO(sissel): Only seek if the file is a file, not a pipe or socket.
-  if h.Offset > 0 {
-    h.file.Seek(h.Offset, os.SEEK_SET)
-  } else if *from_beginning {
-    h.file.Seek(0, os.SEEK_SET)
+  if h.Initial {
+    // This is a new file detected during startup so calculate offset based on from-beginning
+    if *from_beginning {
+      h.file.Seek(0, os.SEEK_SET)
+    } else {
+      h.file.Seek(0, os.SEEK_END)
+    }
+    h.Offset = 0
   } else {
-    h.file.Seek(0, os.SEEK_END)
+    // This is a new file detected after startup, or one that was resumed from the state file; in both cases we must obey the given offset
+    // For new files offset will be 0 so this ensures we always start from the beginning on files created while we're running
+    // This matches the LogStash behaviour
+    h.file.Seek(h.Offset, os.SEEK_SET)
   }
 
   return h.file

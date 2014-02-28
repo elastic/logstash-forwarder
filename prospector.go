@@ -8,19 +8,20 @@ import (
 )
 
 type ProspectorInfo struct {
-  fileinfo os.FileInfo /* the file info */
+  fileinfo  os.FileInfo /* the file info */
   harvester chan int64 /* the harvester will send an event with its offset when it closes */
   last_seen uint32 /* int number of the last iterations in which we saw this file */
 }
 
-func Prospect(fileconfig FileConfig, historical_state map[string]*FileState, statereturn chan *FileState, output chan *FileEvent) {
+func Prospect(fileconfig FileConfig, historical_state map[string]*FileState, statereturn chan *FileState, registrar_chan chan []*FileEvent, output chan *FileEvent) {
   fileinfo := make(map[string]ProspectorInfo)
 
   // Handle any "-" (stdin) paths
   for i, path := range fileconfig.Paths {
     if path == "-" {
+      // Offset and Initial never get used when path is "-"
       harvester := Harvester{Path: path, FileConfig: fileconfig}
-      go harvester.Harvest(output)
+      go harvester.Harvest(registrar_chan, output)
 
       // Remove it from the file list
       fileconfig.Paths = append(fileconfig.Paths[:i], fileconfig.Paths[i+1:]...)
@@ -28,7 +29,7 @@ func Prospect(fileconfig FileConfig, historical_state map[string]*FileState, sta
   }
 
   // Use the registrar db to reopen any files at their last positions
-  resume_tracking(fileconfig, historical_state, fileinfo, statereturn, output)
+  resume_tracking(fileconfig, historical_state, fileinfo, statereturn, registrar_chan, output)
 
   // This signals we finished considering the previous state
   event := &FileState{
@@ -36,10 +37,16 @@ func Prospect(fileconfig FileConfig, historical_state map[string]*FileState, sta
   }
   statereturn <- event
 
+  // Now let's do one quick scan to pick up new files - flag true so new files obey from-beginning
   var iteration uint32 = 0
+  for _, path := range fileconfig.Paths {
+    prospector_scan(iteration, path, fileconfig, fileinfo, registrar_chan, output, true)
+  }
+
   for {
     for _, path := range fileconfig.Paths {
-      prospector_scan(iteration, path, fileconfig, fileinfo, output)
+      // Scan - flag false so new files always start at beginning
+      prospector_scan(iteration, path, fileconfig, fileinfo, registrar_chan, output, false)
     }
 
     // Defer next scan for a bit.
@@ -57,7 +64,9 @@ func Prospect(fileconfig FileConfig, historical_state map[string]*FileState, sta
   }
 } /* Prospect */
 
-func resume_tracking(fileconfig FileConfig, historical_state map[string]*FileState, fileinfo map[string]ProspectorInfo, statereturn chan *FileState, output chan *FileEvent) {
+func resume_tracking(fileconfig FileConfig, historical_state map[string]*FileState,
+  fileinfo map[string]ProspectorInfo, statereturn chan *FileState,
+  registrar_chan chan []*FileEvent, output chan *FileEvent) {
   // Start up with any registrar data.
   for path, state := range historical_state {
     // if the file is the same inode/device as we last saw,
@@ -78,12 +87,12 @@ func resume_tracking(fileconfig FileConfig, historical_state map[string]*FileSta
           }
           log.Printf("Resuming harvester on a previously harvested file: %s\n", path)
           newinfo := ProspectorInfo{fileinfo: info, harvester: make(chan int64, 1)}
+          // Don't pass initial as we want to use state.Offset
           harvester := &Harvester{Path: path, FileConfig: fileconfig, Offset: state.Offset, FinishChan: newinfo.harvester}
-          go harvester.Harvest(output)
+          go harvester.Harvest(registrar_chan, output)
           fileinfo[path] = newinfo
 
           // Throw an event downstream so we re-save this resume information to the registrar state
-          // Registrar will not save until it receives events (null source) that state each prospector has finished resuming files
           ino, dev := file_ids(&info)
           event_source := path // We need a copy of path since we change it in the loop above
           event := &FileState{
@@ -100,9 +109,10 @@ func resume_tracking(fileconfig FileConfig, historical_state map[string]*FileSta
   }
 }
 
+// NOTE(driskell): I know, I know... parameter soup... my bad... needs restructuring at some point
 func prospector_scan(iteration uint32, path string, fileconfig FileConfig, 
-  fileinfo map[string]ProspectorInfo,
-  output chan *FileEvent) {
+  fileinfo map[string]ProspectorInfo, registrar_chan chan []*FileEvent,
+  output chan *FileEvent, initial bool) {
   //log.Printf("Prospecting %s\n", path)
 
   // Evaluate the path as a wildcards/shell glob
@@ -161,8 +171,8 @@ func prospector_scan(iteration uint32, path string, fileconfig FileConfig,
         // Most likely a new file. Harvest it!
         log.Printf("Launching harvester on new file: %s\n", file)
 
-        harvester := &Harvester{Path: file, FileConfig: fileconfig, FinishChan: newinfo.harvester}
-        go harvester.Harvest(output)
+        harvester := &Harvester{Path: file, FileConfig: fileconfig, FinishChan: newinfo.harvester, Initial: initial}
+        go harvester.Harvest(registrar_chan, output)
       }
     } else {
       // Update the fileinfo information used for future comparisons, and the last_seen counter
@@ -184,8 +194,8 @@ func prospector_scan(iteration uint32, path string, fileconfig FileConfig,
           newinfo.harvester = make(chan int64, 1)
 
           // Start a harvester on the path
-          harvester := &Harvester{Path: file, FileConfig: fileconfig, FinishChan: newinfo.harvester}
-          go harvester.Harvest(output)
+          harvester := &Harvester{Path: file, FileConfig: fileconfig, FinishChan: newinfo.harvester, Initial: initial}
+          go harvester.Harvest(registrar_chan, output)
         }
 
         // Keep the old file in missingfiles so we don't rescan it if it was renamed and we've not yet reached the new filename
@@ -198,8 +208,9 @@ func prospector_scan(iteration uint32, path string, fileconfig FileConfig,
 
         // Start a harvester on the path; an old file was just modified and it doesn't have a harvester
         // The offset to continue from will be stored in the harvester channel - so take that to use and also clear the channel
+        // Don't pass initial, we are resuming based on last offset
         harvester := &Harvester{Path: file, FileConfig: fileconfig, Offset: <-newinfo.harvester, FinishChan: newinfo.harvester}
-        go harvester.Harvest(output)
+        go harvester.Harvest(registrar_chan, output)
       }
     }
 

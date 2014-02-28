@@ -20,9 +20,7 @@ func Registrar(new_state map[string]*FileState, input chan []*FileEvent) {
       ino, dev := file_ids(event.fileinfo)
       state[*event.Source] = &FileState{
         Source: event.Source,
-        // take the offset + length of the line + newline char and
-        // save it as the new starting offset.
-        Offset: event.Offset + int64(len(*event.Text)) + 1,
+        Offset: event.Offset,
         Inode:  ino,
         Device: dev,
       }
