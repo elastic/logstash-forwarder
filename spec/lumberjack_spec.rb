@@ -52,6 +52,7 @@ describe "logstash-forwarder" do
   end # before each
 
   after :each do
+    shutdown
     [@file, @file2, @config, @ssl_cert, @ssl_key, @ssl_csr].each do |f|
       if not f.closed?
         f.close
@@ -60,12 +61,13 @@ describe "logstash-forwarder" do
         File.unlink(f.path)
       end
     end
-    File.unlink(".logstash-forwarder")
-    shutdown
+    if File.exists?(".logstash-forwarder.")
+      File.unlink(".logstash-forwarder")
+    end
   end
 
-  def startup
-    @logstash_forwarder = IO.popen("build/bin/logstash-forwarder -config #{@config.path}", "r")
+  def startup (config="")
+    @logstash_forwarder = IO.popen("build/bin/logstash-forwarder -config #{@config.path}" + (config.empty? ? "" : " " + config), "r")
     sleep 1 # let logstash-forwarder start up.
   end # def startup
 
@@ -74,7 +76,16 @@ describe "logstash-forwarder" do
     Process::wait(@logstash_forwarder.pid)
   end # def shutdown
 
-  it "should follow a file and emit lines as events" do
+  it "should follow a file from the end and emit lines as events" do
+    # Hide 50 lines in the file - this makes sure we start at the end of the file
+    initialcount = 50
+    initialcount.times do |i|
+      @file.puts("test #{i}")
+    end
+    @file.close
+
+    @file.reopen(@file.path, "a+")
+
     startup
 
     count = rand(5000) + 25000
@@ -91,6 +102,49 @@ describe "logstash-forwarder" do
     # Now verify that we have all the data and in the correct order.
     insist { @event_queue.size } == count
     host = Socket.gethostname
+    count.times do |i|
+      event = @event_queue.pop
+      insist { event["line"] } == "hello #{i}"
+      insist { event["file"] } == @file.path
+      insist { event["host"] } == host
+    end
+    insist { @event_queue }.empty?
+  end
+
+  it "should follow a file from the beginning and emit lines as events" do
+    # Hide 50 lines in the file - this makes sure we start at the end of the file
+    initialcount = 50
+    initialcount.times do |i|
+      @file.puts("test #{i}")
+    end
+    @file.close
+
+    @file.reopen(@file.path, "a+")
+
+    startup "-from-beginning=true"
+
+    count = rand(5000) + 25000
+    count.times do |i|
+      @file.puts("hello #{i}")
+    end
+    @file.close
+
+    totalcount = count + initialcount
+
+    # Wait for logstash-forwarder to finish publishing data to us.
+    Stud::try(20.times) do
+      raise "have #{@event_queue.size}, want #{totalcount}" if @event_queue.size < totalcount
+    end
+
+    # Now verify that we have all the data and in the correct order.
+    insist { @event_queue.size } == totalcount
+    host = Socket.gethostname
+    initialcount.times do |i|
+      event = @event_queue.pop
+      insist { event["line"] } == "test #{i}"
+      insist { event["file"] } == @file.path
+      insist { event["host"] } == host
+    end
     count.times do |i|
       event = @event_queue.pop
       insist { event["line"] } == "hello #{i}"
@@ -137,8 +191,12 @@ describe "logstash-forwarder" do
 
     finish = false
     while true
-      count = (rand(5000) + 25000) / 2
+      count = rand(2500) + 12500
+      totalcount = count * 2
       count.times do |i|
+        if finish
+          i += count # So the second set of lines have unique numbers
+        end
         @file.puts("hello #{i}")
         @file2.puts("hello #{i}")
       end
@@ -147,15 +205,20 @@ describe "logstash-forwarder" do
 
       # Wait for logstash-forwarder to finish publishing data to us.
       Stud::try(20.times) do
-        raise "have #{@event_queue.size}, want #{count}" if @event_queue.size < count * 2
+        raise "have #{@event_queue.size}, want #{totalcount}" if @event_queue.size < totalcount
       end
 
       # Now verify that we have all the data and in the correct order.
-      insist { @event_queue.size } == count * 2
+      insist { @event_queue.size } == totalcount
       host = Socket.gethostname
-      count1 = 0
-      count2 = 0
-      (count * 2).times do |i|
+      if finish
+        count1 = count
+        count2 = count
+      else
+        count1 = 0
+        count2 = 0
+      end
+      totalcount.times do |i|
         event = @event_queue.pop
         if event["file"] == @file.path
           insist { event["line"] } == "hello #{count1}"
@@ -178,8 +241,9 @@ describe "logstash-forwarder" do
       @file.reopen(@file.path, "a+")
       @file2.reopen(@file2.path, "a+")
 
-      startup
-      sleep(1) # let lgostash-forwarder start up
+      # From beginning makes testing this easier - without it we'd need to create lines inbetween shutdown and start and verify them which is more work
+      startup "-from-beginning=true"
+      sleep(1) # let logstash-forwarder start up
 
       finish = true
     end
@@ -191,7 +255,8 @@ describe "logstash-forwarder" do
 
     startup
 
-    count = rand(5000) + 25000
+    count = rand(2500) + 12500
+    totalcount = count * 2
     count.times do |i|
       @file.puts("hello #{i}")
     end
@@ -203,15 +268,15 @@ describe "logstash-forwarder" do
 
     # Wait for logstash-forwarder to finish publishing data to us.
     Stud::try(20.times) do
-      raise "have #{@event_queue.size}, want #{count}" if @event_queue.size < count * 2
+      raise "have #{@event_queue.size}, want #{totalcount}" if @event_queue.size < totalcount
     end
 
     # Now verify that we have all the data and in the correct order.
-    insist { @event_queue.size } == count * 2
+    insist { @event_queue.size } == totalcount
     host = Socket.gethostname
     count1 = 0
     count2 = 0
-    (count * 2).times do |i|
+    totalcount.times do |i|
       event = @event_queue.pop
       if event["file"] == @file.path
         insist { event["line"] } == "hello #{count1}"
