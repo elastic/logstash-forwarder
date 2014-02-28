@@ -38,11 +38,12 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 
   // TODO(sissel): Make the buffer size tunable at start-time
   reader := bufio.NewReaderSize(h.file, 16<<10) // 16kb buffer by default
+  buffer := new(bytes.Buffer)
 
   var read_timeout = 10 * time.Second
   last_read_time := time.Now()
   for {
-    text, bytesread, err := h.readline(reader, read_timeout)
+    text, bytesread, err := h.readline(reader, buffer, read_timeout)
 
     if err != nil {
       if err == io.EOF {
@@ -116,15 +117,10 @@ func (h *Harvester) open() *os.File {
   return h.file
 }
 
-func (h *Harvester) readline(reader *bufio.Reader, eof_timeout time.Duration) (*string, int, error) {
-  var buffer bytes.Buffer
+func (h *Harvester) readline(reader *bufio.Reader, buffer *bytes.Buffer, eof_timeout time.Duration) (*string, int, error) {
   var is_partial bool = true
-  var is_cr_present bool = false
-  var bufferSize int = 0;
+  var newline_length int = 1
   start_time := time.Now()
-
-  // Store current offset for seeking back on timeout if the line is not complete
-  offset, _ := h.file.Seek(0, os.SEEK_CUR)
 
   for {
     segment, err := reader.ReadBytes('\n')
@@ -136,17 +132,12 @@ func (h *Harvester) readline(reader *bufio.Reader, eof_timeout time.Duration) (*
 
         // Check if also a CR present
         if len(segment) > 1 && segment[len(segment)-2] == '\r' {
-          is_cr_present = true;
+          newline_length++
         }
       }
-    }
-
-    if segment != nil && len(segment) > 0 {
 
       // TODO(sissel): if buffer exceeds a certain length, maybe report an error condition? chop it?
-      writelen,_ := buffer.Write(segment)
-      bufferSize += writelen;
-
+      buffer.Write(segment)
     }
 
     if err != nil {
@@ -156,11 +147,6 @@ func (h *Harvester) readline(reader *bufio.Reader, eof_timeout time.Duration) (*
         // Give up waiting for data after a certain amount of time.
         // If we time out, return the error (eof)
         if time.Since(start_time) > eof_timeout {
-
-          // If we read a partial line then we seek back otherwise we miss this part
-          if len(segment) > 0 || bufferSize > 0 {
-            h.file.Seek(offset, os.SEEK_SET)
-          }
           return nil, 0, err
         }
         continue
@@ -170,15 +156,14 @@ func (h *Harvester) readline(reader *bufio.Reader, eof_timeout time.Duration) (*
       }
     }
 
+    // If we got a full line, return the whole line without the EOL chars (CRLF or LF)
     if !is_partial {
-      // If we got a full line, return the whole line without the EOL chars (CRLF or LF)
+      // Get the str length with the EOL chars (LF or CRLF)
+      bufferSize := buffer.Len()
       str := new(string)
-      if !is_cr_present {
-        *str = buffer.String()[:bufferSize-1]
-      } else {
-        *str = buffer.String()[:bufferSize-2]
-      }
-      // bufferSize returns the str length with the EOL chars (LF or CRLF)
+      *str = buffer.String()[:bufferSize - newline_length]
+      // Reset the buffer for the next line
+      buffer.Reset()
       return str, bufferSize, nil
     }
   } /* forever read chunks */
