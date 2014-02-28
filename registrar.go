@@ -22,6 +22,7 @@ func Registrar(input chan []*FileEvent) {
         Source: event.Source,
         // take the offset + length of the line + newline char and
         // save it as the new starting offset.
+        // This issues a problem, if the EOL is a CRLF! Then on start it read the LF again and generates a event with an empty line
         Offset: event.Offset + int64(len(*event.Text)) + 1,
         Inode:  ino,
         Device: dev,

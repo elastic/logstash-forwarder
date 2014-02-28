@@ -42,7 +42,7 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
   var read_timeout = 10 * time.Second
   last_read_time := time.Now()
   for {
-    text, err := h.readline(reader, read_timeout)
+    text, bytesread, err := h.readline(reader, read_timeout)
 
     if err != nil {
       if err == io.EOF {
@@ -78,7 +78,7 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
       Fields:   &h.Fields,
       fileinfo: &info,
     }
-    offset += int64(len(*text))
+    offset += int64(bytesread)
 
     output <- event // ship the new event downstream
   } /* forever */
@@ -116,10 +116,16 @@ func (h *Harvester) open() *os.File {
   return h.file
 }
 
-func (h *Harvester) readline(reader *bufio.Reader, eof_timeout time.Duration) (*string, error) {
+func (h *Harvester) readline(reader *bufio.Reader, eof_timeout time.Duration) (*string, int, error) {
   var buffer bytes.Buffer
   var is_partial bool = true
+  var is_cr_present bool = false
+  var bufferSize int = 0;
   start_time := time.Now()
+
+  // Store current offset for seeking back on timeout if the line is not complete
+  offset, _ := h.file.Seek(0, os.SEEK_CUR)
+
   for {
     segment, err := reader.ReadBytes('\n')
 
@@ -127,7 +133,20 @@ func (h *Harvester) readline(reader *bufio.Reader, eof_timeout time.Duration) (*
       if segment[len(segment)-1] == '\n' {
         // Found a complete line
         is_partial = false
+
+        // Check if also a CR present
+        if len(segment) > 1 && segment[len(segment)-2] == '\r' {
+          is_cr_present = true;
+        }
       }
+    }
+
+    if segment != nil && len(segment) > 0 {
+
+      // TODO(sissel): if buffer exceeds a certain length, maybe report an error condition? chop it?
+      writelen,_ := buffer.Write(segment)
+      bufferSize += writelen;
+
     }
 
     if err != nil {
@@ -137,25 +156,32 @@ func (h *Harvester) readline(reader *bufio.Reader, eof_timeout time.Duration) (*
         // Give up waiting for data after a certain amount of time.
         // If we time out, return the error (eof)
         if time.Since(start_time) > eof_timeout {
-          return nil, err
+
+          // If we read a partial line then we seek back otherwise we miss this part
+          if len(segment) > 0 || bufferSize > 0 {
+            h.file.Seek(offset, os.SEEK_SET)
+          }
+          return nil, 0, err
         }
         continue
       } else {
         log.Println(err)
-        return nil, err // TODO(sissel): don't do this?
+        return nil, 0, err // TODO(sissel): don't do this?
       }
     }
 
-    // TODO(sissel): if buffer exceeds a certain length, maybe report an error condition? chop it?
-    buffer.Write(segment)
-
     if !is_partial {
-      // If we got a full line, return the whole line without the newline.
+      // If we got a full line, return the whole line without the EOL chars (CRLF or LF)
       str := new(string)
-      *str = buffer.String()[:len(segment)-1]
-      return str, nil
+      if !is_cr_present {
+        *str = buffer.String()[:bufferSize-1]
+      } else {
+        *str = buffer.String()[:bufferSize-2]
+      }
+      // bufferSize returns the str length with the EOL chars (LF or CRLF)
+      return str, bufferSize, nil
     }
   } /* forever read chunks */
 
-  return nil, nil
+  return nil, 0, nil
 }
