@@ -1,10 +1,10 @@
 package main
 
 import (
-  "time"
-  "path/filepath"
-  "os"
   "log"
+  "os"
+  "path/filepath"
+  "time"
 )
 
 type ProspectorInfo struct {
@@ -63,7 +63,9 @@ func resume_tracking(fileconfig FileConfig, historical_state map[string]*FileSta
     // if the file is the same inode/device as we last saw,
     // start a harvester on it at the last known position
     info, err := os.Stat(path)
-    if err != nil { continue }
+    if err != nil {
+      continue
+    }
 
     if is_file_same(path, info, state) {
       // same file, seek to last known position
@@ -99,8 +101,8 @@ func resume_tracking(fileconfig FileConfig, historical_state map[string]*FileSta
 }
 
 func prospector_scan(iteration uint32, path string, fileconfig FileConfig, 
-                     fileinfo map[string]ProspectorInfo,
-                     output chan *FileEvent) {
+  fileinfo map[string]ProspectorInfo,
+  output chan *FileEvent) {
   //log.Printf("Prospecting %s\n", path)
 
   // Evaluate the path as a wildcards/shell glob

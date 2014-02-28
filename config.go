@@ -2,30 +2,30 @@ package main
 
 import (
   "encoding/json"
-  "os"
-  "log"
-  "time"
   "errors"
+  "log"
+  "os"
+  "time"
 )
 
 type Config struct {
   Network NetworkConfig `json:network`
-  Files []FileConfig `json:files`
+  Files   []FileConfig  `json:files`
 }
 
 type NetworkConfig struct {
-  Servers []string `json:servers`
-  SSLCertificate string `json:"ssl certificate"`
-  SSLKey string `json:"ssl key"`
-  SSLCA string `json:"ssl ca"`
-  Timeout int64 `json:timeout`
-  timeout time.Duration
-  Reconnect int64 `json:reconnect`
-  reconnect time.Duration
-} 
+  Servers        []string `json:servers`
+  SSLCertificate string   `json:"ssl certificate"`
+  SSLKey         string   `json:"ssl key"`
+  SSLCA          string   `json:"ssl ca"`
+  Timeout        int64    `json:timeout`
+  timeout        time.Duration
+  Reconnect      int64    `json:reconnect`
+  reconnect      time.Duration
+}
 
 type FileConfig struct {
-  Paths []string `json:paths`
+  Paths  []string          `json:paths`
   Fields map[string]string `json:fields`
   DeadTime string `json:"dead time"`
   deadtime time.Duration
@@ -46,7 +46,7 @@ func LoadConfig(path string) (config Config, err error) {
   if fi.Size() > (10 << 20) {
     err = errors.New("Config file too large?")
     log.Printf("Config file too large? Aborting, just in case. '%s' is %d bytes\n",
-               path, fi)
+      path, fi)
     return
   }
 

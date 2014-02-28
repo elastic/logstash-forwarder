@@ -2,8 +2,8 @@ package main
 
 import (
   "encoding/json"
-  "os"
   "log"
+  "os"
 )
 
 func WriteRegistry(state map[string]*FileState, path string) {
