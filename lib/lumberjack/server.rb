@@ -4,6 +4,7 @@ require "openssl"
 require "zlib"
 
 module Lumberjack
+  class UnknownFrameType < StandardError; end
   class Server
     attr_reader :port
 
@@ -67,6 +68,7 @@ module Lumberjack
       @buffer_offset = 0
       @buffer = ""
       @buffer.force_encoding("BINARY")
+      @protocol_version = 1
       transition(:header, 2)
     end # def initialize
 
@@ -129,6 +131,7 @@ module Lumberjack
       @need = length
     end # def need
 
+    FRAME_PROTOCOL_VERSION = "V".ord
     FRAME_WINDOW = "W".ord
     FRAME_DATA = "D".ord
     FRAME_COMPRESSED = "C".ord
@@ -136,11 +139,18 @@ module Lumberjack
       version, frame_type = get.bytes.to_a[0..1]
 
       case frame_type
+        when FRAME_PROTOCOL_VERSION; transition(:protocol_version, 4)
         when FRAME_WINDOW; transition(:window_size, 4)
         when FRAME_DATA; transition(:data_lead, 8)
         when FRAME_COMPRESSED; transition(:compressed_lead, 4)
-        else; raise "Unknown frame type: #{frame_type}"
+        else; raise UnknownFrameType
       end
+    end
+
+    def protocol_version(&block)
+      @protocol_version = get.unpack("N").first
+      transition(:header, 2)
+      yield :protocol_version, @protocol_version
     end
 
     def window_size(&block)
@@ -219,6 +229,7 @@ module Lumberjack
         # X: too many events after errors.
         @parser.feed(@fd.sysread(16384)) do |event, *args|
           case event
+            when :protocol_version; protocol_version(*args, &block)
             when :window_size; window_size(*args, &block)
             when :data; data(*args, &block)
           end
@@ -228,10 +239,18 @@ module Lumberjack
     rescue EOFError, OpenSSL::SSL::SSLError, IOError, Errno::ECONNRESET
       # EOF or other read errors, only action is to shutdown which we'll do in
       # 'ensure'
+    rescue UnknownFrameType
+      # Maybe log something?
     ensure
       # Try to ensure it's closed, but if this fails I don't care.
       @fd.close rescue nil
     end # def run
+
+    def protocol_version(version)
+      # Here we would receive a request for a specific protocol version
+      # We must choose either the same version, or the maximum we support, whichever is lowest, and return it
+      @fd.syswrite(["1V", 1].pack("A*N")) # We only support version 1 atm so always return that
+    end
 
     def window_size(size)
       @window_size = size
