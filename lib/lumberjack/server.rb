@@ -20,7 +20,6 @@ module Lumberjack
     # * :ssl_key - the path to the ssl key to use
     # * :ssl_key_passphrase - the key passphrase (optional)
     def initialize(options={})
-      require "cabin" # gem 'cabin'
       @options = {
         :port => 0,
         :address => "0.0.0.0",
