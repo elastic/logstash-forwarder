@@ -1,10 +1,12 @@
 require "socket"
 require "thread"
+require "timeout"
 require "openssl"
 require "zlib"
 
 module Lumberjack
-  class UnknownFrameType < StandardError; end
+  class ShutdownSignal < StandardError; end
+  class ProtocolError < StandardError; end
   class Server
     attr_reader :port
 
@@ -18,6 +20,7 @@ module Lumberjack
     # * :ssl_key - the path to the ssl key to use
     # * :ssl_key_passphrase - the key passphrase (optional)
     def initialize(options={})
+      require "cabin" # gem 'cabin'
       @options = {
         :port => 0,
         :address => "0.0.0.0",
@@ -44,22 +47,65 @@ module Lumberjack
     end # def initialize
 
     def run(&block)
-      while true
-        # NOTE: This means ssl accepting is single-threaded.
-        begin
-          client = @ssl_server.accept
-        rescue EOFError, OpenSSL::SSL::SSLError, IOError
-          # ssl handshake failure or other issue, skip it.
-          # TODO(sissel): log the error
-          # TODO(sissel): try to identify what client was connecting that failed.
-          client.close rescue nil
-          next
+      event_queue = SizedQueue.new(500)
+      spooler_thread = nil
+      client_threads = Hash.new
+      ack_resume = Hash.new
+      ack_resume_mutex = Mutex.new
+
+      begin
+        # Why a spooler thread? Well we don't know what &block is! We want connection threads to be non-blocking so they DON'T timeout
+        # Non-blocking means we can keep clients informed of progress, and response in a timely fashion. We could create this with
+        # a timeout wrapper around the &block call but we'd then be generating exceptions in someone else's code
+        # So we allow the caller to block us - but only our spooler thread - our other threads are safe and we can use timeout
+        spooler_thread = Thread.new do
+          begin
+            while true
+              block.call(event_queue.pop)
+            end
+          rescue ShutdownSignal
+            # Flush whatever we have left
+          end
+          while event_queue.length
+            block.call(event_queue.pop)
+          end
         end
 
-        Thread.new(client) do |fd|
-          Connection.new(fd).run(&block)
+        while true
+          # NOTE: This means ssl accepting is single-threaded.
+          begin
+            client = @ssl_server.accept
+          rescue EOFError, OpenSSL::SSL::SSLError, IOError
+            # ssl handshake failure or other issue, skip it.
+            # TODO(sissel): log the error
+            # TODO(sissel): try to identify what client was connecting that failed.
+            client.close rescue nil
+            next
+          end
+
+          # Clear up finished threads
+          client_threads.delete_if do |k, thr|
+            not thr.alive?
+          end
+
+          # Start a new connection thread
+          client_threads[client] = Thread.new do
+            Connection.new(client, ack_resume, ack_resume_mutex).run(event_queue)
+          end
         end
-      end
+      ensure
+        # Raise shutdown in all client threads and join then
+        client_threads.each do |thr|
+          thr.raise(ShutdownSignal)
+        end
+        client_threads.each(&:join)
+
+        # Signal the spooler thread to stop
+        if not spooler_thread.nil?
+          spooler_thread.raise(ShutdownSignal)
+          spooler_thread.join
+        end
+      end # ensure
     end # def run
   end # class Server
 
@@ -135,15 +181,16 @@ module Lumberjack
     FRAME_WINDOW = "W".ord
     FRAME_DATA = "D".ord
     FRAME_COMPRESSED = "C".ord
+    FRAME_PING = "P".ord
     def header(&block)
       version, frame_type = get.bytes.to_a[0..1]
-
       case frame_type
         when FRAME_PROTOCOL_VERSION; transition(:protocol_version, 4)
         when FRAME_WINDOW; transition(:window_size, 4)
         when FRAME_DATA; transition(:data_lead, 8)
         when FRAME_COMPRESSED; transition(:compressed_lead, 4)
-        else; raise UnknownFrameType
+        when FRAME_PING; transition(:ping, 0)
+        else; raise ProtocolError
       end
     end
 
@@ -163,6 +210,7 @@ module Lumberjack
       @sequence, @data_count = get.unpack("NN")
       @data = {}
       transition(:data_field_key_len, 4)
+      yield :data_lead
     end
 
     def data_field_key_len(&block)
@@ -207,31 +255,51 @@ module Lumberjack
       # Parse the uncompressed payload.
       feed(original, &block)
     end
+
+    def ping(&block)
+      transition(:header, 2)
+      yield :ping
+    end
   end # class Parser
 
   class Connection
-    def initialize(fd)
+    def initialize(fd, ack_resume, ack_resume_mutex)
       super()
       @parser = Parser.new
       @fd = fd
-      @last_ack = 0
+      @last_window_ack = nil
+      @next_sequence = 1
 
-      # a safe default until we are told by the client what window size to use
+      # Safe defaults until we are told by the client
       @window_size = 1 
+      @protocol_version = 1
+
+      reset_timeout
     end
 
-    def run(&block)
+    def run(event_queue)
       while true
-        # TODO(sissel): Ack on idle.
-        # X: - if any unacked, IO.select
-        # X:   - on timeout, ack all.
-        # X: Doing so will prevent slow streams from retransmitting
-        # X: too many events after errors.
-        @parser.feed(@fd.sysread(16384)) do |event, *args|
+        begin
+          # If we don't receive anything after the main timeout - something is probably wrong
+          buffer = Timeout::timeout(@timeout - Time.now.to_i) do
+            buffer = @fd.sysread(16384)
+            next buffer
+          end
+        rescue Timeout::Error
+          # TODO(driskell): Should we disconnect? Or keep waiting?
+          # Protocol 1 we'll probably need to just wait until we drop it, version 2 we could disconnect as we should have had a ping
+          reset_timeout
+          next
+        rescue # All other exception, we end the connection
+          break
+        end
+        @parser.feed(buffer) do |event, *args|
           case event
-            when :protocol_version; protocol_version(*args, &block)
-            when :window_size; window_size(*args, &block)
-            when :data; data(*args, &block)
+            when :protocol_version; protocol_version(*args)
+            when :window_size; window_size(*args)
+            when :data_lead; data_lead()
+            when :data; data(*args, event_queue)
+            when :ping; ping()
           end
           #send(event, *args)
         end # feed
@@ -239,29 +307,89 @@ module Lumberjack
     rescue EOFError, OpenSSL::SSL::SSLError, IOError, Errno::ECONNRESET
       # EOF or other read errors, only action is to shutdown which we'll do in
       # 'ensure'
-    rescue UnknownFrameType
-      # Maybe log something?
+    rescue ProtocolError
+      # Connection abort request due to a protocol error
     ensure
       # Try to ensure it's closed, but if this fails I don't care.
       @fd.close rescue nil
     end # def run
 
+    def reset_timeout()
+      @timeout = Time.now.to_i + 1800
+    end
+
+    def reset_ack_timeout()
+      @ack_timeout = Time.now.to_i + 5
+      reset_timeout
+    end
+
     def protocol_version(version)
       # Here we would receive a request for a specific protocol version
       # We must choose either the same version, or the maximum we support, whichever is lowest, and return it
-      @fd.syswrite(["1V", 1].pack("A*N")) # We only support version 1 atm so always return that
+      @protocol_version = [2, version].min
+      @fd.syswrite(["1V", @protocol_version].pack("A*N"))
+      reset_timeout
     end
 
     def window_size(size)
       @window_size = size
     end
 
-    def data(sequence, map, &block)
-      block.call(map)
-      if (sequence - @last_ack) >= @window_size
-        @fd.syswrite(["1A", sequence].pack("A*N"))
-        @last_ack = sequence
+    def data_lead()
+      reset_ack_timeout
+    end
+
+    def data(sequence, map, event_queue)
+      # If our current last_window_sequence is 0, this is a new connection
+      # However, the client doesn't necessarily want to start from 0... so populate initial last_window_sequence with first-1
+      # If we do have a last_window_sequence though, verify this sequence number (must be sequential)
+      if @last_window_ack.nil?
+        @last_window_ack = sequence - 1
+        @next_sequence = sequence + 1
+      elsif sequence != @next_sequence
+        raise ProtocolError
       end
+
+      # Increment the sequence number we're expecting next
+      @next_sequence = sequence + 1
+
+      while true
+        begin
+          # Follow the ack timeout here - this needs to be smaller
+          Timeout::timeout(@ack_timeout - Time.now.to_i) do
+            event_queue << map
+          end
+        rescue Timeout::Error
+          # While we're busy - keeping sending acks for the last sequence we finished
+          # But ONLY if we're protocol version 2+ - protocol version 1 would lose events as it does not check the sequences!
+          if @protocol_version > 1
+            send_ack(sequence - 1)
+          else
+            reset_ack_timeout
+          end
+        else
+          break
+        end
+      end
+      if (sequence - @last_window_ack) >= @window_size
+        send_ack(sequence)
+        @last_window_ack = sequence
+      end
+    end
+
+    def send_ack(sequence)
+      @fd.syswrite(["1A", sequence].pack("A*N"))
+      reset_ack_timeout
+    end
+
+    def ping()
+      if @protocol_version < 2
+        raise ProtocolError
+      end
+      # Send a friendly response - this ping should come only once in a while
+      # It stops pesky firewalls closing our connection and causing issues when logs start appearing
+      @fd.syswrite("1P")
+      reset_timeout
     end
   end # class Connection
 
