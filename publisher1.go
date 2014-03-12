@@ -35,12 +35,11 @@ func Publishv1(input chan []*FileEvent,
   var buffer bytes.Buffer
   var compressed_payload []byte
   var socket *tls.Conn
-  var protocol_version uint32
   var last_ack_sequence uint32
   var sequence uint32
   var err error
 
-  socket, protocol_version = connect(config)
+  socket = connect(config)
   defer socket.Close()
 
   // TODO(driskell): Make the idle timeout configurable like the network timeout is?
@@ -126,14 +125,6 @@ func Publishv1(input chan []*FileEvent,
               break
             }
 
-            // Partial acknowledgement is only supported in protocol v2+
-            if protocol_version < 2 {
-              // Previous version didn't check acknowledgements - now we do...
-              // but should only affect edge error scenarios, and for the better
-              log.Printf("Socket error, will reconnect: Partial ACK not implemented in requested protocol version\n")
-              goto RetryPayload
-            }
-
             // NOTE(driskell): If the server is busy and not yet processed anything, we MAY
             // end up receiving an ack for the last sequence in the previous payload, or 0
             if ack_sequence == last_ack_sequence {
@@ -172,7 +163,7 @@ func Publishv1(input chan []*FileEvent,
         // things seem healthy.
         time.Sleep(1 * time.Second)
         socket.Close()
-        socket, protocol_version = connect(config)
+        socket = connect(config)
       }
 
       // Tell the registrar that we've successfully sent the remainder of the events
@@ -187,16 +178,13 @@ func Publishv1(input chan []*FileEvent,
       // Reset the timer
       timer.Reset(900 * time.Second)
     case <-timer.C:
-      // We've no events to send - throw a ping so our connection doesn't idle and die
-      // Only version 2 protocol though or the other side doesn't understand it
-      if protocol_version > 1 {
-        err = ping(socket)
-        if err != nil {
-          log.Printf("Socket error during ping, will reconnect: %s\n", err)
-          time.Sleep(1 * time.Second)
-          socket.Close()
-          socket, protocol_version = connect(config)
-        }
+      // We've no events to send - throw a ping (well... window frame) so our connection doesn't idle and die
+      err = ping(socket)
+      if err != nil {
+        log.Printf("Socket error during ping, will reconnect: %s\n", err)
+        time.Sleep(1 * time.Second)
+        socket.Close()
+        socket = connect(config)
       }
 
       // Reset the deadline
@@ -211,27 +199,25 @@ func Publishv1(input chan []*FileEvent,
 func ping(socket *tls.Conn) error {
   var frame [2]byte
 
-  // Ping out
-  _, err := socket.Write([]byte("1P"))
+  // Set deadline for this write
+  socket.SetDeadline(time.Now().Add(config.timeout))
+
+  // This just keeps connection open through firewalls
+  // We don't await for a response so its not a real ping, the protocol does not provide for a real ping
+  // And with a complete replacement of protocol happening soon, makes no sense to add new frames and such
+  _, err := socket.Write([]byte("1W"))
+  if err != nil {
+    return err
+  }
+  err = binary.Write(socket, binary.BigEndian, uint32(*spool-size))
   if err != nil {
     return err
   }
 
-  // Read pong
-  err = binary.Read(socket, binary.BigEndian, &frame)
-  if err != nil {
-    return err
-  }
-
-  if frame == [2]byte{'1', 'P'} {
-    return nil
-  }
-
-  // Unknown frame type
-  return errors.New(fmt.Sprintf("Unknown frame received: %s", frame))
+  return nil
 }
 
-func connect(config *NetworkConfig) (socket *tls.Conn, protocol_version uint32) {
+func connect(config *NetworkConfig) (socket *tls.Conn) {
   var tlsconfig tls.Config
 
   if len(config.SSLCertificate) > 0 && len(config.SSLKey) > 0 {
@@ -305,53 +291,6 @@ func connect(config *NetworkConfig) (socket *tls.Conn, protocol_version uint32) 
       goto TryNextServer
     }
 
-    log.Printf("Performing handshake with %s\n", address)
-
-    // TODO(driskell): config option to revert to original non-backwards compatible protocol (no V frame)
-    // This is required because if the server does not have the V frame patch it will disconnect us
-    if false {
-      protocol_version = 1
-    } else {
-      var frame [2]byte
-
-      // Negotiate version
-      _, err := socket.Write([]byte("1V"))
-      if err != nil {
-        log.Printf("Socket error with %s, will try next server: %s\n", address, err)
-        goto TryNextServer
-      }
-      // Propose version 2
-      err = binary.Write(socket, binary.BigEndian, uint32(2))
-      if err != nil {
-        log.Printf("Socket error with %s, will try next server: %s\n", address, err)
-        goto TryNextServer
-      }
-
-      // Read what we've been asked
-      err = binary.Read(socket, binary.BigEndian, &frame)
-      if err != nil {
-        log.Printf("Socket error with %s, will try next server: %s\n", address, err)
-        goto TryNextServer
-      }
-
-      if frame == [2]byte{'1', 'V'} {
-        err = binary.Read(socket, binary.BigEndian, &protocol_version)
-        if err != nil {
-          log.Printf("Socket error with %s, will try next server: %s\n", address, err)
-          goto TryNextServer
-        }
-
-        if protocol_version == 0 || protocol_version > 2  {
-          log.Printf("Handshake failure with %s: Server enforced protocol version unsupported: %d\n", address, protocol_version)
-          goto TryNextServer
-        }
-      } else {
-        // Unknown frame type
-        log.Printf("Handshake failure with %s: Unknown frame: %s\n", address, frame)
-        goto TryNextServer
-      }
-    }
-
     log.Printf("Connected with %s\n", address)
 
     // connected, let's rock and roll.
@@ -367,8 +306,11 @@ func connect(config *NetworkConfig) (socket *tls.Conn, protocol_version uint32) 
 
 func writeDataFrame(event *FileEvent, sequence uint32, output io.Writer) {
   //log.Printf("event: %s\n", *event.Text)
-  // header, "1D"
-  output.Write([]byte("1D"))
+  // header, "2D"
+  // Why version 2 data frame? Because server.rb will correctly start returning partial ACKs if we specify version 2
+  // This keeps the old logstash forwarders, which broke on partial ACK, working with even the newer server.rb
+  // If the newer server.rb receives a 1D it will refuse to send partial ACK, just like before
+  output.Write([]byte("2D"))
   // sequence number
   binary.Write(output, binary.BigEndian, uint32(sequence))
   // 'pair' count

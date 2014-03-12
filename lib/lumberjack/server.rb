@@ -113,7 +113,6 @@ module Lumberjack
       @buffer_offset = 0
       @buffer = ""
       @buffer.force_encoding("BINARY")
-      @protocol_version = 1
       transition(:header, 2)
     end # def initialize
 
@@ -176,27 +175,17 @@ module Lumberjack
       @need = length
     end # def need
 
-    FRAME_PROTOCOL_VERSION = "V".ord
     FRAME_WINDOW = "W".ord
     FRAME_DATA = "D".ord
     FRAME_COMPRESSED = "C".ord
-    FRAME_PING = "P".ord
     def header(&block)
-      version, frame_type = get.bytes.to_a[0..1]
+      @frame_version, frame_type = get.bytes.to_a[0..1]
       case frame_type
-        when FRAME_PROTOCOL_VERSION; transition(:protocol_version, 4)
         when FRAME_WINDOW; transition(:window_size, 4)
         when FRAME_DATA; transition(:data_lead, 8)
         when FRAME_COMPRESSED; transition(:compressed_lead, 4)
-        when FRAME_PING; transition(:ping, 0)
         else; raise ProtocolError
       end
-    end
-
-    def protocol_version(&block)
-      @protocol_version = get.unpack("N").first
-      transition(:header, 2)
-      yield :protocol_version, @protocol_version
     end
 
     def window_size(&block)
@@ -236,7 +225,7 @@ module Lumberjack
         transition(:data_field_key_len, 4)
       else
         # emit the whole map now that we found the end of the data fields list.
-        yield :data, @sequence, @data
+        yield :data, @frame_version, @sequence, @data
         transition(:header, 2)
       end
 
@@ -254,11 +243,6 @@ module Lumberjack
       # Parse the uncompressed payload.
       feed(original, &block)
     end
-
-    def ping(&block)
-      transition(:header, 2)
-      yield :ping
-    end
   end # class Parser
 
   class Connection
@@ -270,8 +254,7 @@ module Lumberjack
       @next_sequence = 1
 
       # Safe defaults until we are told by the client
-      @window_size = 1 
-      @protocol_version = 1
+      @window_size = 1
 
       reset_timeout
     end
@@ -286,7 +269,8 @@ module Lumberjack
           end
         rescue Timeout::Error
           # TODO(driskell): Should we disconnect? Or keep waiting?
-          # Protocol 1 we'll probably need to just wait until we drop it, version 2 we could disconnect as we should have had a ping
+          # Clients should really ping to keep this connection open
+          # So we don't start increasing the reconnect on old clients we can just wait for now
           reset_timeout
           next
         rescue # All other exception, we end the connection
@@ -294,11 +278,9 @@ module Lumberjack
         end
         @parser.feed(buffer) do |event, *args|
           case event
-            when :protocol_version; protocol_version(*args)
             when :window_size; window_size(*args)
             when :data_lead; data_lead()
             when :data; data(*args, event_queue)
-            when :ping; ping()
           end
           #send(event, *args)
         end # feed
@@ -322,14 +304,6 @@ module Lumberjack
       reset_timeout
     end
 
-    def protocol_version(version)
-      # Here we would receive a request for a specific protocol version
-      # We must choose either the same version, or the maximum we support, whichever is lowest, and return it
-      @protocol_version = [2, version].min
-      @fd.syswrite(["1V", @protocol_version].pack("A*N"))
-      reset_timeout
-    end
-
     def window_size(size)
       @window_size = size
     end
@@ -338,7 +312,7 @@ module Lumberjack
       reset_ack_timeout
     end
 
-    def data(sequence, map, event_queue)
+    def data(frame_version, sequence, map, event_queue)
       # If our current last_window_sequence is 0, this is a new connection
       # However, the client doesn't necessarily want to start from 0... so populate initial last_window_sequence with first-1
       # If we do have a last_window_sequence though, verify this sequence number (must be sequential)
@@ -359,9 +333,9 @@ module Lumberjack
             event_queue << map
           end
         rescue Timeout::Error
-          # While we're busy - keeping sending acks for the last sequence we finished
-          # But ONLY if we're protocol version 2+ - protocol version 1 would lose events as it does not check the sequences!
-          if @protocol_version > 1
+          # While we're busy - keeping sending partial ACKs for the last sequence we finished
+          # But ONLY if we're frame version 2+ so we don't break the old clients that don't support partial ACKs
+          if frame_version > 1
             send_ack(sequence - 1)
           else
             reset_ack_timeout
@@ -379,16 +353,6 @@ module Lumberjack
     def send_ack(sequence)
       @fd.syswrite(["1A", sequence].pack("A*N"))
       reset_ack_timeout
-    end
-
-    def ping()
-      if @protocol_version < 2
-        raise ProtocolError
-      end
-      # Send a friendly response - this ping should come only once in a while
-      # It stops pesky firewalls closing our connection and causing issues when logs start appearing
-      @fd.syswrite("1P")
-      reset_timeout
     end
   end # class Connection
 
