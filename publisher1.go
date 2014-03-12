@@ -196,8 +196,6 @@ func Publishv1(input chan []*FileEvent,
 } // Publish
 
 func ping(config *NetworkConfig, socket *tls.Conn) error {
-  var frame [2]byte
-
   // Set deadline for this write
   socket.SetDeadline(time.Now().Add(config.timeout))
 
