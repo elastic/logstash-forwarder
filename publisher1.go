@@ -7,7 +7,6 @@ import (
   "crypto/x509"
   "encoding/binary"
   "encoding/pem"
-  "errors"
   "fmt"
   "io"
   "io/ioutil"
