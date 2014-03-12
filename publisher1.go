@@ -179,7 +179,7 @@ func Publishv1(input chan []*FileEvent,
       timer.Reset(900 * time.Second)
     case <-timer.C:
       // We've no events to send - throw a ping (well... window frame) so our connection doesn't idle and die
-      err = ping(socket)
+      err = ping(config, socket)
       if err != nil {
         log.Printf("Socket error during ping, will reconnect: %s\n", err)
         time.Sleep(1 * time.Second)
@@ -196,7 +196,7 @@ func Publishv1(input chan []*FileEvent,
   } /* for */
 } // Publish
 
-func ping(socket *tls.Conn) error {
+func ping(config *NetworkConfig, socket *tls.Conn) error {
   var frame [2]byte
 
   // Set deadline for this write
@@ -209,7 +209,7 @@ func ping(socket *tls.Conn) error {
   if err != nil {
     return err
   }
-  err = binary.Write(socket, binary.BigEndian, uint32(*spool-size))
+  err = binary.Write(socket, binary.BigEndian, uint32(*spool_size))
   if err != nil {
     return err
   }
