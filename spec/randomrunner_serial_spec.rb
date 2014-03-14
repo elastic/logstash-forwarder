@@ -375,4 +375,89 @@ describe "logstash-forwarder" do
     end
   end #end test
 
+
+  it "should follow multiple explicit files from end, new files from beginning, no rotations, sequential writes" do
+
+    @files = Array.new(@random.rand(1..5)){ |i| Stud::Temporary.file("logstash-forwarder-test-file") }
+    filesNew = Array.new(@random.rand(3..5)){ |i| Stud::Temporary.file("logstash-forwarder-test-file", "a+") }
+
+    file_paths = @files.map do |u|
+      { :paths => [u.path] }
+    end
+
+    file_paths += filesNew.map do |u|
+      { :paths => [u.path] }
+    end
+
+    filesNew.each do |file|
+      File.delete(file)
+    end
+
+
+    json = {
+        :network => {
+            :servers => ["localhost:#{@server.port}"],
+            "ssl ca" => "#{@ssl_cert.path}",
+        },
+        :files => file_paths
+    }
+
+    @config.puts(json.to_json)
+    @config.close
+
+    # initialize files with 1-100 lines of text
+    @files.each do |file|
+      initial = @random.rand(1..100)
+      initial.times do |count|
+        file.puts("initial #{count}")
+      end
+      file.close
+      file.reopen(file.path, "a+")
+    end
+
+    # Start LSF
+    startup
+
+    filesNew.each do |file|
+      File.open(file, "a+")
+    end
+
+    @files.concat(filesNew)
+
+    expected_events = Array.new
+    count = @random.rand(10000..20000)
+    count.times do |i|
+      selected_file = @files[@random.rand(@files.length)]
+      selected_file.puts("#{i}")
+      expected_events << {
+          "line" => "#{i}",
+          "file" => selected_file.path,
+          "host" => Socket.gethostname
+      }
+    end
+
+
+    @files.each do |f|
+      if not f.closed?
+        f.close
+      end
+    end
+
+    # Wait for logstash-forwarder to finish publishing data to us.
+    Stud::try(30.times) do
+      raise "have #{@actual_events.size}, want #{count}" if @actual_events.size < count
+    end
+
+    # events are not guaranteed to arrive in-order, so sort by line value
+    @actual_events = @actual_events.sort_by{ |hsh| Integer(hsh["line"]) }
+
+    # Now verify that we have all the data
+    insist { @actual_events.size } == count
+    @actual_events.each_index do |index|
+      ["line", "file", "host"].each do |property|
+        insist { @actual_events[index][property] } == expected_events[index][property]
+      end
+    end
+  end #end test
+
 end
