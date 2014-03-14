@@ -102,6 +102,13 @@ describe "logstash-forwarder" do
     File.rename(path, rotated_path)
     file.close
     new_file = File.new(path, "a+")
+
+    rSleep = 15
+
+    # Add a little noise to help stop thundering herds
+    @rand_lock.synchronize {
+      rSleep += @random.rand(0.0..5.0)
+    }
     sleep(15)
 
     return new_file
