@@ -37,8 +37,10 @@ func main() {
     return
   }
 
-  statereturn_chan := make(chan *FileState)
-  statereturns := 0
+  resumeinfo := &ProspectorResume{}
+
+  resumeinfo.resave = make(chan *FileState)
+  prospector_waits := 0
 
   event_chan := make(chan *FileEvent, 16)
   publisher_chan := make(chan []*FileEvent, 1)
@@ -63,7 +65,7 @@ func main() {
   }
 
   // Load the previous log file locations now, for use in prospector
-  historical_state := make(map[string]*FileState)
+  resumeinfo.files = make(map[string]*FileState)
   history, err := os.Open(".logstash-forwarder")
   if err == nil {
     wd, err := os.Getwd()
@@ -73,25 +75,26 @@ func main() {
     log.Printf("Loading registrar data from %s/.logstash-forwarder\n", wd)
 
     decoder := json.NewDecoder(history)
-    decoder.Decode(&historical_state)
+    decoder.Decode(&resumeinfo.files)
     history.Close()
   }
 
   // Prospect the globs/paths given on the command line and launch harvesters
   for _, fileconfig := range config.Files {
-    go Prospect(fileconfig, historical_state, statereturn_chan, event_chan)
-    statereturns++
+    prospector := &Prospector{FileConfig: fileconfig}
+    go prospector.Prospect(resumeinfo, event_chan)
+    prospector_waits++
   }
 
   // Now determine which states we need to re-save by pulling the events from the prospectors
   // When we hit a nil source a prospector had finished so we decrease the expected events
-  log.Printf("Waiting for %d prospectors to process loaded registrar data\n", statereturns)
+  log.Printf("Waiting for %d prospectors to process loaded registrar data\n", prospector_waits)
   new_state := make(map[string]*FileState)
 
-  for event := range statereturn_chan {
+  for event := range resumeinfo.resave {
     if event.Source == nil {
-      statereturns--
-      if statereturns == 0 {
+      prospector_waits--
+      if prospector_waits == 0 {
         break
       }
       continue
