@@ -41,3 +41,19 @@ func is_file_renamed(file string, info os.FileInfo, fileinfo map[string]Prospect
   }
   return ""
 }
+
+func is_file_renamed_resumelist(file string, info os.FileInfo, initial map[string]*FileState) string {
+  // NOTE(driskell): What about using golang's func os.SameFile(fi1, fi2 FileInfo) bool instead?
+  stat := info.Sys().(*syscall.Stat_t)
+
+  for kf, ki := range initial {
+    if kf == file {
+      continue
+    }
+    if stat.Dev == ki.Device && stat.Ino == ki.Inode {
+      return kf
+    }
+  }
+
+  return ""
+}
