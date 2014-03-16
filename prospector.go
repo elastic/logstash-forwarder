@@ -157,11 +157,10 @@ func (p *Prospector) scan(path string, registrar_chan chan []*FileEvent, output 
       newinfo.fileinfo = info
       newinfo.last_seen = p.iteration
 
-      if !is_fileinfo_same(lastinfo.fileinfo, info) {
+      if !os.SameFile(lastinfo.fileinfo, info) {
         if previous := is_file_renamed(file, info, p.fileinfo, missingfiles); previous != "" {
           // This file was renamed from another file we know - link the same harvester channel as the old file
           log.Printf("File rename was detected: %s -> %s\n", previous, file)
-          log.Printf("Launching harvester on renamed file: %s\n", file)
 
           newinfo.harvester = p.fileinfo[previous].harvester
         } else {

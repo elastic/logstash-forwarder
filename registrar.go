@@ -17,13 +17,11 @@ func Registrar(new_state map[string]*FileState, input chan []*FileEvent) {
       // have to dereference the FileInfo here because os.FileInfo is an
       // interface, not a struct, so Go doesn't have smarts to call the Sys()
       // method on a pointer to os.FileInfo. :(
-      ino, dev := file_ids(event.fileinfo)
       state[*event.Source] = &FileState{
         Source: event.Source,
         Offset: event.Offset,
-        Inode:  ino,
-        Device: dev,
       }
+      file_ids(event.fileinfo, state[*event.Source])
       //log.Printf("State %s: %d\n", *event.Source, event.Offset)
     }
 
