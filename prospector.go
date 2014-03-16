@@ -155,6 +155,7 @@ func (p *Prospector) scan(path string, output chan *FileEvent, resumelist *Prosp
         if previous := is_file_renamed(file, info, p.fileinfo, missingfiles); previous != "" {
           // This file was renamed from another file we know - link the same harvester channel as the old file
           log.Printf("File rename was detected: %s -> %s\n", previous, file)
+          log.Printf("Launching harvester on renamed file: %s\n", file)
 
           newinfo.harvester = p.fileinfo[previous].harvester
         } else {
