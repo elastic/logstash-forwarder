@@ -193,7 +193,9 @@ func (p *Prospector) scan(path string, output chan *FileEvent, resumelist *Prosp
 
 func (p *Prospector) calculate_resume(file string, info os.FileInfo, resumelist *ProspectorResume) (int64, bool) {
   if resumelist != nil {
-    if last_state, is_found := resumelist.files[file]; is_found && is_file_same(file, info, last_state) {
+    last_state, is_found := resumelist.files[file]
+
+    if is_found && is_file_same(file, info, last_state) {
       // We're resuming - throw the last state back downstream so we resave it
       // And return the offset - also force harvest in case the file is old and we're about to skip it
       resumelist.resave <- last_state
@@ -204,11 +206,15 @@ func (p *Prospector) calculate_resume(file string, info os.FileInfo, resumelist 
       // File has rotated between shutdown and startup
       // We return last state downstream, with a modified event source with the new file name
       // And return the offset - also force harvest in case the file is old and we're about to skip it
-      log.Printf("Detected rotation on a previously harvested file: %s -> %s\n", previous, file)
+      log.Printf("Detected rename of a previously harvested file: %s -> %s\n", previous, file)
       event := resumelist.files[previous]
       event.Source = &file
       resumelist.resave <- event
       return event.Offset, true
+    }
+
+    if is_found {
+      log.Printf("Not resuming rotated file: %s\n", file)
     }
   }
 
