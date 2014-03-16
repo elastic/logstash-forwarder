@@ -13,18 +13,19 @@ type FileState struct {
 }
 
 func file_ids(info *os.FileInfo, state *FileState) {
-  fstat := (*info).(*fileStat)
-  e := fstat.loadFileId()
-  if e != nil {
-    return
-  }
-  state.Vol = fstat.vol
-  state.IdxHi = fstat.idxhi
-  state.IdxLo = fstat.idxlow
+  // TODO(golang): Make the following Windows fileStat struct members accessible somehow: vol, idxhi, idxlo
+  //               They are the struct members used for samefile - the equivilant to device and inode on Linux
+  //               At the moment they are truly unreachable due to Go's package separation
+  //               Rather than reinvent the wheel we just need to wait for an interface to them
+  //               Sys() returns the WIN32_FILE_ATTRIBUTE_DATA unfortunately which is not what we need
+
+  // Until the above TODO is completely, we will just have to accept that we cannot verify a file
+  // has not renamed or rotated during restarts - that is, the statefile will only contain the file path
+
+  // Do nothing and return, the vol/idxhi/idxlo FileState entries will be set to 0
 }
 
 func is_file_same(path string, info os.FileInfo, state *FileState) bool {
-  istate := &FileState{}
-  file_ids(info, istate)
-  return (istate.Vol == state.Vol && istate.IdxHi == state.IdxHi && istate.IdxLo == state.IdxLo)
+  // Just compare filename
+  return (*state.Source == path)
 }
