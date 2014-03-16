@@ -62,7 +62,6 @@ func (p *Prospector) Prospect(resumelist *ProspectorResume, output chan *FileEve
     // Clear out files that disappeared
     for file, lastinfo := range p.fileinfo {
       if lastinfo.last_seen < p.iteration {
-        log.Printf("No longer tracking file that hasn't been seen for a while: %s\n", file)
         delete(p.fileinfo, file)
       }
     }
@@ -155,6 +154,7 @@ func (p *Prospector) scan(path string, output chan *FileEvent, resumelist *Prosp
         if previous := is_file_renamed(file, info, p.fileinfo, missingfiles); previous != "" {
           // This file was renamed from another file we know - link the same harvester channel as the old file
           log.Printf("File rename was detected: %s -> %s\n", previous, file)
+          log.Printf("Launching harvester on renamed file: %s\n", file)
 
           newinfo.harvester = p.fileinfo[previous].harvester
         } else {
@@ -192,7 +192,9 @@ func (p *Prospector) scan(path string, output chan *FileEvent, resumelist *Prosp
 
 func (p *Prospector) calculate_resume(file string, info os.FileInfo, resumelist *ProspectorResume) (int64, bool) {
   if resumelist != nil {
-    if last_state, is_found := resumelist.files[file]; is_found && is_file_same(file, info, last_state) {
+    last_state, is_found := resumelist.files[file]
+
+    if is_found && is_file_same(file, info, last_state) {
       // We're resuming - throw the last state back downstream so we resave it
       // And return the offset - also force harvest in case the file is old and we're about to skip it
       resumelist.resave <- last_state
@@ -203,11 +205,15 @@ func (p *Prospector) calculate_resume(file string, info os.FileInfo, resumelist 
       // File has rotated between shutdown and startup
       // We return last state downstream, with a modified event source with the new file name
       // And return the offset - also force harvest in case the file is old and we're about to skip it
-      log.Printf("Detected rotation on a previously harvested file: %s -> %s\n", previous, file)
+      log.Printf("Detected rename of a previously harvested file: %s -> %s\n", previous, file)
       event := resumelist.files[previous]
       event.Source = &file
       resumelist.resave <- event
       return event.Offset, true
+    }
+
+    if is_found {
+      log.Printf("Not resuming rotated file: %s\n", file)
     }
   }
 
