@@ -7,6 +7,20 @@ require "zlib"
 module Lumberjack
   class ShutdownSignal < StandardError; end
   class ProtocolError < StandardError; end
+
+  # This allows us to catch a reference to the accepted socket
+  # So that if the SSL layer throws an error, we can grab it to get the peer address that caused it
+  class ExtendedTCPServer < TCPServer
+    attr_reader :last_peer
+
+    def accept()
+      sock = super()
+      peer = sock.peeraddr(:numeric)
+      @last_peer = "#{peer[2]}:#{peer[1]}"
+      return sock
+    end
+  end
+
   class Server
     attr_reader :port
 
@@ -26,7 +40,10 @@ module Lumberjack
         :ssl_certificate => nil,
         :ssl_key => nil,
         :ssl_key_passphrase => nil,
+        :logger => nil,
       }.merge(options)
+
+      @logger = @options[:logger]
 
       [:ssl_certificate, :ssl_key].each do |k|
         if @options[k].nil?
@@ -34,7 +51,7 @@ module Lumberjack
         end
       end
 
-      @tcp_server = TCPServer.new(@options[:port])
+      @tcp_server = ExtendedTCPServer.new(@options[:port])
       # Query the port in case the port number is '0'
       # TCPServer#addr == [ address_family, port, address, address ]
       @port = @tcp_server.addr[1]
@@ -74,13 +91,14 @@ module Lumberjack
           # NOTE: This means ssl accepting is single-threaded.
           begin
             client = @ssl_server.accept
-          rescue EOFError, OpenSSL::SSL::SSLError, IOError
+          rescue EOFError, OpenSSL::SSL::SSLError, IOError => e
             # ssl handshake failure or other issue, skip it.
-            # TODO(sissel): log the error
-            # TODO(sissel): try to identify what client was connecting that failed.
+            @logger.warn("[Lumberjack] Connection from #{@tcp_server.last_peer} failed to initialise: #{e}") if not @logger.nil?
             client.close rescue nil
             next
           end
+
+          @logger.info("[Lumberjack] New connection from #{@tcp_server.last_peer}") if not @logger.nil?
 
           # Clear up finished threads
           client_threads.delete_if do |k, thr|
@@ -88,9 +106,12 @@ module Lumberjack
           end
 
           # Start a new connection thread
-          client_threads[client] = Thread.new do
-            Connection.new(client, ack_resume, ack_resume_mutex).run(event_queue)
+          client_threads[client] = Thread.new(client, @tcp_server.last_peer) do |client, peer|
+            Connection.new(@logger, client, peer).run(event_queue)
           end
+
+          # Reset client so if ssl_server.accept fails, we don't close the previous connection in client since it was left untouched
+          client = nil
         end
       ensure
         # Raise shutdown in all client threads and join then
@@ -246,10 +267,12 @@ module Lumberjack
   end # class Parser
 
   class Connection
-    def initialize(fd, ack_resume, ack_resume_mutex)
+    def initialize(logger, fd, peer)
       super()
       @parser = Parser.new
+      @logger = logger
       @fd = fd
+      @peer = peer
       @last_window_ack = nil
       @next_sequence = 1
 
@@ -273,8 +296,6 @@ module Lumberjack
           # So we don't start increasing the reconnect on old clients we can just wait for now
           reset_timeout
           next
-        rescue # All other exception, we end the connection
-          break
         end
         @parser.feed(buffer) do |event, *args|
           case event
@@ -285,13 +306,19 @@ module Lumberjack
           #send(event, *args)
         end # feed
       end # while true
-    rescue EOFError, OpenSSL::SSL::SSLError, IOError, Errno::ECONNRESET
+    rescue EOFError, OpenSSL::SSL::SSLError, IOError, Errno::ECONNRESET => e
       # EOF or other read errors, only action is to shutdown which we'll do in
       # 'ensure'
+      @logger.warn("[Lumberjack] SSL error on connection from #{@peer}: #{e}") if not @logger.nil?
     rescue ProtocolError
       # Connection abort request due to a protocol error
+      @logger.warn("[Lumberjack] Protocol error on connection from #{@peer}") if not @logger.nil?
+    rescue => e
+      # Some other unknown problem
+      @logger.warn("[Lumberjack] Unknown error on connection from #{@peer}: #{e}") if not @logger.nil?
     ensure
       # Try to ensure it's closed, but if this fails I don't care.
+      @logger.info("[Lumberjack] Closing connection from #{@peer}") if not @logger.nil?
       @fd.close rescue nil
     end # def run
 
