@@ -61,7 +61,7 @@ describe "logstash-forwarder" do
         File.unlink(f.path)
       end
     end
-    if File.exists?(".logstash-forwarder.")
+    if File.exists?(".logstash-forwarder")
       File.unlink(".logstash-forwarder")
     end
   end
