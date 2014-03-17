@@ -24,6 +24,6 @@ func is_file_same(path string, info os.FileInfo, state *FileState) bool {
   return (istate.Inode == state.Inode && istate.Device == state.Device)
 }
 
-func open_file_no_lock(path string) (*File, error) {
+func open_file_no_lock(path string) (*os.File, error) {
   return os.Open(path)
 }
