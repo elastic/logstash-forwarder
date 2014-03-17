@@ -62,7 +62,6 @@ func (p *Prospector) Prospect(resumelist *ProspectorResume, output chan *FileEve
     // Clear out files that disappeared
     for file, lastinfo := range p.fileinfo {
       if lastinfo.last_seen < p.iteration {
-        log.Printf("No longer tracking file that hasn't been seen for a while: %s\n", file)
         delete(p.fileinfo, file)
       }
     }
