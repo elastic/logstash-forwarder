@@ -115,13 +115,13 @@ describe "logstash-forwarder" do
     new_file = File.new(path, "a+")
     ensure_delete(new_file)
 
-    rSleep = 15
+    sleep_value = 15
 
     # Add a little noise to help stop thundering herds
     @rand_lock.synchronize {
-      rSleep += @random.rand(0.0..5.0)
+      sleep_value += @random.rand(0.0..5.0)
     }
-    sleep(15)
+    sleep(sleep_value)
 
     return new_file
   end
