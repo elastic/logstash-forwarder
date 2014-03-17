@@ -23,3 +23,7 @@ func is_file_same(path string, info os.FileInfo, state *FileState) bool {
   file_ids(&info, istate)
   return (istate.Inode == state.Inode && istate.Device == state.Device)
 }
+
+func open_file_no_lock(path string) (*File, error) {
+  return os.Open(path)
+}

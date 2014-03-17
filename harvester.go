@@ -122,7 +122,7 @@ func (h *Harvester) open() *os.File {
 
   for {
     var err error
-    h.file, err = os.Open(h.Path)
+    h.file, err = open_file_no_lock(h.Path)
 
     if err != nil {
       // retry on failure.
