@@ -35,6 +35,7 @@ describe "logstash-forwarder" do
     )
 
     @files = []
+    @active_files = []
     @actual_events = []
 
     @server_thread = Thread.new do
@@ -54,7 +55,8 @@ describe "logstash-forwarder" do
         File.unlink(f.path)
       end
     end
-    @files.each do |f|
+
+    @active_files.each do |f|
       if not f.closed?
         f.close
       end
@@ -90,16 +92,25 @@ describe "logstash-forwarder" do
     end
   end
 
-  def rotate_file(file)
+  def ensure_delete(file)
+    @active_files << file
+  end
+
+  def rotate_file(file, index)
     path = file.path
     rotated_path = path + "_" +SecureRandom.uuid
-    puts "\nEvents since last rotate: #{since_last_rotate}\nRotating file: #{File.basename(path)}"
+    puts "\nRotating file: #{File.basename(path)}"
     File.rename(path, rotated_path)
-    selected_file.close
-    @files[selected_file_index] = File.new(path, "a+")
+    file.close
+    ensure_delete(file)
+
+    @files[index] = File.new(path, "a+")
+
+    ensure_delete(@files[index])
 
     sleep(15)
   end
+
 
   it "should follow multiple explicit files from the end, no rotations, sequential writes" do
 
@@ -119,6 +130,7 @@ describe "logstash-forwarder" do
 
     # initialize files with 1-100 lines of text
     @files.each do |file|
+      ensure_delete(file)
       initial = @random.rand(1..100)
       initial.times do |count|
         file.puts("initial #{count}")
@@ -184,6 +196,7 @@ describe "logstash-forwarder" do
 
     # initialize files with 1-100 lines of text
     @files.each do |file|
+      ensure_delete(file)
       initial = @random.rand(1..100)
       initial.times do |count|
         file.puts("initial #{count}")
@@ -246,6 +259,7 @@ describe "logstash-forwarder" do
 
     # initialize files with 1-100 lines of text
     @files.each do |file|
+      ensure_delete(file)
       initial = @random.rand(1..100)
       initial.times do |count|
         file.puts("initial #{count}")
@@ -275,7 +289,7 @@ describe "logstash-forwarder" do
           print "."
           $stdout.flush
         when :rotate
-          rotate_file(selected_file)
+          rotate_file(selected_file, selected_file_index)
       end
     end
 
@@ -321,6 +335,7 @@ describe "logstash-forwarder" do
 
     # initialize files with 1-100 lines of text
     @files.each do |file|
+      ensure_delete(file)
       initial = @random.rand(1..100)
       initial.times do |count|
         file.puts("initial #{count}")
@@ -350,7 +365,7 @@ describe "logstash-forwarder" do
           print "."
           $stdout.flush
         when :rotate
-          rotate_file(selected_file)
+          rotate_file(selected_file, selected_file_index)
       end
     end
 
@@ -407,6 +422,7 @@ describe "logstash-forwarder" do
 
     # initialize files with 1-100 lines of text
     @files.each do |file|
+      ensure_delete(file)
       initial = @random.rand(1..100)
       initial.times do |count|
         file.puts("initial #{count}")
@@ -420,6 +436,7 @@ describe "logstash-forwarder" do
 
     filesNew.each do |file|
       File.open(file, "a+")
+      ensure_delete(file)
     end
 
     @files.concat(filesNew)

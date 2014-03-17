@@ -20,6 +20,7 @@ describe "logstash-forwarder" do
     @random = Random.new(@random_seed)
 
     @rand_lock = Mutex.new
+    @active_files_lock = Mutex.new
 
     @config = Stud::Temporary.file("logstash-forwarder-test-file")
     @ssl_cert = Stud::Temporary.file("logstash-forwarder-test-file")
@@ -37,6 +38,7 @@ describe "logstash-forwarder" do
     )
 
     @files = []
+    @active_files = []
     @actual_events = []
 
     @server_thread = Thread.new do
@@ -56,7 +58,8 @@ describe "logstash-forwarder" do
         File.unlink(f.path)
       end
     end
-    @files.each do |f|
+
+    @active_files.each do |f|
       if not f.closed?
         f.close
       end
@@ -95,13 +98,22 @@ describe "logstash-forwarder" do
     }
   end
 
+  def ensure_delete(file)
+    @active_files_lock.synchronize {
+      @active_files << file
+    }
+  end
+
   def rotate_file(file)
     path = file.path
     rotated_path = path + "_" +SecureRandom.uuid
     puts "\nRotating file: #{File.basename(path)}"
     File.rename(path, rotated_path)
     file.close
+    ensure_delete(file)
+
     new_file = File.new(path, "a+")
+    ensure_delete(new_file)
 
     rSleep = 15
 
@@ -132,6 +144,7 @@ describe "logstash-forwarder" do
 
     # initialize files with 1-100 lines of text
     @files.each do |file|
+      ensure_delete(file)
       initial = @random.rand(1..100)
       initial.times do |count|
         file.puts("initial #{count}")
@@ -210,6 +223,7 @@ describe "logstash-forwarder" do
 
     # initialize files with 1-100 lines of text
     @files.each do |file|
+      ensure_delete(file)
       initial = @random.rand(1..100)
       initial.times do |count|
         file.puts("initial #{count}")
@@ -285,6 +299,7 @@ describe "logstash-forwarder" do
 
     # initialize files with 1-100 lines of text
     @files.each do |file|
+      ensure_delete(file)
       initial = @random.rand(1..100)
       initial.times do |count|
         file.puts("initial #{count}")
@@ -364,6 +379,7 @@ describe "logstash-forwarder" do
 
     # initialize files with 1-100 lines of text
     @files.each do |file|
+      ensure_delete(file)
       initial = @random.rand(1..100)
       initial.times do |count|
         file.puts("initial #{count}")
