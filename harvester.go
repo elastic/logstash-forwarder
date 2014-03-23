@@ -55,6 +55,11 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
         } else {
             // lets see if the file moved on us.
             originalStat, originalErr := os.Stat(h.file.Name())
+            nextInfo, _ := h.file.Stat()
+            if nextInfo.Size() != info.Size() {
+                // it grew between stats we should continue processing
+                continue
+            }
             if originalErr != nil && os.IsNotExist(originalErr) {
                 // file does not exist anymore, lets drop it
                 return
