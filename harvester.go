@@ -40,7 +40,6 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
   reader := bufio.NewReaderSize(h.file, 16<<10) // 16kb buffer by default
 
   var read_timeout = 10 * time.Second
-  last_read_time := time.Now()
   for {
     text, err := h.readline(reader, read_timeout)
 
@@ -53,13 +52,24 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
           log.Printf("File truncated, seeking to beginning: %s\n", h.Path)
           h.file.Seek(0, os.SEEK_SET)
           offset = 0
-        } else if age := time.Since(last_read_time); age > (24 * time.Hour) {
-          // if last_read_time was more than 24 hours ago, this file is probably
-          // dead. Stop watching it.
-          // TODO(sissel): Make this time configurable
-          // This file is idle for more than 24 hours. Give up and stop harvesting.
-          log.Printf("Stopping harvest of %s; last change was %d seconds ago\n", h.Path, age.Seconds())
-          return
+        } else {
+            // lets see if the file moved on us.
+            originalStat, originalErr := os.Stat(h.file.Name())
+            nextInfo, _ := h.file.Stat()
+            if nextInfo.Size() != info.Size() {
+                // it grew between stats we should continue processing
+                continue
+            }
+            if originalErr != nil && os.IsNotExist(originalErr) {
+                // file does not exist anymore, lets drop it
+                return
+            }
+            if originalErr == nil && info.Size() != originalStat.Size() {
+                // the file changed names assume that we do not want this anymore
+                // if we wanted it then it would be configured for another harvester
+                // to pick it up
+                return
+            }
         }
         continue
       } else {
@@ -67,7 +77,6 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
         return
       }
     }
-    last_read_time = time.Now()
 
     line++
     event := &FileEvent{
