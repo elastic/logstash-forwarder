@@ -18,7 +18,7 @@ func file_ids(info *os.FileInfo, state *FileState) {
   state.Device = fstat.Dev
 }
 
-func is_file_same(path string, info os.FileInfo, state *FileState) bool {
+func is_filestate_same(path string, info os.FileInfo, state *FileState) bool {
   istate := &FileState{}
   file_ids(&info, istate)
   return (istate.Inode == state.Inode && istate.Device == state.Device)

@@ -26,7 +26,7 @@ func file_ids(info *os.FileInfo, state *FileState) {
   // Do nothing and return, the vol/idxhi/idxlo FileState entries will be set to 0
 }
 
-func is_file_same(path string, info os.FileInfo, state *FileState) bool {
+func is_filestate_same(path string, info os.FileInfo, state *FileState) bool {
   // Just compare filename
   return (*state.Source == path)
 }

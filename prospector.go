@@ -125,7 +125,7 @@ func (p *Prospector) scan(path string, registrar_chan chan []*FileEvent, output 
           log.Printf("Skipping file (older than dead time of %v): %s\n", p.FileConfig.deadtime, file)
           newinfo.harvester <- 0
         }
-      } else if previous := is_file_renamed(file, info, p.fileinfo, missingfiles); previous != "" {
+      } else if previous := lookup_file_ids(file, info, p.fileinfo, missingfiles); previous != "" {
         // This file was simply renamed (known inode+dev) - link the same harvester channel as the old file
         log.Printf("File rename was detected: %s -> %s\n", previous, file)
 
@@ -157,7 +157,7 @@ func (p *Prospector) scan(path string, registrar_chan chan []*FileEvent, output 
       newinfo.last_seen = p.iteration
 
       if !os.SameFile(lastinfo.fileinfo, info) {
-        if previous := is_file_renamed(file, info, p.fileinfo, missingfiles); previous != "" {
+        if previous := lookup_file_ids(file, info, p.fileinfo, missingfiles); previous != "" {
           // This file was renamed from another file we know - link the same harvester channel as the old file
           log.Printf("File rename was detected: %s -> %s\n", previous, file)
 
@@ -200,14 +200,14 @@ func (p *Prospector) calculate_resume(file string, info os.FileInfo, resumelist 
   if resumelist != nil {
     last_state, is_found := resumelist.files[file]
 
-    if is_found && is_file_same(file, info, last_state) {
+    if is_found && is_filestate_same(file, info, last_state) {
       // We're resuming - throw the last state back downstream so we resave it
       // And return the offset - also force harvest in case the file is old and we're about to skip it
       resumelist.resave <- last_state
       return last_state.Offset, true
     }
 
-    if previous := is_file_renamed_resumelist(file, info, resumelist.files); previous != "" {
+    if previous := lookup_file_ids_resumelist(file, info, resumelist.files); previous != "" {
       // File has rotated between shutdown and startup
       // We return last state downstream, with a modified event source with the new file name
       // And return the offset - also force harvest in case the file is old and we're about to skip it
