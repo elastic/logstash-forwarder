@@ -2,7 +2,6 @@ package main
 
 import (
   "encoding/json"
-  "errors"
   "log"
   "os"
   "time"
@@ -70,13 +69,6 @@ func LoadConfig(path string) (config Config, err error) {
     config.Files[k].deadtime, err = time.ParseDuration(config.Files[k].DeadTime)
     if err != nil {
       log.Printf("Failed to parse dead time duration '%s'. Error was: %s\n", config.Files[k].DeadTime, err)
-      return
-    }
-    // Prospector loops every 10s and due to lack of checks there we can't let dead time be less than this
-    // Otherwise the ability to resume on dead files if they return to life will fail
-    if config.Files[k].deadtime < 30 * time.Second {
-      err = errors.New("Dead time cannot be less than 30 seconds.")
-      log.Printf("Dead time cannot be less than 30 seconds. You specified %s.\n", config.Files[k].DeadTime)
       return
     }
   }
