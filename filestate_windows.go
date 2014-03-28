@@ -42,8 +42,8 @@ func open_file_no_lock(path string) (*os.File, error) {
   var sa *syscall.SecurityAttributes
 
   handle, err := syscall.CreateFile(
-    pathp, syscall.GENERIC_READ, syscall.FILE_SHARE_READ | syscall.FILE_SHARE_WRITE | syscall.FILE_SHARE_DELETE,
-		sa,	syscall.OPEN_EXISTING, syscall.FILE_ATTRIBUTE_NORMAL, 0)
+    pathp, syscall.GENERIC_READ, syscall.FILE_SHARE_READ|syscall.FILE_SHARE_WRITE|syscall.FILE_SHARE_DELETE,
+    sa, syscall.OPEN_EXISTING, syscall.FILE_ATTRIBUTE_NORMAL, 0)
   if err != nil {
     return nil, err
   }

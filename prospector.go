@@ -9,13 +9,13 @@ import (
 
 type ProspectorResume struct {
   files  map[string]*FileState
-  resave  chan *FileState
+  resave chan *FileState
 }
 
 type ProspectorInfo struct {
   fileinfo  os.FileInfo /* the file info */
-  harvester chan int64 /* the harvester will send an event with its offset when it closes */
-  last_seen uint32 /* int number of the last iterations in which we saw this file */
+  harvester chan int64  /* the harvester will send an event with its offset when it closes */
+  last_seen uint32      /* int number of the last iterations in which we saw this file */
 }
 
 type Prospector struct {
@@ -151,9 +151,9 @@ func (p *Prospector) scan(path string, registrar_chan chan []*FileEvent, output 
         var is_resuming bool = false
 
         if resumelist != nil {
-            // Call the calculator - it will process resume state if there is one
-            offset, is_resuming = p.calculate_resume(file, fileinfo, resumelist)
-            initial = true
+          // Call the calculator - it will process resume state if there is one
+          offset, is_resuming = p.calculate_resume(file, fileinfo, resumelist)
+          initial = true
         }
 
         // Are we resuming a file or is this a completely new file?

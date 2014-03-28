@@ -14,7 +14,7 @@ type Harvester struct {
   FileConfig FileConfig
   Offset     int64
   FinishChan chan int64
-  Initial bool
+  Initial    bool
 
   file *os.File /* the file being watched */
 }

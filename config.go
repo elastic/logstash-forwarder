@@ -25,14 +25,14 @@ type NetworkConfig struct {
   SSLCA          string   `json:"ssl ca"`
   Timeout        int64    `json:timeout`
   timeout        time.Duration
-  Reconnect      int64    `json:reconnect`
+  Reconnect      int64 `json:reconnect`
   reconnect      time.Duration
 }
 
 type FileConfig struct {
-  Paths  []string          `json:paths`
-  Fields map[string]string `json:fields`
-  DeadTime string `json:"dead time"`
+  Paths    []string          `json:paths`
+  Fields   map[string]string `json:fields`
+  DeadTime string            `json:"dead time"`
   deadtime time.Duration
 }
 
