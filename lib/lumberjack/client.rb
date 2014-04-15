@@ -115,7 +115,7 @@ module Lumberjack
 
     private
     def to_frame(hash, sequence)
-      frame = ["1", "D", sequence]
+      frame = ["2", "D", sequence]
       pack = "AAN"
       keys = deep_keys(hash)
       frame << keys.length
