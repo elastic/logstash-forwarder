@@ -7,6 +7,7 @@ import (
   "log"
   "os" // for File and friends
   "time"
+  "strings"
 )
 
 type Harvester struct {
@@ -70,16 +71,20 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 
     last_read_time = time.Now()
 
+    // Remove whitespaces from string
+    text_without_newlines := new(string)
+    *text_without_newlines = strings.Trim(*text, "\n\r")
+
     line++
     event := &FileEvent{
       Source:   &h.Path,
       Offset:   offset,
       Line:     line,
-      Text:     text,
+      Text:     text_without_newlines,
       Fields:   &h.Fields,
       fileinfo: &info,
     }
-    offset += int64(len(*event.Text)) + 1 // +1 because of the line terminator
+    offset += int64(len(*text))
 
     output <- event // ship the new event downstream
   } /* forever */
