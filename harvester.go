@@ -67,6 +67,7 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
         return
       }
     }
+
     last_read_time = time.Now()
 
     line++
@@ -120,11 +121,16 @@ func (h *Harvester) readline(reader *bufio.Reader, eof_timeout time.Duration) (*
   var buffer bytes.Buffer
   start_time := time.Now()
   for {
-    segment, is_partial, err := reader.ReadLine()
+    segment, err := reader.ReadBytes('\n')
+
+    if segment != nil {
+      // TODO(sissel): if buffer exceeds a certain length, maybe report an error condition? chop it?
+      buffer.Write(segment)
+    }
 
     if err != nil {
       if err == io.EOF {
-        time.Sleep(1 * time.Second) // TODO(sissel): Implement backoff
+        time.Sleep(2 * time.Second) // TODO(sissel): Implement backoff
 
         // Give up waiting for data after a certain amount of time.
         // If we time out, return the error (eof)
@@ -138,15 +144,10 @@ func (h *Harvester) readline(reader *bufio.Reader, eof_timeout time.Duration) (*
       }
     }
 
-    // TODO(sissel): if buffer exceeds a certain length, maybe report an error condition? chop it?
-    buffer.Write(segment)
-
-    if !is_partial {
-      // If we got a full line, return the whole line.
-      str := new(string)
-      *str = buffer.String()
-      return str, nil
-    }
+    // If we got a full line, return the whole line.
+    str := new(string)
+    *str = buffer.String()
+    return str, nil
   } /* forever read chunks */
 
   return nil, nil
