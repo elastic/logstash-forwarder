@@ -1,0 +1,95 @@
+#!/bin/bash
+# chkconfig: 345 80 20
+# description:  Logstash Forwarder
+#
+### BEGIN INIT INFO
+# Provides:          skeleton
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     3 4 5
+# Default-Stop:      0 1 2 6
+# Short-Description: Example initscript
+# Description:       This file should be used to construct scripts to be
+#                    placed in /etc/init.d.
+### END INIT INFO
+
+
+# Author: Adam Stephens <adam@valkor.net>
+
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+DESC="log shipper"
+NAME=logstash-forwarder
+DAEMON=/opt/logstash-forwarder/bin/logstash-forwarder
+PIDFILE=/var/run/$NAME.pid
+SCRIPTNAME=/etc/init.d/$NAME
+LOCKFILE=/var/lock/subsys/$NAME
+
+[ -r /etc/default/$NAME ] && . /etc/default/$NAME
+. /etc/init.d/functions
+. /lib/lsb/init-functions
+
+[ -e /etc/sysconfig/logstash-forwarder ] && . /etc/sysconfig/logstash-forwarder
+DAEMON_ARGS="${DAEMON_ARGS:--config /etc/logstash-forwarder -spool-size 100 -log-to-syslog}"
+
+COMMAND="$DAEMON $DAEMON_ARGS"
+
+do_start() {
+  echo -n "Starting $NAME"
+
+  $COMMAND &>/dev/null &
+  RETVAL=$?
+  if [ $RETVAL -eq 0 ]
+  then
+    touch $LOCKFILE
+    log_success_msg
+  else
+    log_failure_msg
+  fi
+
+  return $RETVAL
+}
+
+do_stop()
+{
+  echo -n "Stopping $NAME"
+  status $DAEMON &>/dev/null && killproc $DAEMON
+  RETVAL=$?
+  if [ $RETVAL -eq 0 ]
+  then
+    log_success_msg
+  else
+    log_failure_msg
+  fi
+  rm -f $PIDFILE
+  rm -f $LOCKFILE
+  return "$RETVAL"
+}
+
+case "$1" in
+  start)
+    do_start
+    ;;
+  stop)
+    do_stop
+    ;;
+  status)
+    status "$DAEMON" && exit 0 || exit $?
+    ;;
+  restart|force-reload)
+    do_stop
+    case "$?" in
+      0|1)
+        do_start
+      ;;
+      *)
+        exit 1
+      ;;
+    esac
+    ;;
+  *)
+    echo "Usage: $SCRIPTNAME {start|stop|status|restart|force-reload}" >&2
+    exit 3
+    ;;
+esac
+
+:
