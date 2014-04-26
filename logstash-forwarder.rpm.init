@@ -1,0 +1,74 @@
+#!/bin/bash
+# chkconfig: 345 80 20
+# description: Logstash Forwarder
+# processname: logstash-forwarder
+# config: /etc/logstash-forwarder
+# pidfile: /var/run/logstash-forwarder.pid
+
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+NAME=logstash-forwarder
+DAEMON=/opt/logstash-forwarder/bin/logstash-forwarder
+PIDFILE=/var/run/$NAME.pid
+SCRIPTNAME=/etc/init.d/$NAME
+
+[ -r /etc/default/$NAME ] && . /etc/default/$NAME
+. /etc/init.d/functions
+
+[ -e /etc/sysconfig/logstash-forwarder ] && . /etc/sysconfig/logstash-forwarder
+DAEMON_ARGS="${DAEMON_ARGS:--config /etc/logstash-forwarder.conf -spool-size 100 -log-to-syslog}"
+
+start()
+{
+	echo -n $"Starting $NAME: "
+	nohup $DAEMON $DAEMON_ARGS >/dev/null 2>&1 &
+	RETVAL=$?
+	PID=$!
+	echo $PID > $PIDFILE
+	echo
+	[ $RETVAL -eq 0 ] && touch /var/lock/subsys/$NAME
+}
+
+stop()
+{
+	echo -n $"Stopping $NAME: "
+	killproc -p "$PIDFILE" $DAEMON
+	RETVAL=$?
+	[ -f "$PIDFILE" ] && rm -f "$PIDFILE"
+	echo
+	[ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/$NAME
+}
+
+restart () {
+	stop
+	start
+}
+
+RETVAL=0
+
+case "$1" in
+	start)
+		status -p $PIDFILE >/dev/null
+		RET=$?
+		if [ $RET -ne 0 ];then
+			start
+		fi
+		;;
+	stop)
+		stop
+		;;
+	restart|reload|force-reload)
+		restart
+		;;
+	condrestart)
+		[ -f /var/lock/subsys/$NAME ] && restart || :
+		;;
+	status)
+		status -p $PIDFILE
+		RETVAL=$?
+		;;
+	*)
+		echo "Usage: $0 {start|stop|status|restart|reload|force-reload|condrestart}"
+		RETVAL=1
+esac
+
+exit $RETVAL
