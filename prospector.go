@@ -67,9 +67,9 @@ func (p *Prospector) Prospect(resumelist *ProspectorResume, output chan *FileEve
     // Defer next scan for a bit.
     time.Sleep(10 * time.Second) // Make this tunable
 
-    // Clear out files that disappeared
+    // Clear out files that disappeared and we've stopped harvesting
     for file, lastinfo := range p.prospectorinfo {
-      if lastinfo.last_seen < p.iteration {
+      if len(lastinfo.harvester) != 0 && lastinfo.last_seen < p.iteration {
         delete(p.prospectorinfo, file)
       }
     }
