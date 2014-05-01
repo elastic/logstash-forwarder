@@ -37,11 +37,6 @@ func main() {
     return
   }
 
-  resumeinfo := &ProspectorResume{}
-
-  resumeinfo.resave = make(chan *FileState)
-  prospector_waits := 0
-
   event_chan := make(chan *FileEvent, 16)
   publisher_chan := make(chan []*FileEvent, 1)
   registrar_chan := make(chan []*FileEvent, 1)
@@ -64,8 +59,11 @@ func main() {
     configureSyslog()
   }
 
+  resume := &ProspectorResume{}
+  resume.persist = make(chan *FileState)
+
   // Load the previous log file locations now, for use in prospector
-  resumeinfo.files = make(map[string]*FileState)
+  resume.files = make(map[string]*FileState)
   history, err := os.Open(".logstash-forwarder")
   if err == nil {
     wd, err := os.Getwd()
@@ -75,35 +73,37 @@ func main() {
     log.Printf("Loading registrar data from %s/.logstash-forwarder\n", wd)
 
     decoder := json.NewDecoder(history)
-    decoder.Decode(&resumeinfo.files)
+    decoder.Decode(&resume.files)
     history.Close()
   }
+
+  prospector_pending := 0
 
   // Prospect the globs/paths given on the command line and launch harvesters
   for _, fileconfig := range config.Files {
     prospector := &Prospector{FileConfig: fileconfig}
-    go prospector.Prospect(resumeinfo, event_chan)
-    prospector_waits++
+    go prospector.Prospect(resume, event_chan)
+    prospector_pending++
   }
 
-  // Now determine which states we need to re-save by pulling the events from the prospectors
+  // Now determine which states we need to persist by pulling the events from the prospectors
   // When we hit a nil source a prospector had finished so we decrease the expected events
-  log.Printf("Waiting for %d prospectors to process loaded registrar data\n", prospector_waits)
-  new_state := make(map[string]*FileState)
+  log.Printf("Waiting for %d prospectors to process loaded registrar data\n", prospector_pending)
+  persist := make(map[string]*FileState)
 
-  for event := range resumeinfo.resave {
+  for event := range resume.persist {
     if event.Source == nil {
-      prospector_waits--
-      if prospector_waits == 0 {
+      prospector_pending--
+      if prospector_pending == 0 {
         break
       }
       continue
     }
-    new_state[*event.Source] = event
+    persist[*event.Source] = event
     log.Printf("Registrar will re-save state for %s\n", *event.Source)
   }
 
-  log.Printf("All prospectors have been initialised with %d states to re-save to registrar data\n", len(new_state))
+  log.Printf("All prospectors have been initialised with %d states to re-save to registrar data\n", len(persist))
 
   // Harvesters dump events into the spooler.
   go Spool(event_chan, publisher_chan, *spool_size, *idle_timeout)
@@ -111,5 +111,5 @@ func main() {
   go Publishv1(publisher_chan, registrar_chan, &config.Network)
 
   // registrar records last acknowledged positions in all files.
-  Registrar(new_state, registrar_chan)
+  Registrar(persist, registrar_chan)
 } /* main */
