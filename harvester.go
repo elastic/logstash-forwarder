@@ -19,7 +19,7 @@ type Harvester struct {
   file *os.File /* the file being watched */
 }
 
-func (h *Harvester) Harvest(registrar_chan chan []*FileEvent, output chan *FileEvent) {
+func (h *Harvester) Harvest(output chan *FileEvent) {
   h.open()
   info, _ := h.file.Stat() // TODO(sissel): Check error
   defer h.file.Close()
@@ -46,18 +46,6 @@ func (h *Harvester) Harvest(registrar_chan chan []*FileEvent, output chan *FileE
 
   h.Offset = offset
 
-  // Shoot a dummy FileEvent to registrar so we get this offset stored ASAP in the state file, before any events are read
-  // Otherwise, if the file doesn't change, and we restart, we won't know about it when we start up again
-  // And if from-beginning is false... we'll start from the end during startup even if we started from the beginning just now
-  if h.Path != "-" {
-    event := &FileEvent{
-      Source:   &h.Path,
-      Offset:   h.Offset,
-      fileinfo: &info,
-    }
-    registrar_chan <- []*FileEvent{event}
-  }
-
   // TODO(sissel): Make the buffer size tunable at start-time
   reader := bufio.NewReaderSize(h.file, 16<<10) // 16kb buffer by default
 
@@ -75,15 +63,6 @@ func (h *Harvester) Harvest(registrar_chan chan []*FileEvent, output chan *FileE
           log.Printf("File truncated, seeking to beginning: %s\n", h.Path)
           h.file.Seek(0, os.SEEK_SET)
           h.Offset = 0
-          // Shoot another dummy event to registrar to ensure we update the statefile regarding the truncation
-          if h.Path != "-" {
-            event := &FileEvent{
-              Source:   &h.Path,
-              Offset:   h.Offset,
-              fileinfo: &info,
-            }
-            registrar_chan <- []*FileEvent{event}
-          }
         } else if age := time.Since(last_read_time); age > h.FileConfig.deadtime {
           // if last_read_time was more than dead time, this file is probably
           // dead. Stop watching it.

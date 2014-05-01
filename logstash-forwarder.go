@@ -82,7 +82,7 @@ func main() {
   // Prospect the globs/paths given on the command line and launch harvesters
   for _, fileconfig := range config.Files {
     prospector := &Prospector{FileConfig: fileconfig}
-    go prospector.Prospect(resumeinfo, registrar_chan, event_chan)
+    go prospector.Prospect(resumeinfo, event_chan)
     prospector_waits++
   }
 

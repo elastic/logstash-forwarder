@@ -25,7 +25,7 @@ type Prospector struct {
   lastscan       time.Time
 }
 
-func (p *Prospector) Prospect(resumelist *ProspectorResume, registrar_chan chan []*FileEvent, output chan *FileEvent) {
+func (p *Prospector) Prospect(resumelist *ProspectorResume, output chan *FileEvent) {
   p.prospectorinfo = make(map[string]ProspectorInfo)
 
   // Handle any "-" (stdin) paths
@@ -33,7 +33,7 @@ func (p *Prospector) Prospect(resumelist *ProspectorResume, registrar_chan chan 
     if path == "-" {
       // Offset and Initial never get used when path is "-"
       harvester := Harvester{Path: path, FileConfig: p.FileConfig}
-      go harvester.Harvest(registrar_chan, output)
+      go harvester.Harvest(output)
 
       // Remove it from the file list
       p.FileConfig.Paths = append(p.FileConfig.Paths[:i], p.FileConfig.Paths[i+1:]...)
@@ -45,7 +45,7 @@ func (p *Prospector) Prospect(resumelist *ProspectorResume, registrar_chan chan 
 
   // Now let's do one quick scan to pick up new files - flag true so new files obey from-beginning
   for _, path := range p.FileConfig.Paths {
-    p.scan(path, registrar_chan, output, resumelist)
+    p.scan(path, output, resumelist)
   }
 
   // This signals we finished considering the previous state
@@ -59,7 +59,7 @@ func (p *Prospector) Prospect(resumelist *ProspectorResume, registrar_chan chan 
 
     for _, path := range p.FileConfig.Paths {
       // Scan - flag false so new files always start at beginning
-      p.scan(path, registrar_chan, output, nil)
+      p.scan(path, output, nil)
     }
 
     p.lastscan = newlastscan
@@ -78,7 +78,7 @@ func (p *Prospector) Prospect(resumelist *ProspectorResume, registrar_chan chan 
   }
 } /* Prospect */
 
-func (p *Prospector) scan(path string, registrar_chan chan []*FileEvent, output chan *FileEvent, resumelist *ProspectorResume) {
+func (p *Prospector) scan(path string, output chan *FileEvent, resumelist *ProspectorResume) {
   //log.Printf("Prospecting %s\n", path)
 
   // Evaluate the path as a wildcards/shell glob
@@ -134,7 +134,7 @@ func (p *Prospector) scan(path string, registrar_chan chan []*FileEvent, output 
         if is_resuming {
           log.Printf("Resuming harvester on a previously harvested file: %s\n", file)
           harvester := &Harvester{Path: file, FileConfig: p.FileConfig, Offset: offset, FinishChan: newinfo.harvester}
-          go harvester.Harvest(registrar_chan, output)
+          go harvester.Harvest(output)
         } else {
           // Old file, skip it, but push offset of file size so we start from the end if this file changes and needs picking up
           log.Printf("Skipping file (older than dead time of %v): %s\n", p.FileConfig.deadtime, file)
@@ -169,7 +169,7 @@ func (p *Prospector) scan(path string, registrar_chan chan []*FileEvent, output 
         // Launch the harvester - if initial is true it means ignore offset and choose end if this is first scan, and choose beginning if subsequence scan
         // This ensures we always pick up new logs from start - and only skip to end if we've just started up
         harvester := &Harvester{Path: file, FileConfig: p.FileConfig, Offset: offset, FinishChan: newinfo.harvester, Initial: initial}
-        go harvester.Harvest(registrar_chan, output)
+        go harvester.Harvest(output)
       }
     } else {
       // Update the fileinfo information used for future comparisons, and the last_seen counter
@@ -191,7 +191,7 @@ func (p *Prospector) scan(path string, registrar_chan chan []*FileEvent, output 
 
           // Start a harvester on the path
           harvester := &Harvester{Path: file, FileConfig: p.FileConfig, FinishChan: newinfo.harvester, Initial: (resumelist != nil)}
-          go harvester.Harvest(registrar_chan, output)
+          go harvester.Harvest(output)
         }
 
         // Keep the old file in missingfiles so we don't rescan it if it was renamed and we've not yet reached the new filename
@@ -205,7 +205,7 @@ func (p *Prospector) scan(path string, registrar_chan chan []*FileEvent, output 
         // The offset to continue from will be stored in the harvester channel - so take that to use and also clear the channel
         // Don't pass initial, we are resuming based on last offset
         harvester := &Harvester{Path: file, FileConfig: p.FileConfig, Offset: <-newinfo.harvester, FinishChan: newinfo.harvester}
-        go harvester.Harvest(registrar_chan, output)
+        go harvester.Harvest(output)
       }
     }
 
