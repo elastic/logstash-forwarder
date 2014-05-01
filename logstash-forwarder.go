@@ -88,7 +88,7 @@ func main() {
 
   // Now determine which states we need to persist by pulling the events from the prospectors
   // When we hit a nil source a prospector had finished so we decrease the expected events
-  log.Printf("Waiting for %d prospectors to process loaded registrar data\n", prospector_pending)
+  log.Printf("Waiting for %d prospectors to initialise\n", prospector_pending)
   persist := make(map[string]*FileState)
 
   for event := range resume.persist {
@@ -103,7 +103,7 @@ func main() {
     log.Printf("Registrar will re-save state for %s\n", *event.Source)
   }
 
-  log.Printf("All prospectors have been initialised with %d states to re-save to registrar data\n", len(persist))
+  log.Printf("All prospectors initialised with %d states to persist\n", len(persist))
 
   // Harvesters dump events into the spooler.
   go Spool(event_chan, publisher_chan, *spool_size, *idle_timeout)

@@ -21,8 +21,6 @@ func Registrar(state map[string]*FileState, input chan []*FileEvent) {
       //log.Printf("State %s: %d\n", *event.Source, event.Offset)
     }
 
-    if len(state) > 0 {
-      WriteRegistry(state, ".logstash-forwarder")
-    }
+    WriteRegistry(state, ".logstash-forwarder")
   }
 }
