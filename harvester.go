@@ -141,7 +141,6 @@ func (h *Harvester) open() *os.File {
     } else {
       h.file.Seek(0, os.SEEK_END)
     }
-    h.Offset = 0
   } else {
     // This is a new file detected after startup, or one that was resumed from the state file; in both cases we must obey the given offset
     // For new files offset will be 0 so this ensures we always start from the beginning on files created while we're running
