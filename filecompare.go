@@ -23,7 +23,7 @@ func lookup_file_ids(file string, info os.FileInfo, fileinfo map[string]Prospect
   return ""
 }
 
-func lookup_file_ids_resumelist(file string, info os.FileInfo, initial map[string]*FileState) string {
+func lookup_file_ids_resume(file string, info os.FileInfo, initial map[string]*FileState) string {
   for kf, ki := range initial {
     if kf == file {
       continue

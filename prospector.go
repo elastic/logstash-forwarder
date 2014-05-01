@@ -8,8 +8,8 @@ import (
 )
 
 type ProspectorResume struct {
-  files  map[string]*FileState
-  resave chan *FileState
+  files   map[string]*FileState
+  persist chan *FileState
 }
 
 type ProspectorInfo struct {
@@ -25,7 +25,7 @@ type Prospector struct {
   lastscan       time.Time
 }
 
-func (p *Prospector) Prospect(resumelist *ProspectorResume, output chan *FileEvent) {
+func (p *Prospector) Prospect(resume *ProspectorResume, output chan *FileEvent) {
   p.prospectorinfo = make(map[string]ProspectorInfo)
 
   // Handle any "-" (stdin) paths
@@ -45,14 +45,14 @@ func (p *Prospector) Prospect(resumelist *ProspectorResume, output chan *FileEve
 
   // Now let's do one quick scan to pick up new files - flag true so new files obey from-beginning
   for _, path := range p.FileConfig.Paths {
-    p.scan(path, output, resumelist)
+    p.scan(path, output, resume)
   }
 
   // This signals we finished considering the previous state
   event := &FileState{
     Source: nil,
   }
-  resumelist.resave <- event
+  resume.persist <- event
 
   for {
     newlastscan := time.Now()
@@ -78,7 +78,7 @@ func (p *Prospector) Prospect(resumelist *ProspectorResume, output chan *FileEve
   }
 } /* Prospect */
 
-func (p *Prospector) scan(path string, output chan *FileEvent, resumelist *ProspectorResume) {
+func (p *Prospector) scan(path string, output chan *FileEvent, resume *ProspectorResume) {
   //log.Printf("Prospecting %s\n", path)
 
   // Evaluate the path as a wildcards/shell glob
@@ -89,7 +89,7 @@ func (p *Prospector) scan(path string, output chan *FileEvent, resumelist *Prosp
   }
 
   // To keep the old inode/dev reference if we see a file has renamed, in case it was also renamed prior
-  missingfiles := make(map[string]os.FileInfo)
+  missinginfo := make(map[string]os.FileInfo)
 
   // Check any matched files to see if we need to start a harvester
   for _, file := range matches {
@@ -123,9 +123,9 @@ func (p *Prospector) scan(path string, output chan *FileEvent, resumelist *Prosp
         var offset int64 = 0
         var is_resuming bool = false
 
-        if resumelist != nil {
+        if resume != nil {
           // Call the calculator - it will process resume state if there is one
-          offset, is_resuming = p.calculate_resume(file, fileinfo, resumelist)
+          offset, is_resuming = p.calculate_resume(file, fileinfo, resume)
         }
 
         // Are we resuming a dead file? We have to resume even if dead so we catch any old updates to the file
@@ -140,7 +140,7 @@ func (p *Prospector) scan(path string, output chan *FileEvent, resumelist *Prosp
           log.Printf("Skipping file (older than dead time of %v): %s\n", p.FileConfig.deadtime, file)
           newinfo.harvester <- fileinfo.Size()
         }
-      } else if previous := lookup_file_ids(file, fileinfo, p.prospectorinfo, missingfiles); previous != "" {
+      } else if previous := lookup_file_ids(file, fileinfo, p.prospectorinfo, missinginfo); previous != "" {
         // This file was simply renamed (known inode+dev) - link the same harvester channel as the old file
         log.Printf("File rename was detected: %s -> %s\n", previous, file)
 
@@ -150,9 +150,9 @@ func (p *Prospector) scan(path string, output chan *FileEvent, resumelist *Prosp
         var offset int64 = 0
         var is_resuming bool = false
 
-        if resumelist != nil {
+        if resume != nil {
           // Call the calculator - it will process resume state if there is one
-          offset, is_resuming = p.calculate_resume(file, fileinfo, resumelist)
+          offset, is_resuming = p.calculate_resume(file, fileinfo, resume)
           initial = true
         }
 
@@ -177,7 +177,7 @@ func (p *Prospector) scan(path string, output chan *FileEvent, resumelist *Prosp
       newinfo.last_seen = p.iteration
 
       if !os.SameFile(lastinfo.fileinfo, fileinfo) {
-        if previous := lookup_file_ids(file, fileinfo, p.prospectorinfo, missingfiles); previous != "" {
+        if previous := lookup_file_ids(file, fileinfo, p.prospectorinfo, missinginfo); previous != "" {
           // This file was renamed from another file we know - link the same harvester channel as the old file
           log.Printf("File rename was detected: %s -> %s\n", previous, file)
 
@@ -190,13 +190,13 @@ func (p *Prospector) scan(path string, output chan *FileEvent, resumelist *Prosp
           newinfo.harvester = make(chan int64, 1)
 
           // Start a harvester on the path
-          harvester := &Harvester{Path: file, FileConfig: p.FileConfig, FinishChan: newinfo.harvester, Initial: (resumelist != nil)}
+          harvester := &Harvester{Path: file, FileConfig: p.FileConfig, FinishChan: newinfo.harvester, Initial: (resume != nil)}
           go harvester.Harvest(output)
         }
 
-        // Keep the old file in missingfiles so we don't rescan it if it was renamed and we've not yet reached the new filename
+        // Keep the old file in missinginfo so we don't rescan it if it was renamed and we've not yet reached the new filename
         // We only need to keep it for the remainder of this iteration then we can assume it was deleted and forget about it
-        missingfiles[file] = lastinfo.fileinfo
+        missinginfo[file] = lastinfo.fileinfo
       } else if len(newinfo.harvester) != 0 && lastinfo.fileinfo.ModTime() != fileinfo.ModTime() {
         // Resume harvesting of an old file we've stopped harvesting from
         log.Printf("Resuming harvester on an old file that was just modified: %s\n", file)
@@ -215,25 +215,25 @@ func (p *Prospector) scan(path string, output chan *FileEvent, resumelist *Prosp
   } // for each file matched by the glob
 }
 
-func (p *Prospector) calculate_resume(file string, fileinfo os.FileInfo, resumelist *ProspectorResume) (int64, bool) {
-  last_state, is_found := resumelist.files[file]
+func (p *Prospector) calculate_resume(file string, fileinfo os.FileInfo, resume *ProspectorResume) (int64, bool) {
+  last_state, is_found := resume.files[file]
 
   if is_found && is_filestate_same(file, fileinfo, last_state) {
     // We're resuming - throw the last state back downstream so we resave it
     // And return the offset - also force harvest in case the file is old and we're about to skip it
-    resumelist.resave <- last_state
+    resume.persist <- last_state
     return last_state.Offset, true
   }
 
-  if previous := lookup_file_ids_resumelist(file, fileinfo, resumelist.files); previous != "" {
+  if previous := lookup_file_ids_resume(file, fileinfo, resume.files); previous != "" {
     // File has rotated between shutdown and startup
     // We return last state downstream, with a modified event source with the new file name
     // And return the offset - also force harvest in case the file is old and we're about to skip it
     log.Printf("Detected rename of a previously harvested file: %s -> %s\n", previous, file)
-    event := resumelist.files[previous]
-    event.Source = &file
-    resumelist.resave <- event
-    return event.Offset, true
+    last_state := resume.files[previous]
+    last_state.Source = &file
+    resume.persist <- last_state
+    return last_state.Offset, true
   }
 
   if is_found {
