@@ -19,6 +19,10 @@ import (
   "time"
 )
 
+// Support for newer SSL signature algorithms
+import _ "crypto/sha256"
+import _ "crypto/sha512"
+
 var hostname string
 var hostport_re, _ = regexp.Compile("^(.+):([0-9]+)$")
 
