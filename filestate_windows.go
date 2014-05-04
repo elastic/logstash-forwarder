@@ -3,6 +3,8 @@ package main
 import (
   "os"
   "syscall"
+  "reflect"
+  "log"
 )
 
 type FileState struct {
@@ -14,21 +16,46 @@ type FileState struct {
 }
 
 func file_ids(info *os.FileInfo, state *FileState) {
-  // TODO(golang): Make the following Windows fileStat struct members accessible somehow: vol, idxhi, idxlo
-  //               They are the struct members used for samefile - the equivilant to device and inode on Linux
-  //               At the moment they are truly unreachable due to Go's package separation
-  //               Rather than reinvent the wheel we just need to wait for an interface to them
-  //               Sys() returns the WIN32_FILE_ATTRIBUTE_DATA unfortunately which is not what we need
+  // For information on the following, see Go source: src/pkg/os/types_windows.go
+  // This is the only way we can get at the idxhi and idxlo
+  // Unix it is much easier as syscall.Stat_t is exposed and os.FileInfo interface has a Sys() method to get a syscall.Stat_t
+  // Unfortunately, the relevant Windows information is in a private struct so we have to dig inside
 
-  // Until the above TODO is completely, we will just have to accept that we cannot verify a file
-  // has not renamed or rotated during restarts - that is, the statefile will only contain the file path
+  // NOTE: This WILL be prone to break if Go source changes, but I'd rather just fix it if it does or make it fail gracefully
 
-  // Do nothing and return, the vol/idxhi/idxlo FileState entries will be set to 0
+  // info is *os.FileInfo which is a pointer to a
+  // - os.FileInfo interface of a
+  // - *os.fileStat (holding methods) which is a pointer to a
+  // - os.fileStat (holding data)
+
+  // Ensure that the numbers are loaded by calling os.SameFile
+  // os.SameFile will call sameFile (types_windows.go) which will call *os.fileStat's loadFileId
+  // Reflection panics if we try to call an unexpected method; but anyway this is much safer and more reliable
+  os.SameFile(*info, *info)
+
+  // If any of the following fails, report the library has changed and recover and return 0s
+  defer func() {
+    if r := recover(); r != nil {
+      log.Printf("WARNING: File rotations that occur while LogStash Forwarder is not running will NOT be detected due to an incompatible change to the Go library used for compiling. This is a bug, please report it.\n")
+      state.Vol = 0
+      state.IdxHi = 0
+      state.IdxLo = 0
+    }
+  }()
+
+  // Following makes fstat hold os.fileStat
+  fstat := reflect.ValueOf(info).Elem().Elem().Elem()
+
+  // To get the data, we need the os.fileStat that fstat points to, so one more Elem()
+  state.Vol = uint32(fstat.FieldByName("vol").Uint())
+  state.IdxHi = uint32(fstat.FieldByName("idxhi").Uint())
+  state.IdxLo = uint32(fstat.FieldByName("idxlo").Uint())
 }
 
 func is_filestate_same(path string, info os.FileInfo, state *FileState) bool {
-  // Just compare filename
-  return (*state.Source == path)
+  istate := &FileState{}
+  file_ids(&info, istate)
+  return (istate.Vol == state.Vol && istate.IdxHi == state.IdxHi && istate.IdxLo == state.IdxLo)
 }
 
 func open_file_no_lock(path string) (*os.File, error) {
