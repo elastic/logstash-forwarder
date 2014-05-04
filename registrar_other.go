@@ -20,5 +20,8 @@ func WriteRegistry(state map[string]*FileState, path string) {
   encoder := json.NewEncoder(file)
   encoder.Encode(state)
 
-  os.Rename(".logstash-forwarder.new", path)
+  err = os.Rename(".logstash-forwarder.new", path)
+  if err != nil {
+    log.Printf("Registrar save problem: Failed to move the new file into place: %s\n", err)
+  }
 }

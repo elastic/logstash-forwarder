@@ -19,6 +19,25 @@ func WriteRegistry(state map[string]*FileState, path string) {
   file.Close()
 
   old := path + ".old"
-  os.Rename(path, old)
-  os.Rename(tmp, path)
+
+  if _, err = os.Stat(old); err != nil && os.IsNotExist(err) {
+  } else {
+    err = os.Remove(old)
+    if err != nil {
+      log.Printf("Registrar save problem: Failed to delete backup file: %s\n", err)
+    }
+  }
+
+  if _, err = os.Stat(path); err != nil && os.IsNotExist(err) {
+  } else {
+    err = os.Rename(path, old)
+    if err != nil {
+      log.Printf("Registrar save problem: Failed to perform backup: %s\n", err)
+    }
+  }
+
+  err = os.Rename(tmp, path)
+  if err != nil {
+    log.Printf("Registrar save problem: Failed to move the new file into place: %s\n", err)
+  }
 }

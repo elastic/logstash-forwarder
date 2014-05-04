@@ -63,7 +63,13 @@ include them in your config.:
         # acknowledgement from the downstream server. If an timeout is reached,
         # logstash-forwarder will assume the connection or server is bad and
         # will connect to a server chosen at random from the servers list.
-        "timeout": 15
+        "timeout": 15,
+
+        # Reconnect time in seconds. If a connection fails due to an error
+        # or due to the timeout configured above, logstash forwarder will
+        # wait this many seconds before attempting to reconnect to another
+        # server from the servers list.
+        "reconnect": 1
       },
 
       # The list of files configurations

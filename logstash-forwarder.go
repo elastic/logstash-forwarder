@@ -1,6 +1,7 @@
 package main
 
 import (
+  "encoding/json"
   "flag"
   "log"
   "os"
@@ -58,10 +59,51 @@ func main() {
     configureSyslog()
   }
 
+  resume := &ProspectorResume{}
+  resume.persist = make(chan *FileState)
+
+  // Load the previous log file locations now, for use in prospector
+  resume.files = make(map[string]*FileState)
+  history, err := os.Open(".logstash-forwarder")
+  if err == nil {
+    wd, err := os.Getwd()
+    if err != nil {
+      wd = ""
+    }
+    log.Printf("Loading registrar data from %s/.logstash-forwarder\n", wd)
+
+    decoder := json.NewDecoder(history)
+    decoder.Decode(&resume.files)
+    history.Close()
+  }
+
+  prospector_pending := 0
+
   // Prospect the globs/paths given on the command line and launch harvesters
   for _, fileconfig := range config.Files {
-    go Prospect(fileconfig, event_chan)
+    prospector := &Prospector{FileConfig: fileconfig}
+    go prospector.Prospect(resume, event_chan)
+    prospector_pending++
   }
+
+  // Now determine which states we need to persist by pulling the events from the prospectors
+  // When we hit a nil source a prospector had finished so we decrease the expected events
+  log.Printf("Waiting for %d prospectors to initialise\n", prospector_pending)
+  persist := make(map[string]*FileState)
+
+  for event := range resume.persist {
+    if event.Source == nil {
+      prospector_pending--
+      if prospector_pending == 0 {
+        break
+      }
+      continue
+    }
+    persist[*event.Source] = event
+    log.Printf("Registrar will re-save state for %s\n", *event.Source)
+  }
+
+  log.Printf("All prospectors initialised with %d states to persist\n", len(persist))
 
   // Harvesters dump events into the spooler.
   go Spool(event_chan, publisher_chan, *spool_size, *idle_timeout)
@@ -69,5 +111,5 @@ func main() {
   go Publishv1(publisher_chan, registrar_chan, &config.Network)
 
   // registrar records last acknowledged positions in all files.
-  Registrar(registrar_chan)
+  Registrar(persist, registrar_chan)
 } /* main */
