@@ -43,7 +43,7 @@ func (p *Prospector) Prospect(resume *ProspectorResume, output chan *FileEvent) 
   // Seed last scan time
   p.lastscan = time.Now()
 
-  // Now let's do one quick scan to pick up new files - flag true so new files obey from-beginning
+  // Now let's do one quick scan to pick up new files
   for _, path := range p.FileConfig.Paths {
     p.scan(path, output, resume)
   }
