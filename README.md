@@ -44,6 +44,10 @@ include them in your config.:
     {
       # The network section covers network configuration :)
       "network": {
+        # Define a preferred server (optional)
+        # The server must be defined in the 'servers' list below as well
+        "preferred server": "localhost:5053",
+
         # A list of downstream servers listening for our messages.
         # logstash-forwarder will pick one at random and only switch if
         # the selected one appears to be dead or unresponsive
