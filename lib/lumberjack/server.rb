@@ -341,7 +341,6 @@ module Lumberjack
     def data(frame_version, sequence, map, event_queue)
       # If our current last_window_sequence is 0, this is a new connection
       # However, the client doesn't necessarily want to start from 0... so populate initial last_window_sequence with first-1
-      # If we do have a last_window_sequence though, verify this sequence number (must be sequential)
       if @last_window_ack.nil?
         @last_window_ack = sequence - 1
       end
