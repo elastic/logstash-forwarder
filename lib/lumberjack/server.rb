@@ -274,7 +274,6 @@ module Lumberjack
       @fd = fd
       @peer = peer
       @last_window_ack = nil
-      @next_sequence = 1
 
       # Safe defaults until we are told by the client
       @window_size = 1
@@ -345,13 +344,7 @@ module Lumberjack
       # If we do have a last_window_sequence though, verify this sequence number (must be sequential)
       if @last_window_ack.nil?
         @last_window_ack = sequence - 1
-        @next_sequence = sequence + 1
-      elsif sequence != @next_sequence
-        raise ProtocolError
       end
-
-      # Increment the sequence number we're expecting next
-      @next_sequence = sequence + 1
 
       while true
         begin
