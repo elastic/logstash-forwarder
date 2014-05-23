@@ -90,6 +90,11 @@ include them in your config.:
             "/var/log/apache/httpd-*.log"
           ],
           "fields": { "type": "apache" }
+        }, {
+          # You can specify a Regex that the line must match to be forwarded.
+          # Regex modified are not supported
+          "paths": [ "/var/log/messages" ],
+          "grep": "(Fatal|Warning)"
         }
       ]
     }
