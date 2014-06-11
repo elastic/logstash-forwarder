@@ -20,8 +20,9 @@ var E_USAGE = errors.New("invalid command usage")
 var E_INVALID = errors.New("invalid argument")
 var E_RELATIVE_PATH = errors.New("path is not absolute")
 var E_EXISTING_LSF = errors.New("lsf environment already exists")
+var E_NOTEXISTING_LSF = errors.New("lsf environment does not exists at location")
 var E_EXISTING = errors.New("lsf resource already exists")
-var E_NOTEXISTING = errors.New("lsf environment does not exists at location")
+var E_NOTEXISTING = errors.New("lsf resource does not exist")
 var E_ILLEGALSTATE = errors.New("illegal state")
 var E_ILLEGALSTATE_REGISTRAR_RUNNING = errors.New("Registrar already running")
 var E_EXISTING_STREAM = errors.New("stream already exists")
@@ -372,7 +373,7 @@ func (env *Environment) Initialize(dir string) error {
 
 	// check if exists
 	if !exists(root) {
-		return E_NOTEXISTING
+		return E_NOTEXISTING_LSF
 	}
 
 	env.bound = true

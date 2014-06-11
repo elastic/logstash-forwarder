@@ -45,7 +45,6 @@ func (l *lock) Unlock() error {
 	return nil
 }
 
-
 // attempts to create a lock file for the named resource.
 // returns:
 // lock, true, nil on success

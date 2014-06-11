@@ -98,11 +98,11 @@ func getSubCommand(subcmd string) *lsf.Command {
 	switch lsf.CommandCode("stream-" + subcmd) {
 	case addStreamCmdCode:
 		cmd = addStream
-	case cmd_stream_remove:
+	case removeStreamCmdCode:
 		cmd = removeStream
 	case updateStreamCmdCode:
 		cmd = updateStream
-	case cmd_stream_list:
+	case listStreamCmdCode:
 		cmd = listStream
 	default:
 		// not panic -- return error TODO

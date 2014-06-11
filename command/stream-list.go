@@ -10,7 +10,7 @@ import (
 	"path"
 )
 
-const cmd_stream_list lsf.CommandCode = "stream-list"
+const listStreamCmdCode lsf.CommandCode = "stream-list"
 
 type listStreamOptionsSpec struct {
 	global  BoolOptionSpec
@@ -23,10 +23,10 @@ var listStreamOptions *listStreamOptionsSpec
 func init() {
 
 	listStream = &lsf.Command{
-		Name:  cmd_stream_list,
+		Name:  listStreamCmdCode,
 		About: "List Streams defined ",
 		Run:   runListStream,
-		Flag:  FlagSet(cmd_stream_list),
+		Flag:  FlagSet(listStreamCmdCode),
 	}
 	listStreamOptions = &listStreamOptionsSpec{
 		global:  NewBoolFlag(listStream.Flag, "G", "global", false, "global scope flag for command", false),
