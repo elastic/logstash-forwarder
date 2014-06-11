@@ -81,6 +81,12 @@ func (r *registry) createDocument(key DocId, data map[string][]byte) (*document,
 	return newDocument(key, docpath, docname, data)
 }
 
+func (r *registry) deleteDocument(key DocId) (bool, error) {
+	docpath, docname := docpathForKey(r.path, key)
+	//	log.Printf("registry.getDocument: \n\t%s \n\t%s \n\t%s", key, docname, docpath)
+	return deleteDocument(key, path.Join(docpath, docname))
+}
+
 //func confFile(capability string) string {
 //	return strings.ToUpper(capability + "-conf")
 //}
@@ -355,6 +361,10 @@ func loadDocument(dockey DocId, filename string) (*document, error) {
 	return doc, nil
 }
 
+func deleteDocument(dockey DocId, filename string) (bool, error) {
+	return false, fmt.Errorf("system.deleteDocument: not implemented!")
+}
+
 // ----------------------------------------------------------------------------
 // Record
 // ----------------------------------------------------------------------------
@@ -375,6 +385,8 @@ type Registrar interface {
 	// Write Lock acquired for duration (attempted)
 	// New document file is atomically swapped.
 	UpdateDocument(Document) (bool, error)
+	//
+	DeleteDocument(DocId) (bool, error)
 	// stop.
 	// release all resources.
 	Stop() chan<- struct{}
@@ -414,6 +426,22 @@ func (r *registrar) String() string {
 }
 func (r *registrar) Done() <-chan stat     { return r.done }
 func (r *registrar) Stop() chan<- struct{} { return r.cancel }
+
+func (r *registrar) DeleteDocument(key DocId) (bool, error) {
+	resch := makeResChan()
+	fn := func() interface{} {
+		//		log.Printf("func: get document %s", string(key))
+		ok, e := r.reg.deleteDocument(key)
+		if e != nil {
+			return e
+		}
+		return ok
+	}
+	r.ui <- req{resch, fn}
+	result := <-resch
+	return mapBoolResult(result)
+}
+
 
 func (r *registrar) UpdateDocument(doc Document) (bool, error) {
 	resch := makeResChan()

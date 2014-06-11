@@ -149,6 +149,17 @@ func (env *Environment) resolveRecord(documents []system.DocId, key string) []by
 	return value
 }
 
+func (env *Environment) DeleteDocument(docid system.DocId) (bool, error) {
+	ok, e := env.registrar.DeleteDocument(docid)
+	if e == nil && ok {
+		env.docslock.Lock()
+		delete(env.docs, docid)
+		// REVU: all other sibling docs must go as well
+		env.docslock.Unlock()
+	}
+	return ok, e
+}
+
 func (env *Environment) UpdateDocument(doc system.Document) (bool, error) {
 	ok, e := env.registrar.UpdateDocument(doc)
 	if e == nil && ok {

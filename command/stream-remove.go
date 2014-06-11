@@ -2,7 +2,7 @@ package command
 
 import (
 	"fmt"
-	"log"
+//	"log"
 	"lsf"
 	"lsf/schema"
 	"lsf/system"
@@ -62,5 +62,18 @@ func runRemoveStream(env *lsf.Environment, args ...string) error {
 	}
 	defer lock.Unlock()
 
-	panic("command.runRemoveStream() not impelemented - TODO system.Registrar.DeleteDocument(id)")
+	// remove doc
+	ok, e = env.DeleteDocument(docid)
+	if e != nil {
+		return fmt.Errorf("error runRemoveStream: %s", e)
+	}
+	if !ok {
+		return fmt.Errorf("error runRemoveStream: DeleteDocument returned false")
+	}
+
+	// remove the stream's directory
+	// REVU: this command needs a check to see if any procs
+	// related to this stream are running . OK for initial.
+
+	panic("command.runRemoveStream() not impelemented - TODO remove sibling docs")
 }
