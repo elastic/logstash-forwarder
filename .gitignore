@@ -22,3 +22,5 @@ nacl.secret
 .rbx
 lumberjack
 logstash-forwarder
+*.idea
+*.iml
