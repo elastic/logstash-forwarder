@@ -2,10 +2,11 @@ package command
 
 import (
 	"fmt"
-//	"log"
+	//	"log"
 	"lsf"
 	"lsf/schema"
 	"lsf/system"
+	"os"
 )
 
 const removeStreamCmdCode lsf.CommandCode = "stream-remove"
@@ -28,7 +29,7 @@ func init() {
 		Flag:  FlagSet(removeStreamCmdCode),
 	}
 	removeStreamOptions = &removeStreamOptionsSpec{
-		global: NewBoolFlag(removeStream.Flag, "g", "gg", false, "ggg", false),
+		global: NewBoolFlag(removeStream.Flag, "G", "global", false, "global scope operation", false),
 		id:     NewStringFlag(removeStream.Flag, "s", "stream-id", "", "unique identifier for stream", true),
 	}
 }
@@ -39,6 +40,10 @@ func verifyRemoveStreamRequiredOpts(env *lsf.Environment, args ...string) error 
 	return nil
 }
 
+// REVU: TODO definitively require a stream 'x' lock for use by
+// processes that expect the stream (info) to remain in place.
+// For now, assuming this is the same "stream.<name>.stream.lock"
+// lock file.
 func runRemoveStream(env *lsf.Environment, args ...string) error {
 
 	id := schema.StreamId(*removeStreamOptions.id.value)
@@ -74,6 +79,13 @@ func runRemoveStream(env *lsf.Environment, args ...string) error {
 	// remove the stream's directory
 	// REVU: this command needs a check to see if any procs
 	// related to this stream are running . OK for initial.
+	dir, fname := system.DocpathForKey(env.Port(), docid)
+	fmt.Printf("DEBUG: runRemoveStream: %s %s\n", dir, fname)
 
-	panic("command.runRemoveStream() not impelemented - TODO remove sibling docs")
+	e = os.RemoveAll(dir)
+	if e != nil {
+		return fmt.Errorf("error: runRemoveStream: os.RemoveAll %s - %s", dir, e)
+	}
+
+	return nil
 }

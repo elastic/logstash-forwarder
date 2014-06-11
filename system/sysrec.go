@@ -64,25 +64,25 @@ func openRegistry(dir string) (*registry, error) {
 }
 
 func (r *registry) updateDocument(doc *document) (bool, error) {
-	docpath, docname := docpathForKey(r.path, doc.key)
+	docpath, docname := DocpathForKey(r.path, doc.key)
 	//	log.Printf("registry.updateDocument: \n\t%s \n\t%s \n\t%s", doc.key, docname, docpath)
 	return updateDocument(doc, path.Join(docpath, docname))
 }
 
 func (r *registry) readDocument(key DocId) (*document, error) {
-	docpath, docname := docpathForKey(r.path, key)
+	docpath, docname := DocpathForKey(r.path, key)
 	//	log.Printf("registry.getDocument: \n\t%s \n\t%s \n\t%s", key, docname, docpath)
 	return loadDocument(key, path.Join(docpath, docname))
 }
 
 func (r *registry) createDocument(key DocId, data map[string][]byte) (*document, error) {
-	docpath, docname := docpathForKey(r.path, key)
+	docpath, docname := DocpathForKey(r.path, key)
 	//	log.Printf("registry.getDocument: \n\t%s \n\t%s \n\t%s", key, docname, docpath)
 	return newDocument(key, docpath, docname, data)
 }
 
 func (r *registry) deleteDocument(key DocId) (bool, error) {
-	docpath, docname := docpathForKey(r.path, key)
+	docpath, docname := DocpathForKey(r.path, key)
 	//	log.Printf("registry.getDocument: \n\t%s \n\t%s \n\t%s", key, docname, docpath)
 	return deleteDocument(key, path.Join(docpath, docname))
 }
@@ -91,7 +91,7 @@ func (r *registry) deleteDocument(key DocId) (bool, error) {
 //	return strings.ToUpper(capability + "-conf")
 //}
 
-func docpathForKey(lsfpath string, key DocId) (filepath, filename string) {
+func DocpathForKey(lsfpath string, key DocId) (filepath, filename string) {
 	docid := string(key)
 	keyparts := strings.Split(docid, ".")
 	kplen := len(keyparts)
@@ -362,7 +362,31 @@ func loadDocument(dockey DocId, filename string) (*document, error) {
 }
 
 func deleteDocument(dockey DocId, filename string) (bool, error) {
-	return false, fmt.Errorf("system.deleteDocument: not implemented!")
+
+	// verify document file
+	info, e := os.Stat(filename)
+	if e != nil {
+		return false, fmt.Errorf("deleteDocument: os.Stat: %s: %s", filename, e.Error())
+	}
+	if info.IsDir() {
+		return false, errors.New(filename + " is not a file")
+	}
+
+	// acquire lock for file
+	lock, ok, e := LockResource(filename, "delete document "+string(dockey))
+	if e != nil {
+		return false, fmt.Errorf("deleteDocument: error acquiring lock for %q - %s", dockey, e.Error())
+	}
+	if !ok {
+		return false, fmt.Errorf("deleteDocument: lock acquire for resource %q failed", filename)
+	}
+	defer lock.Unlock()
+
+	if e = os.Remove(filename); e != nil {
+		return false, fmt.Errorf("deleteDocument: os.Remove: %s: %s", filename, e.Error())
+	}
+
+	return true, nil
 }
 
 // ----------------------------------------------------------------------------
@@ -441,7 +465,6 @@ func (r *registrar) DeleteDocument(key DocId) (bool, error) {
 	result := <-resch
 	return mapBoolResult(result)
 }
-
 
 func (r *registrar) UpdateDocument(doc Document) (bool, error) {
 	resch := makeResChan()

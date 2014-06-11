@@ -154,7 +154,6 @@ func (env *Environment) DeleteDocument(docid system.DocId) (bool, error) {
 	if e == nil && ok {
 		env.docslock.Lock()
 		delete(env.docs, docid)
-		// REVU: all other sibling docs must go as well
 		env.docslock.Unlock()
 	}
 	return ok, e
