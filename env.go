@@ -19,9 +19,11 @@ const RootDir = ".lsf"
 var E_USAGE = errors.New("invalid command usage")
 var E_INVALID = errors.New("invalid argument")
 var E_RELATIVE_PATH = errors.New("path is not absolute")
-var E_EXISTING = errors.New("lsf environment already exists")
+var E_EXISTING_LSF = errors.New("lsf environment already exists")
+var E_EXISTING = errors.New("lsf resource already exists")
 var E_NOTEXISTING = errors.New("lsf environment does not exists at location")
 var E_ILLEGALSTATE = errors.New("illegal state")
+var E_ILLEGALSTATE_REGISTRAR_RUNNING = errors.New("Registrar already running")
 var E_EXISTING_STREAM = errors.New("stream already exists")
 var E_CONCURRENT = errors.New("concurrent operation error")
 
@@ -269,7 +271,7 @@ func CreateEnvironment(dir string, force bool) (string, error) {
 	isUserHome := userHome == dir
 	if !isUserHome {
 		// create user level .lsf environment if not existing
-		if _, e := CreateEnvironment(userHome, false); e != nil && e != E_EXISTING {
+		if _, e := CreateEnvironment(userHome, false); e != nil && e != E_EXISTING_LSF {
 			return "", e
 		}
 	}
@@ -277,7 +279,7 @@ func CreateEnvironment(dir string, force bool) (string, error) {
 	root := rootAt(dir)
 	exists := exists(root)
 	if exists && !force {
-		return "", E_EXISTING
+		return "", E_EXISTING_LSF
 	}
 
 	uid := HexShaDigest(dir) // unique id for this absolute path
@@ -392,7 +394,7 @@ func (env *Environment) Initialize(dir string) error {
 
 func (env *Environment) startRegistrar() error {
 	if env.registrar != nil {
-		return errors.New("env.startRegistrar() registrar already started")
+		return E_ILLEGALSTATE_REGISTRAR_RUNNING
 	}
 
 	port, found := env.Get(VarHomePort)
