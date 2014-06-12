@@ -12,39 +12,40 @@ You can simply `cd` here and try:
 
 ### sequence to try (assuming your PATH is pointing at the right path)
 
-   # initialize an LS/F port in a given location
 
-   cd <somewhere>
-   lsf init
+    # initialize an LS/F port in a given location
 
-   # list defined streams
-   # we have nothing yet so NOP
+    cd <somewhere>
+    lsf init
 
-   lsf stream [-v]
+    # list defined streams
+    # we have nothing yet so NOP
 
-   # let's define a stream
-   # try 'lsf stream add -h' for stream-add command's usage options
+    lsf stream [-v]
 
-   lsf stream add -s apache-123 -n "*.log*" -p /var/logs -m rotation
+    # let's define a stream
+    # try 'lsf stream add -h' for stream-add command's usage options
 
-   # now try listing them again
+    lsf stream add -s apache-123 -n "*.log*" -p /var/logs -m rotation
 
-   lsf stream
-   lsf stream -v
+    # now try listing them again
 
-   # now let's update the stream definition
-   # let's change the path to the log files
+    lsf stream
+    lsf stream -v
 
-   lsf stream update -s apache-123 -p /var/log/apache-logs -m rotation
+    # now let's update the stream definition
+    # let's change the path to the log files
 
-   # and confirm
-   # should reflect the updated stream spec
-   lsf stream -v
+    lsf stream update -s apache-123 -p /var/log/apache-logs -m rotation
 
-   # what's out there?
-   # open and take a look
+    # and confirm
+    # should reflect the updated stream spec
+    lsf stream -v
 
-   open .lsf/
+    # what's out there?
+    # open and take a look
+
+    open .lsf/
 
 
 ### what works as of 06/11/2014
