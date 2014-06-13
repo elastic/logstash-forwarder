@@ -103,6 +103,7 @@ type DataMap interface {
 	Mappings() map[string][]byte
 }
 type DocId string
+func (t DocId) String() string { return string(t) }
 
 type Document interface {
 	Id() DocId

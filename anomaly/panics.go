@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"time"
 )
+type StringCodec interface {
+	String() string
+}
 
 type Error struct {
 	Cause error
@@ -48,6 +51,8 @@ func fmtInfo(info ...interface{}) string {
 			switch t := s.(type){
 			case string:
 				str = t
+			case StringCodec:
+				str = t.String()
 			case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 				str = fmt.Sprintf("%d", t)
 			case time.Time:
