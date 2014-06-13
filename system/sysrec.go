@@ -191,8 +191,8 @@ func newDocument(dockey DocId, fpath, fname string, data map[string][]byte) (*do
 
 	// acquire lock for file
 	lock, ok, e := LockResource(filename, "create document "+string(dockey))
-	anomaly.PanicOnError(e, "newDocument:", "lockResource:", string(dockey), filename)
-	anomaly.PanicOnFalse(ok, "newDocument:", "lockResource:", string(dockey), filename)
+	anomaly.PanicOnError(e, "newDocument:", "lockResource:", dockey, filename)
+	anomaly.PanicOnFalse(ok, "newDocument:", "lockResource:", dockey, filename)
 	defer lock.Unlock()
 
 	_, e = os.Stat(filename)
@@ -264,8 +264,8 @@ func updateDocument(doc *document, filename string) (bool, error) {
 
 	// acquire lock for doc file
 	lock, ok, e := LockResource(filename, "create document "+string(doc.key))
-	anomaly.PanicOnError(e, "updateDocument:", "lockResource:", string(doc.key), filename)
-	anomaly.PanicOnFalse(ok, "updateDocument:", "lockResource:", string(doc.key), filename)
+	anomaly.PanicOnError(e, "updateDocument:", "lockResource:", doc.key, filename)
+	anomaly.PanicOnFalse(ok, "updateDocument:", "lockResource:", doc.key, filename)
 	defer lock.Unlock()
 
 	e = os.Remove(filename)
@@ -334,8 +334,8 @@ func deleteDocument(dockey DocId, filename string) (ok bool, err error) {
 
 	// acquire lock for file
 	lock, ok, e := LockResource(filename, "delete document "+string(dockey))
-	anomaly.PanicOnError(e, "deleteDocument:", "lockResource:", string(dockey), filename)
-	anomaly.PanicOnFalse(ok, "deleteDocument:", "lockResource:", string(dockey), filename)
+	anomaly.PanicOnError(e, "deleteDocument:", "lockResource:", dockey, filename)
+	anomaly.PanicOnFalse(ok, "deleteDocument:", "lockResource:", dockey, filename)
 	defer lock.Unlock()
 
 	e = os.Remove(filename)

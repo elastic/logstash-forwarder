@@ -2,6 +2,7 @@ package anomaly
 
 import (
 	"fmt"
+	"time"
 )
 
 type Error struct {
@@ -27,8 +28,7 @@ func Cause(e error) error {
 	return ex.Cause
 }
 
-// REVU: info...interface{} is more useful. TODO
-func PanicOnFalse(flag bool, info ...string) {
+func PanicOnFalse(flag bool, info ...interface{}) {
 	if flag {
 		return
 	}
@@ -36,33 +36,42 @@ func PanicOnFalse(flag bool, info ...string) {
 	panic(&Error{Cause: err, err: err})
 }
 
-// REVU: info...interface{} is more useful. TODO
-func PanicOnTrue(flag bool, info ...string) {
+func PanicOnTrue(flag bool, info ...interface{}) {
 	PanicOnFalse(!flag, info...)
 }
 
-// REVU: info...interface{} is more useful. TODO
-func fmtInfo(info ...string) string {
+func fmtInfo(info ...interface{}) string {
 	var msg = ""
 	if len(info) > 0 {
-		var m []byte
 		for _, s := range info {
-			m = append(m, s...)
-			m = append(m, ' ')
+			str := ""
+			switch t := s.(type){
+			case string:
+				str = t
+			case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+				str = fmt.Sprintf("%d", t)
+			case time.Time:
+				str = fmt.Sprintf("'%d epoch-ns'", t.UnixNano())
+			case bool:
+				str = fmt.Sprintf("%t", t)
+			default:
+				str = fmt.Sprintf("%q", t)
+			}
+			msg += str
 		}
-		msg = string(m[:len(m)-1]) + ": "
+		msg += ": "
 	}
 	return msg
 }
 
-// REVU: info...interface{} is more useful. TODO
-func PanicOnError(e error, info ...string) {
+func PanicOnError(e error, info ...interface{}) {
 	if e == nil {
 		return
 	}
 	err := fmt.Errorf("%s%s", fmtInfo(info...), e)
 	panic(&Error{Cause: e, err: err})
 }
+
 func Recover(err *error) error {
 	p := recover()
 	if p == nil {
