@@ -5,6 +5,7 @@ import (
 	"lsf"
 	"lsf/schema"
 	"lsf/system"
+	"lsf/anomaly"
 )
 
 const updateStreamCmdCode lsf.CommandCode = "stream-update"
@@ -27,30 +28,27 @@ func init() {
 	updateStreamOptions = initEditStreamOptionsSpec(updateStream.Flag)
 }
 
-func runUpdateStream(env *lsf.Environment, args ...string) error {
+func runUpdateStream(env *lsf.Environment, args ...string) (err error) {
+	defer anomaly.Recover(&err)
 
-	if e := verifyRequiredOption(updateStreamOptions.id); e != nil {
-		return e
-	}
+	e := verifyRequiredOption(updateStreamOptions.id)
+	anomaly.PanicOnError(e, "runUpdateStream:", "verifyRequiredOption")
+
 	id := schema.StreamId(*updateStreamOptions.id.value)
 
 	// do not premit concurrent updates to this stream
-	lockid := env.ResourceId(fmt.Sprintf("stream.%s.update", id))
-	oplock, ok, e := system.LockResource(lockid, "add stream "+string(id))
-	if e != nil {
-		return e
-	}
-	if !ok {
-		return fmt.Errorf("error - could not lock resource %q for stream update op", string(id))
-	}
+	resource := fmt.Sprintf("stream.%s.update", id)
+	lockid := env.ResourceId(resource)
+	oplock, ok, e := system.LockResource(lockid, "add stream - resource " + resource)
+	anomaly.PanicOnError(e, "command.runUpdateStream:", "lockResource:", resource)
+	anomaly.PanicOnFalse(ok, "command.runUpdateStream:", "lockResource:", resource)
 	defer oplock.Unlock()
 
 	// verify it exists
 	docid := system.DocId(fmt.Sprintf("stream.%s.stream", id))
 	doc, e := env.LoadDocument(docid)
-	if e != nil || doc == nil {
-		panic("BUG - error or document for stream missing: " + docid)
-	}
+	anomaly.PanicOnError(e, "BUG command.runUpdateStream:", "LoadDocument:", string(docid))
+	anomaly.PanicOnTrue(doc==nil, "BUG command.runUpdateStream:", "LoadDocument:", string(docid))
 
 	// update stream config document
 	var option interface{}
@@ -70,12 +68,8 @@ func runUpdateStream(env *lsf.Environment, args ...string) error {
 		doc.Set("journal-mode", v)
 	}
 	ok, e = env.UpdateDocument(doc)
-	if e != nil {
-		return fmt.Errorf("error runUpdateStream: %s", e)
-	}
-	if !ok {
-		return fmt.Errorf("error runUpdateStream: UpdateDocument returned false")
-	}
+	anomaly.PanicOnError(e, "command.runUpdateStream:", "UpdateDocument:", resource)
+	anomaly.PanicOnFalse(ok, "command.runUpdateStream:", "UpdateDocument:", resource)
 
 	return nil
 }
