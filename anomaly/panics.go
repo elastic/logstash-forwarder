@@ -26,6 +26,8 @@ func Cause(e error) error {
 	}
 	return ex.Cause
 }
+
+// REVU: info...interface{} is more useful. TODO
 func PanicOnFalse(flag bool, info ...string) {
 	if flag {
 		return
@@ -33,10 +35,13 @@ func PanicOnFalse(flag bool, info ...string) {
 	err := fmt.Errorf("error %s%s", fmtInfo(info...), "false")
 	panic(&Error{Cause: err, err: err})
 }
+
+// REVU: info...interface{} is more useful. TODO
 func PanicOnTrue(flag bool, info ...string) {
 	PanicOnFalse(!flag, info...)
 }
 
+// REVU: info...interface{} is more useful. TODO
 func fmtInfo(info ...string) string {
 	var msg = ""
 	if len(info) > 0 {
@@ -50,6 +55,7 @@ func fmtInfo(info ...string) string {
 	return msg
 }
 
+// REVU: info...interface{} is more useful. TODO
 func PanicOnError(e error, info ...string) {
 	if e == nil {
 		return
