@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 )
+
 type StringCodec interface {
 	String() string
 }
@@ -35,7 +36,7 @@ func PanicOnFalse(flag bool, info ...interface{}) {
 	if flag {
 		return
 	}
-	err := fmt.Errorf("error %s%s", fmtInfo(info...), "false")
+	err := fmt.Errorf("%s", fmtInfo(info...))
 	panic(&Error{Cause: err, err: err})
 }
 
@@ -48,7 +49,7 @@ func fmtInfo(info ...interface{}) string {
 	if len(info) > 0 {
 		for _, s := range info {
 			str := ""
-			switch t := s.(type){
+			switch t := s.(type) {
 			case string:
 				str = t
 			case StringCodec:
