@@ -176,7 +176,9 @@ func (d *document) Delete(k string) bool {
 // write data
 // close file
 // release lock
-func newDocument(dockey DocId, fpath, fname string, data map[string][]byte) (*document, error) {
+func newDocument(dockey DocId, fpath, fname string, data map[string][]byte) (doc *document, err error) {
+	defer Recover(&err)
+
 	//	log.Printf("newDocument: %q %q %q", dockey, fpath, fname)
 	dstat, e := os.Stat(fpath)
 	if e != nil {
@@ -208,7 +210,7 @@ func newDocument(dockey DocId, fpath, fname string, data map[string][]byte) (*do
 	defer file.Close()
 
 	records := make(map[string][]byte, len(data))
-	doc := &document{dockey, &info, time.Now(), records, lock, false}
+	doc = &document{dockey, &info, time.Now(), records, lock, false}
 	for k, v := range data {
 		records[k] = v
 	}
@@ -250,10 +252,8 @@ func (d *document) Write(w io.Writer) error {
 // Saves document: if dirty, dirty flag cleared; otherwise returns false, nil.
 // Write Lock acquired for duration (attempted)
 // New document file is atomically swapped.
-func updateDocument(doc *document, filename string) (bool, error) {
-	//	if !doc.dirty {
-	//		return false, nil
-	//	}
+func updateDocument(doc *document, filename string) (ok bool, err error) {
+	defer Recover(&err)
 
 	// create temp file
 	swapfile := filename + ".new"

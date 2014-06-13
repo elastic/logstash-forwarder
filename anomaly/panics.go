@@ -63,9 +63,10 @@ func fmtInfo(info ...interface{}) string {
 			default:
 				str = fmt.Sprintf("%q", t)
 			}
+			str = " " + str
 			msg += str
 		}
-		msg += ": "
+//		msg += ":"
 	}
 	return msg
 }
