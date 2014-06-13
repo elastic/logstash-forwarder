@@ -71,7 +71,7 @@ func LockResource(resource string, info string) (l Lock, ok bool, err error) {
 	data := []byte(fmt.Sprintf("%d %d %d %q\n", now.UnixNano(), now.UnixNano(), os.Getpid(), info))
 
 	n, e := file.Write(data)
-	file.Sync()
+//	file.Sync()
 	if e != nil {
 		return nil, false, e
 	}
