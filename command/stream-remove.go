@@ -2,10 +2,10 @@ package command
 
 import (
 	"fmt"
-	//	"log"
 	"lsf"
 	"lsf/schema"
 	"lsf/system"
+	"lsf/anomaly"
 	"os"
 )
 
@@ -44,11 +44,12 @@ func verifyRemoveStreamRequiredOpts(env *lsf.Environment, args ...string) error 
 // processes that expect the stream (info) to remain in place.
 // For now, assuming this is the same "stream.<name>.stream.lock"
 // lock file.
-func runRemoveStream(env *lsf.Environment, args ...string) error {
+func runRemoveStream(env *lsf.Environment, args ...string) (err error) {
+	anomaly.Recover(&err)
 
 	id := schema.StreamId(*removeStreamOptions.id.value)
 
-	// check if exists
+	// check existing
 	docid := system.DocId(fmt.Sprintf("stream.%s.stream", id))
 	doc, e := env.LoadDocument(docid)
 	if e != nil || doc == nil {
@@ -57,24 +58,16 @@ func runRemoveStream(env *lsf.Environment, args ...string) error {
 
 	// lock lsf port's "streams" resource
 	lockid := env.ResourceId("streams")
-	//	log.Printf("DEBUG: runAddStream: lockid: %q", lockid)
 	lock, ok, e := system.LockResource(lockid, "add stream "+string(id))
-	if e != nil {
-		return e
-	}
-	if !ok {
-		return fmt.Errorf("error - could not lock resource %q for stream add op", string(id))
-	}
+	anomaly.PanicOnError(e, "command.runRemoveStream:", "lockResource:")
+	anomaly.PanicOnFalse(ok, "command.runRemoveStream:", "lockResource:", string(id))
 	defer lock.Unlock()
 
 	// remove doc
 	ok, e = env.DeleteDocument(docid)
-	if e != nil {
-		return fmt.Errorf("error runRemoveStream: %s", e)
-	}
-	if !ok {
-		return fmt.Errorf("error runRemoveStream: DeleteDocument returned false")
-	}
+	anomaly.PanicOnError(e, "command.runRemoveStream:", "DeleteDocument:", string(id))
+	anomaly.PanicOnFalse(ok, "command.runRemoveStream:", "DeleteDocument:", string(id))
+
 
 	// remove the stream's directory
 	// REVU: this command needs a check to see if any procs
@@ -83,9 +76,7 @@ func runRemoveStream(env *lsf.Environment, args ...string) error {
 	fmt.Printf("DEBUG: runRemoveStream: %s %s\n", dir, fname)
 
 	e = os.RemoveAll(dir)
-	if e != nil {
-		return fmt.Errorf("error: runRemoveStream: os.RemoveAll %s - %s", dir, e)
-	}
+	anomaly.PanicOnError(e, "command.runRemoveStream:", "os.RemoveAll:", dir)
 
 	return nil
 }
