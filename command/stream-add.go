@@ -18,7 +18,7 @@ func init() {
 	addStream = &lsf.Command{
 		Name:  addStreamCmdCode,
 		About: "Add a new log stream",
-		Init:  verifyEditStreamRequiredOpts,
+		Init:  _verifyEditStreamRequiredOpts,
 		Run:   runAddStream,
 		Flag:  FlagSet(addStreamCmdCode),
 	}
@@ -36,21 +36,15 @@ func runAddStream(env *lsf.Environment, args ...string) (err error) {
 
 	// check existing
 	docid := system.DocId(fmt.Sprintf("stream.%s.stream", id))
-	doc, e := env.LoadDocument(docid)
-	if e == nil && doc != nil {
-		return lsf.E_EXISTING
-	}
+	_assertNotExists(env, docid)
 
 	// lock lsf port's "streams" resource to prevent race condition
-	lockid := env.ResourceId("streams")
-	lock, ok, e := system.LockResource(lockid, "add stream "+string(id))
-	anomaly.PanicOnError(e, "command.runAddStream:", "lockResource:")
-	anomaly.PanicOnFalse(ok, "command.runAddStream:", "lockResource:", string(id))
+	lock := _lockResource(env, "streams", "add stream")
 	defer lock.Unlock()
 
 	// create the stream-conf file.
 	logstream := schema.NewLogStream(id, path, mode, pattern, fields)
-	e = env.CreateDocument(docid, logstream)
+	e := env.CreateDocument(docid, logstream)
 	anomaly.PanicOnError(e, "command.runAddStream:", "CreateDocument:", string(id))
 
 	return nil

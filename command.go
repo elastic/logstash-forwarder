@@ -56,19 +56,22 @@ func Run(env *Environment, cmd *Command, args ...string) (err error) {
 	// run cmd initializer func (if any)
 	if cmd.Init != nil {
 		e0 := cmd.Init(env, commandArgs...)
-		anomaly.PanicOnError(e0, "command.Run:", cmd.Name.String(), "Init()")
+		anomaly.PanicOnError(e0)
+//		anomaly.PanicOnError(e0, "command.Run:", cmd.Name.String(), "Init()")
 	}
 
 	// treat nil cmd.Run as bug
 	anomaly.PanicOnTrue(cmd.Run == nil, "command.Run:", "BUG - cmd.Run is nil")
 
 	e1 := cmd.Run(env, commandArgs...)
-	anomaly.PanicOnError(e1, "command.Run:", cmd.Name.String(), "Run()")
+	anomaly.PanicOnError(e1)
+//	anomaly.PanicOnError(e1, "command.Run:", cmd.Name.String(), "Run()")
 
 	// run cmd finalizer func (if any)
 	if cmd.End != nil {
 		e2 := cmd.End(env, commandArgs...)
-		anomaly.PanicOnError(e2, "command.Run:", cmd.Name.String(), "End()")
+		anomaly.PanicOnError(e2)
+//		anomaly.PanicOnError(e2, "command.Run:", cmd.Name.String(), "End()")
 	}
 
 	return nil

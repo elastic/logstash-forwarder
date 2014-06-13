@@ -5,6 +5,7 @@ import (
 	"lsf"
 	"lsf/schema"
 	"lsf/system"
+	"lsf/anomaly"
 )
 
 const addRemoteCmdCode lsf.CommandCode = "remote-add"
@@ -24,7 +25,7 @@ func init() {
 	addRemote = &lsf.Command{
 		Name:  addRemoteCmdCode,
 		About: "Add a new log remote",
-		Init:  verifyAddRemoteRequiredOpts,
+		Init:  _verifyAddRemoteRequiredOpts,
 		Run:   runAddRemote,
 		Flag:  FlagSet(addRemoteCmdCode),
 	}
@@ -36,55 +37,34 @@ func init() {
 	}
 }
 
-func verifyAddRemoteRequiredOpts(env *lsf.Environment, args ...string) error {
-	if e := verifyRequiredOption(addRemoteOptions.id); e != nil {
-		return e
-	}
-	if e := verifyRequiredOption(addRemoteOptions.host); e != nil {
-		return e
-	}
-	if e := verifyRequiredOption(addRemoteOptions.port); e != nil {
-		return e
-	}
+func _verifyAddRemoteRequiredOpts(env *lsf.Environment, args ...string) (err error) {
 
-	return nil
+	var e error
+	e = verifyRequiredOption(addRemoteOptions.id)
+	anomaly.PanicOnError(e, "remote-add", "option", "id")
+
+	e = verifyRequiredOption(addRemoteOptions.host)
+	anomaly.PanicOnError(e, "remote-add", "option", "host")
+
+	e = verifyRequiredOption(addRemoteOptions.port)
+	anomaly.PanicOnError(e, "remote-add", "option", "port")
+
+	return
 }
 
-func runAddRemote(env *lsf.Environment, args ...string) error {
+func runAddRemote(env *lsf.Environment, args ...string) (err error) {
+	defer anomaly.Recover(&err)
 
 	id := schema.StreamId(*addRemoteOptions.id.value)
-	//	pattern := *addRemoteOptions.pattern.value
-	//	mode := schema.JournalModel(*addRemoteOptions.mode.value)
-	//	path := *addRemoteOptions.path.value
-	//	fields := make(map[string]string) // TODO: fields needs a solution
 
 	// check if exists
 	docid := system.DocId(fmt.Sprintf("remote.%s.remote", id))
-	doc, e := env.LoadDocument(docid)
-	if e == nil && doc != nil {
-		return lsf.E_EXISTING
-	}
+	_assertNotExists(env, docid)
 
 	// lock lsf port's "remotes" resource
 	// to prevent race condition
-	lockid := env.ResourceId("remotes")
-	//	log.Printf("DEBUG: runAddRemote: lockid: %q", lockid)
-	lock, ok, e := system.LockResource(lockid, "add remote "+string(id))
-	if e != nil {
-		return e
-	}
-	if !ok {
-		return fmt.Errorf("error - could not lock resource %q for remote add op", string(id))
-	}
+	lock := _lockResource(env, "remotes", "add remote port")
 	defer lock.Unlock()
 
-	// create the remote-conf file.
-	//	logremote := schema.NewLogStream(id, path, mode, pattern, fields)
-	//	e = env.CreateDocument(docid, logremote)
-	//	if e != nil {
-	//		return e
-	//	}
-	//
-	//	return nil
 	panic("finish me")
 }

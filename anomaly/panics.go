@@ -66,7 +66,7 @@ func fmtInfo(info ...interface{}) string {
 			str = " " + str
 			msg += str
 		}
-//		msg += ":"
+		//		msg += ":"
 	}
 	return msg
 }
@@ -75,7 +75,10 @@ func PanicOnError(e error, info ...interface{}) {
 	if e == nil {
 		return
 	}
-	err := fmt.Errorf("%s%s", fmtInfo(info...), e)
+	var err error = e
+	if len(info) > 0 {
+		err = fmt.Errorf("%s - cause: %s", fmtInfo(info...), e)
+	}
 	panic(&Error{Cause: e, err: err})
 }
 
@@ -84,6 +87,7 @@ func Recover(err *error) error {
 	if p == nil {
 		return nil
 	}
+
 	switch t := p.(type) {
 	case *Error:
 		//*err = Cause(t)
