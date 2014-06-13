@@ -5,6 +5,7 @@ import (
 	"lsf"
 	"lsf/schema"
 	"lsf/system"
+	"lsf/anomaly"
 )
 
 const addStreamCmdCode lsf.CommandCode = "stream-add"
@@ -24,7 +25,8 @@ func init() {
 	addStreamOptions = initEditStreamOptionsSpec(addStream.Flag)
 }
 
-func runAddStream(env *lsf.Environment, args ...string) error {
+func runAddStream(env *lsf.Environment, args ...string) (err error) {
+	defer anomaly.Recover(&err)
 
 	id := schema.StreamId(*addStreamOptions.id.value)
 	pattern := *addStreamOptions.pattern.value
@@ -32,32 +34,24 @@ func runAddStream(env *lsf.Environment, args ...string) error {
 	path := *addStreamOptions.path.value
 	fields := make(map[string]string) // TODO: fields needs a solution
 
-	// check if exists
+	// check existing
 	docid := system.DocId(fmt.Sprintf("stream.%s.stream", id))
 	doc, e := env.LoadDocument(docid)
 	if e == nil && doc != nil {
 		return lsf.E_EXISTING
 	}
 
-	// lock lsf port's "streams" resource
-	// to prevent race condition
+	// lock lsf port's "streams" resource to prevent race condition
 	lockid := env.ResourceId("streams")
-	//	log.Printf("DEBUG: runAddStream: lockid: %q", lockid)
 	lock, ok, e := system.LockResource(lockid, "add stream "+string(id))
-	if e != nil {
-		return e
-	}
-	if !ok {
-		return fmt.Errorf("error - could not lock resource %q for stream add op", string(id))
-	}
+	anomaly.PanicOnError(e, "command.runAddStream:", "lockResource:")
+	anomaly.PanicOnFalse(ok, "command.runAddStream:", "lockResource:", string(id))
 	defer lock.Unlock()
 
 	// create the stream-conf file.
 	logstream := schema.NewLogStream(id, path, mode, pattern, fields)
 	e = env.CreateDocument(docid, logstream)
-	if e != nil {
-		return e
-	}
+	anomaly.PanicOnError(e, "command.runAddStream:", "CreateDocument:", string(id))
 
 	return nil
 }
