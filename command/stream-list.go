@@ -6,6 +6,7 @@ import (
 	"lsf"
 	"lsf/schema"
 	"lsf/system"
+	"lsf/anomaly"
 	"os"
 	"path"
 )
@@ -34,7 +35,8 @@ func init() {
 	}
 }
 
-func runListStream(env *lsf.Environment, args ...string) error {
+func runListStream(env *lsf.Environment, args ...string) (err error) {
+	defer anomaly.Recover(&err)
 
 	//	global := *listStreamOptions.global.value
 
@@ -49,10 +51,10 @@ func runListStream(env *lsf.Environment, args ...string) error {
 	if e != nil {
 		return nil // no stream dir - nothing to list
 	}
+
 	dirnames, e := dir.Readdirnames(0)
-	if e != nil {
-		return e
-	}
+	anomaly.PanicOnError(e, "runListStream:", "BUG - directory is empty", dir.Name())
+
 	for _, sid := range dirnames {
 		if sid[0] == '.' {
 			continue
@@ -61,9 +63,9 @@ func runListStream(env *lsf.Environment, args ...string) error {
 		if verbose {
 			docid := system.DocId(fmt.Sprintf("stream.%s.stream", sid))
 			doc, e := env.LoadDocument(docid)
-			if e != nil || doc == nil {
-				panic("BUG - error or document for stream missing: " + docid)
-			}
+			anomaly.PanicOnError(e, "runListStream:", "env.LoadDocument:", "BUG")
+			anomaly.PanicOnTrue(doc == nil, "runListStream:", "env.LoadDocument:", "BUG")
+
 			logstream := schema.DecodeLogStream(doc)
 			log.Printf("%s", logstream.String())
 		} else {
