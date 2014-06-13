@@ -1,11 +1,9 @@
 package command
 
 import (
-	//	"encoding/json"
-	"errors"
+	"anomaly"
 	"log"
 	"lsf"
-	//	"os"
 )
 
 const cmd_init lsf.CommandCode = "init"
@@ -38,7 +36,8 @@ func init() {
 // The base will be created in the 'path' option location.
 // 'force' flag must be set.
 // Init in existing directory will raise error E_EXISTING
-func runInit(env *lsf.Environment, args ...string) error {
+func runInit(env *lsf.Environment, args ...string) (err error) {
+	defer anomaly.Recover(&err)
 
 	home := lsf.AbsolutePath(*initOptions.home.value)
 	force := *initOptions.force.value
@@ -47,24 +46,14 @@ func runInit(env *lsf.Environment, args ...string) error {
 
 	// init w/ existing is an error unless -force flag is set
 	if env.Exists(home) {
-		if !force {
-			return errors.New("existing environment. use -force flag to reinitialize")
-		}
+		anomaly.PanicOnFalse(force, "init.runInit:", "existing environment. use -force flag to reinitialize")
 		what = "Re-Initialize"
 	}
 
 	envpath, e := lsf.CreateEnvironment(home, force)
-	if e != nil {
-		return e
-	}
+	anomaly.PanicOnError(e, "command/init.runInit", "on lsf.CreateEnvironment")
+
 	log.Printf("%s LSF environment at %s\n", what, envpath)
 
-	//	b, e := json.MarshalIndent(env, "", "  ")
-	//	if e != nil {
-	//		panic(e)
-	//	}
-	//	os.Stdout.Write(b)
-	//	os.Stdout.Write([]byte("\n"))
-
-	return nil
+	return
 }

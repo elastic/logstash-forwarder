@@ -2,7 +2,7 @@ package lsf
 
 import (
 	"flag"
-	"fmt"
+	"lsf/anomaly"
 )
 
 // REVU: no errors? TODO: consolidate all errors under lsf/errors
@@ -35,20 +35,8 @@ type Command struct {
 
 // Run the command. Trap any panics and return as error.
 func Run(env *Environment, cmd *Command, args ...string) (err error) {
-	defer func() {
-		if p := recover(); p != nil {
-			var estr interface{}
-			switch t := p.(type) {
-			case error:
-				estr = t.Error()
-			case string:
-				estr = p
-			default:
-				estr = p // what could it be? has to be lsf
-			}
-			err = fmt.Errorf("lsf.Run: %s: recovered panic: %s", cmd.Name, estr)
-		}
-	}()
+
+	defer anomaly.Recover(&err)
 
 	// environment is created only if it is nil
 	// AND command is not an initializer.
@@ -56,9 +44,7 @@ func Run(env *Environment, cmd *Command, args ...string) (err error) {
 	if env == nil && !cmd.Initializer {
 		env = NewEnvironment()
 		e := env.Initialize(Wd())
-		if e != nil {
-			return fmt.Errorf("error: lsf.Run: initializing environment: %s", e)
-		}
+		anomaly.PanicOnError(e, "command.Run:", "env.Initialize:")
 		defer func() {
 			env.Shutdown()
 		}()
@@ -66,24 +52,23 @@ func Run(env *Environment, cmd *Command, args ...string) (err error) {
 
 	cmd.Flag.Parse(args)
 	commandArgs := cmd.Flag.Args()
+
+	// run cmd initializer func (if any)
 	if cmd.Init != nil {
 		e0 := cmd.Init(env, commandArgs...)
-		if e0 != nil {
-			return fmt.Errorf("(init) %s: %s", cmd.Name, e0)
-		}
+		anomaly.PanicOnError(e0, "command.Run:", cmd.Name.String(), "Init()")
 	}
-	if cmd.Run == nil {
-		panic(fmt.Errorf("BUG - %s.Run is nil", cmd.Name))
-	}
+
+	// treat nil cmd.Run as bug
+	anomaly.PanicOnTrue(cmd.Run == nil, "command.Run:", "BUG - cmd.Run is nil")
+
 	e1 := cmd.Run(env, commandArgs...)
-	if e1 != nil {
-		return fmt.Errorf("(run) %s: %s", cmd.Name, e1)
-	}
+	anomaly.PanicOnError(e1, "command.Run:", cmd.Name.String(), "Run()")
+
+	// run cmd finalizer func (if any)
 	if cmd.End != nil {
 		e2 := cmd.End(env, commandArgs...)
-		if e2 != nil {
-			return fmt.Errorf("(End) %s: %s", cmd.Name, e2)
-		}
+		anomaly.PanicOnError(e2, "command.Run:", cmd.Name.String(), "End()")
 	}
 
 	return nil

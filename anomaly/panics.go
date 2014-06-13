@@ -33,6 +33,9 @@ func PanicOnFalse(flag bool, info ...string) {
 	err := fmt.Errorf("error %s%s", fmtInfo(info...), "false")
 	panic(&Error{Cause: err, err: err})
 }
+func PanicOnTrue(flag bool, info ...string) {
+	PanicOnFalse(!flag, info...)
+}
 
 func fmtInfo(info ...string) string {
 	var msg = ""
@@ -51,7 +54,7 @@ func PanicOnError(e error, info ...string) {
 	if e == nil {
 		return
 	}
-	err := fmt.Errorf("error %s%s", fmtInfo(info...), e)
+	err := fmt.Errorf("%s%s", fmtInfo(info...), e)
 	panic(&Error{Cause: e, err: err})
 }
 func Recover(err *error) error {
