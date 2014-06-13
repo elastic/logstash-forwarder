@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"lsf/anomaly"
 	"os"
 	"path"
 	"strings"
@@ -30,7 +31,9 @@ type registry struct {
 // initializes a registry structure.
 // if dir is not absolute path, then we use
 // current working directory as base path
-func openRegistry(dir string) (*registry, error) {
+func openRegistry(dir string) (reg *registry, err error) {
+
+	defer anomaly.Recover(&err)
 
 	pwd := ""
 	if dir[0] != '/' {
@@ -44,16 +47,11 @@ func openRegistry(dir string) (*registry, error) {
 	rootpath := path.Join(pwd, dir)
 
 	root, e := os.Open(rootpath)
-	if e != nil {
-		return nil, e
-	}
+	anomaly.PanicOnError(e, "system.openRegistry:")
+
 	info, e := root.Stat()
-	if e != nil {
-		return nil, e
-	}
-	if !info.IsDir() {
-		return nil, errors.New(rootpath + " is not a directory")
-	}
+	anomaly.PanicOnError(e, "system.openRegistry:")
+	anomaly.PanicOnFalse(info.IsDir(), "system.openRegistry:", dir, "must be directory")
 
 	r := &registry{
 		path:     rootpath,
@@ -65,31 +63,23 @@ func openRegistry(dir string) (*registry, error) {
 
 func (r *registry) updateDocument(doc *document) (bool, error) {
 	docpath, docname := DocpathForKey(r.path, doc.key)
-	//	log.Printf("registry.updateDocument: \n\t%s \n\t%s \n\t%s", doc.key, docname, docpath)
 	return updateDocument(doc, path.Join(docpath, docname))
 }
 
 func (r *registry) readDocument(key DocId) (*document, error) {
 	docpath, docname := DocpathForKey(r.path, key)
-	//	log.Printf("registry.getDocument: \n\t%s \n\t%s \n\t%s", key, docname, docpath)
 	return loadDocument(key, path.Join(docpath, docname))
 }
 
 func (r *registry) createDocument(key DocId, data map[string][]byte) (*document, error) {
 	docpath, docname := DocpathForKey(r.path, key)
-	//	log.Printf("registry.getDocument: \n\t%s \n\t%s \n\t%s", key, docname, docpath)
 	return newDocument(key, docpath, docname, data)
 }
 
 func (r *registry) deleteDocument(key DocId) (bool, error) {
 	docpath, docname := DocpathForKey(r.path, key)
-	//	log.Printf("registry.getDocument: \n\t%s \n\t%s \n\t%s", key, docname, docpath)
 	return deleteDocument(key, path.Join(docpath, docname))
 }
-
-//func confFile(capability string) string {
-//	return strings.ToUpper(capability + "-conf")
-//}
 
 func DocpathForKey(lsfpath string, key DocId) (filepath, filename string) {
 	docid := string(key)
@@ -201,24 +191,16 @@ func newDocument(dockey DocId, fpath, fname string, data map[string][]byte) (*do
 
 	// acquire lock for file
 	lock, ok, e := LockResource(filename, "create document "+string(dockey))
-	if e != nil {
-		return nil, fmt.Errorf("newDocument: error acquiring lock for %q - %s", dockey, e.Error())
-	}
-	if !ok {
-		return nil, fmt.Errorf("error newDocument: file already exists: %q", filename)
-	}
+	anomaly.PanicOnError(e, "newDocument:", "lockResource:", string(dockey), filename)
+	anomaly.PanicOnFalse(ok, "newDocument:", "lockResource:", string(dockey), filename)
 	defer lock.Unlock()
 
 	_, e = os.Stat(filename)
-	// should not exist
-	if !os.IsNotExist(e) {
-		return nil, fmt.Errorf("error newDocument: file already exists: %q", filename)
-	}
+	anomaly.PanicOnFalse(os.IsNotExist(e), "newDocument:", filename)
 
 	file, e := os.OpenFile(filename, os.O_CREATE|os.O_EXCL|os.O_WRONLY, os.FileMode(0644))
-	if e != nil {
-		return nil, fmt.Errorf("newDocument: error on create %q - %s", filename, e)
-	}
+	anomaly.PanicOnError(e, "newDocument:", "OpenFile:", filename)
+
 	//	log.Println("newDocument: created file %q", file)
 	info, _ := file.Stat()
 	defer file.Close()
@@ -229,9 +211,7 @@ func newDocument(dockey DocId, fpath, fname string, data map[string][]byte) (*do
 		records[k] = v
 	}
 	e = doc.Write(file)
-	if e != nil {
-		return nil, e
-	}
+	anomaly.PanicOnError(e, "newDocument:", "doc.Write:")
 
 	return doc, nil
 }
@@ -276,32 +256,24 @@ func updateDocument(doc *document, filename string) (bool, error) {
 	// create temp file
 	swapfile := filename + ".new"
 	file, e := os.OpenFile(swapfile, os.O_CREATE|os.O_EXCL|os.O_WRONLY, os.FileMode(0644))
-	if e != nil {
-		return false, fmt.Errorf("updateDocument: error on create %q - %s", swapfile, e)
-	}
+	anomaly.PanicOnError(e, "updateDocument:", "os.OpenFile:", swapfile)
 	defer file.Close()
 
 	e = doc.Write(file)
-	if e != nil {
-		return false, e
-	}
+	anomaly.PanicOnError(e, "updateDocument:", "doc.Write:")
 
 	// acquire lock for doc file
 	lock, ok, e := LockResource(filename, "create document "+string(doc.key))
-	if e != nil {
-		return false, fmt.Errorf("updateDocument: error acquiring lock for %q - %s", doc.key, e.Error())
-	}
-	if !ok {
-		return false, fmt.Errorf("error updateDocument: file already exists: %q", filename)
-	}
+	anomaly.PanicOnError(e, "updateDocument:", "lockResource:", string(doc.key), filename)
+	anomaly.PanicOnFalse(ok, "updateDocument:", "lockResource:", string(doc.key), filename)
 	defer lock.Unlock()
 
-	if e = os.Remove(filename); e != nil {
-		return false, fmt.Errorf("updateDocument: error (swap) removing %q - %s", doc.key, e.Error())
-	}
-	if e = os.Rename(swapfile, filename); e != nil {
-		return false, fmt.Errorf("updateDocument: error (swap) renaming %q - %s", doc.key, e.Error())
-	}
+	e = os.Remove(filename)
+	anomaly.PanicOnError(e, "updateDocument:", "os.Remove:", filename)
+
+	e = os.Rename(swapfile, filename)
+	anomaly.PanicOnError(e, "updateDocument:", "os.Rename:", swapfile, filename)
+
 	log.Println("updateDocument: updated file %q", filename)
 
 	return true, nil
@@ -310,46 +282,37 @@ func updateDocument(doc *document, filename string) (bool, error) {
 // load for read.
 // read file and closes it.
 // REVU TODO what if locked?
-func loadDocument(dockey DocId, filename string) (*document, error) {
+func loadDocument(dockey DocId, filename string) (doc *document, err error) {
+	defer anomaly.Recover(&err)
 
 	// verify document file
 	info, e := os.Stat(filename)
-	if e != nil {
-		return nil, e
-	}
-	if info.IsDir() {
-		return nil, errors.New(filename + " is not a file")
-	}
+	anomaly.PanicOnError(e, "loadDocument", "os.Stat", filename)
+	anomaly.PanicOnTrue(info.IsDir(), "loadDocument", filename, "is file")
+
 	// REVU: lock checks could go here.
 
 	// open and defer close document file
 	file, e := os.Open(filename)
-	if e != nil {
-		return nil, fmt.Errorf("error loadDocument: os.Open %s - %s", filename, e.Error())
-	}
+	anomaly.PanicOnError(e, "loadDocument", "os.OpenFile", filename)
 	defer file.Close()
 
 	// read document file
 	bufsize := int(info.Size())
 	buf := make([]byte, bufsize)
 	n, e := file.Read(buf)
-	if e != nil {
-		return nil, fmt.Errorf("error loadDocument: Read %s - %s", filename, e.Error())
-	}
-	if n < bufsize {
-		return nil, fmt.Errorf("error loadDocument: Read %s - only read %d of %d", filename, n, bufsize)
-	}
+	anomaly.PanicOnError(e, "loadDocument", "file.Read")
+	anomaly.PanicOnTrue(n < bufsize, "loadDocument", "file.Read", "partial read")
 
 	// create and load document
-	doc := &document{dockey, &info, time.Now(), make(map[string][]byte), nil, false}
+	doc = &document{dockey, &info, time.Now(), make(map[string][]byte), nil, false}
 	lines := strings.Split(string(buf), "\n")
 	for _, line := range lines {
 		if len(line) > 0 && line[0] != '#' {
 			//			log.Printf("%s\n", line)
 			tuple2 := strings.SplitN(line, ":", 2)
-			if len(tuple2) != 2 {
-				return nil, fmt.Errorf("%q corrupted. malformed record: %q", line)
-			}
+			anomaly.PanicOnFalse(len(tuple2) == 2, "loadDocument", "malformed record", line)
+
 			// trim all whitespace from key and value
 			tuple2[0] = strings.Trim(tuple2[0], "\t ")
 			tuple2[1] = strings.Trim(tuple2[1], "\t ")
@@ -358,33 +321,25 @@ func loadDocument(dockey DocId, filename string) (*document, error) {
 	}
 
 	//	log.Println("newDocument: done")
-	return doc, nil
+	return
 }
 
-func deleteDocument(dockey DocId, filename string) (bool, error) {
+func deleteDocument(dockey DocId, filename string) (ok bool, err error) {
+	defer anomaly.Recover(&err)
 
 	// verify document file
 	info, e := os.Stat(filename)
-	if e != nil {
-		return false, fmt.Errorf("deleteDocument: os.Stat: %s: %s", filename, e.Error())
-	}
-	if info.IsDir() {
-		return false, errors.New(filename + " is not a file")
-	}
+	anomaly.PanicOnError(e, "system.deleteDocument:")
+	anomaly.PanicOnTrue(info.IsDir(), "system.deleteDocument:", filename, "must be file")
 
 	// acquire lock for file
 	lock, ok, e := LockResource(filename, "delete document "+string(dockey))
-	if e != nil {
-		return false, fmt.Errorf("deleteDocument: error acquiring lock for %q - %s", dockey, e.Error())
-	}
-	if !ok {
-		return false, fmt.Errorf("deleteDocument: lock acquire for resource %q failed", filename)
-	}
+	anomaly.PanicOnError(e, "deleteDocument:", "lockResource:", string(dockey), filename)
+	anomaly.PanicOnFalse(ok, "deleteDocument:", "lockResource:", string(dockey), filename)
 	defer lock.Unlock()
 
-	if e = os.Remove(filename); e != nil {
-		return false, fmt.Errorf("deleteDocument: os.Remove: %s: %s", filename, e.Error())
-	}
+	e = os.Remove(filename)
+	anomaly.PanicOnError(e, "system.deleteDocument:", "os.Remove", filename)
 
 	return true, nil
 }
@@ -424,7 +379,6 @@ type Registrar interface {
 func StartRegistry(path string) (Registrar, error) {
 	r, e := openRegistry(path)
 	if e != nil {
-		log.Printf("ERROR - %s", e.Error())
 		return nil, e
 	}
 	ui := make(chan req, 12)
