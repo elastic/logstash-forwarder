@@ -6,6 +6,7 @@ import (
 	"log"
 	"lsf/schema"
 	"lsf/system"
+	"lsf/anomaly"
 	"os"
 	"path"
 	"strings"
@@ -363,7 +364,10 @@ func (env *Environment) Shutdown() error {
 
 	return nil
 }
-func (env *Environment) Initialize(dir string) error {
+func (env *Environment) Initialize(dir string) (err error) {
+
+	defer anomaly.Recover(&err)
+
 	env.lock.Lock()
 	defer env.lock.Unlock() // TODO: these need deadlines.
 
@@ -379,7 +383,6 @@ func (env *Environment) Initialize(dir string) error {
 		dir = path.Join(Wd(), dir)
 	}
 	root := rootAt(dir)
-	//	log.Printf("DEBUG: env.Initialize: init from %s", root)
 
 	// check if exists
 	if !exists(root) {
@@ -387,18 +390,17 @@ func (env *Environment) Initialize(dir string) error {
 	}
 
 	env.bound = true
-	env.Set(VarHomePort, schema.NewLocalPort(root))
-	e := env.startRegistrar()
-	if e != nil {
-		return e
-	}
+	port, e := schema.NewLocalPort(root)
+	anomaly.PanicOnError(e, "Environment.Initialize:", "schema.NewLocalPort")
+
+	env.Set(VarHomePort, port) // panics
+	e = env.startRegistrar()
+	anomaly.PanicOnError(e, "Environment.Initialize:", "env.startRegistrar")
 
 	sysdoc := system.DocId("system")
 	env.loadDocuments([]system.DocId{sysdoc})
 	_, e = env.registrar.ReadDocument(sysdoc)
-	if e != nil {
-		return e
-	}
+	anomaly.PanicOnError(e, "Environment.Initialize:", "env.ReadDocument")
 
 	return nil
 }
@@ -422,4 +424,55 @@ func (env *Environment) startRegistrar() error {
 	//	log.Printf("DEBUG using registrar %s", env.registrar)
 
 	return nil
+}
+
+// panics
+func (env *Environment) GetResourceIds(restype string) []string {
+	root := env.Port()
+	dir, e := os.Open(path.Join(root, restype))
+	if e != nil {
+		return []string{}
+	}
+
+	dirnames, e := dir.Readdirnames(0)
+	// if resource type dir exists and is empty then we have a bug
+	anomaly.PanicOnError(e, "Environment.GetResourceIds:", restype, "BUG - directory is empty", dir.Name())
+
+	resIds := make([]string, len(dirnames))
+	i := 0
+	for _, dirname := range dirnames {
+		if dirname[0] != '.' {
+			resIds[i] = dirname; i++
+		}
+	}
+	return resIds
+}
+func (env *Environment) GetResourceDigests (restype string, verbose bool, encoder system.DocumentDigestFn) []string {
+
+	resourceIds := env.GetResourceIds(restype)
+
+	var digest digestFn = justResourceId
+	if verbose {
+		digest = digestForResourceId
+	}
+
+	digests := make([]string, len(resourceIds))
+	for i, resid := range resourceIds {
+		digests[i] = digest(env, restype, resid, encoder)
+	}
+	return digests
+}
+
+type digestFn func(env *Environment, restype string, resid string, encode system.DocumentDigestFn) string
+
+func justResourceId(env *Environment, restype string, resid string, encode system.DocumentDigestFn) string {
+	return resid
+}
+
+func digestForResourceId(env *Environment, restype string, resid string, encode system.DocumentDigestFn) string {
+	docid := system.DocId(fmt.Sprintf("%s.%s.%s", restype, resid, restype))
+	doc, e := env.LoadDocument(docid)
+	anomaly.PanicOnError(e, "BUG", "getResourceDigests:", "loadDocument", docid)
+	anomaly.PanicOnTrue(doc == nil, "BUG", "getResourceDigests:", "loadDocument", docid)
+	return encode(doc)
 }

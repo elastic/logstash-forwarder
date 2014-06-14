@@ -31,13 +31,14 @@ func init() {
 	}
 	addRemoteOptions = &addRemoteOptionsSpec{
 		//		global: NewBoolFlag(addRemote.Flag, "G", "global", false, "global scope flag for command", false),
-		id:   NewStringFlag(addRemote.Flag, "s", "remote-id", "", "unique identifier for remote port", true),
+		id:   NewStringFlag(addRemote.Flag, "r", "remote-id", "", "unique identifier for remote port", true),
 		host: NewStringFlag(addRemote.Flag, "h", "remote-host", "", "URL of the remote port", true),
 		port: NewInt64Flag(addRemote.Flag, "p", "remote-port", 0, "IP port number of remote port", true),
 	}
 }
 
 func _verifyAddRemoteRequiredOpts(env *lsf.Environment, args ...string) (err error) {
+	defer anomaly.Recover(&err)
 
 	var e error
 	e = verifyRequiredOption(addRemoteOptions.id)
@@ -55,16 +56,23 @@ func _verifyAddRemoteRequiredOpts(env *lsf.Environment, args ...string) (err err
 func runAddRemote(env *lsf.Environment, args ...string) (err error) {
 	defer anomaly.Recover(&err)
 
-	id := schema.StreamId(*addRemoteOptions.id.value)
+	id := *addRemoteOptions.id.value
+	host := *addRemoteOptions.host.value
+	port := int(*addRemoteOptions.port.value)
 
 	// check if exists
 	docid := system.DocId(fmt.Sprintf("remote.%s.remote", id))
 	_assertNotExists(env, docid)
 
-	// lock lsf port's "remotes" resource
-	// to prevent race condition
+	// lock lsf port's "remotes" resource to prevent race condition
 	lock := _lockResource(env, "remotes", "add remote port")
 	defer lock.Unlock()
 
-	panic("finish me")
+	lsfport, e := schema.NewRemotePort(id, host, port)
+	anomaly.PanicOnError(e, "runAddRemote:", "NewRemotePort")
+
+	e = env.CreateDocument(docid, lsfport)
+	anomaly.PanicOnError(e, "command.runAddStream:", "CreateDocument:", id)
+
+	return nil
 }

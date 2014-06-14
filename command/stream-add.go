@@ -44,8 +44,9 @@ func runAddStream(env *lsf.Environment, args ...string) (err error) {
 
 	// create the stream-conf file.
 	logstream := schema.NewLogStream(id, path, mode, pattern, fields)
+
 	e := env.CreateDocument(docid, logstream)
-	anomaly.PanicOnError(e, "command.runAddStream:", "CreateDocument:", string(id))
+	anomaly.PanicOnError(e, "command.runAddStream:", "CreateDocument:", id)
 
 	return nil
 }

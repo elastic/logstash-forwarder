@@ -32,18 +32,6 @@ func init() {
 	}
 }
 
-//func _initInit(env *lsf.Environment, args...string) (err error) {
-//
-//	home := lsf.AbsolutePath(*initOptions.home.value)
-//	force := *initOptions.force.value
-//
-//	// init w/ existing is an error unless -force flag is set
-//	if env.Exists(home) {
-//		anomaly.PanicOnFalse(force, "existing environment. use -force flag to reinitialize")
-//	}
-//	return nil
-//}
-
 // create and initialize an LSF base.
 // The base will be created in the 'path' option location.
 // 'force' flag must be set.

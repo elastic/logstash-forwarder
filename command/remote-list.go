@@ -1,13 +1,10 @@
 package command
 
 import (
-	"fmt"
 	"log"
 	"lsf"
 	"lsf/schema"
-	"lsf/system"
-	"os"
-	"path"
+	"lsf/anomaly"
 )
 
 const cmd_remote_list lsf.CommandCode = "remote-list"
@@ -34,9 +31,8 @@ func init() {
 	}
 }
 
-func runListRemote(env *lsf.Environment, args ...string) error {
-
-	//	global := *listRemoteOptions.global.value
+func runListRemote(env *lsf.Environment, args ...string) (err error) {
+	defer anomaly.Recover(&err)
 
 	verbose := *listRemoteOptions.verbose.value
 	v, found := env.Get(remoteOptionVerbose)
@@ -44,31 +40,9 @@ func runListRemote(env *lsf.Environment, args ...string) error {
 		verbose = verbose || v.(bool)
 	}
 
-	root := env.Port()
-	dir, e := os.Open(path.Join(root, "remote"))
-	if e != nil {
-		return nil // no remote dir - nothing to list
-	}
-	dirnames, e := dir.Readdirnames(0)
-	if e != nil {
-		return e
-	}
-	for _, sid := range dirnames {
-		if sid[0] == '.' {
-			continue
-		}
-		info := sid
-		if verbose {
-			docid := system.DocId(fmt.Sprintf("remote.%s", sid))
-			doc, e := env.LoadDocument(docid)
-			if e != nil || doc == nil {
-				panic("BUG - error or document for remote missing: " + docid)
-			}
-			logremote := schema.DecodeLogStream(doc)
-			log.Printf("%s", logremote.String())
-		} else {
-			log.Printf("%s", info)
-		}
+	digests := env.GetResourceDigests("remote", verbose, schema.PortDigest)
+	for _, digest := range digests {
+		log.Println(digest)
 	}
 
 	return nil

@@ -61,10 +61,11 @@ func runListStream(env *lsf.Environment, args ...string) (err error) {
 		}
 		info := sid
 		if verbose {
+			// REVU: this is generic TODO extract it
 			docid := system.DocId(fmt.Sprintf("stream.%s.stream", sid))
 			doc, e := env.LoadDocument(docid)
-			anomaly.PanicOnError(e, "runListStream:", "env.LoadDocument:", "BUG")
-			anomaly.PanicOnTrue(doc == nil, "runListStream:", "env.LoadDocument:", "BUG")
+			anomaly.PanicOnError(e, "BUG", "runListStream:", "loadDocument", docid)
+			anomaly.PanicOnTrue(doc == nil, "BUG", "runListStream:", "loadDocument", docid)
 
 			logstream := schema.DecodeLogStream(doc)
 			log.Printf("%s", logstream.String())
@@ -75,3 +76,5 @@ func runListStream(env *lsf.Environment, args ...string) (err error) {
 
 	return nil
 }
+
+type EntityDecodeFn func(doc *system.Document)

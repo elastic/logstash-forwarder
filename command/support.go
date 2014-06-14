@@ -26,3 +26,11 @@ func _assertNotExists (env *lsf.Environment, docid system.DocId) {
 		panic(lsf.E_EXISTING)
 	}
 }
+
+// assert resource does not exist
+func _assertExists (env *lsf.Environment, docid system.DocId) {
+	doc, e := env.LoadDocument(docid)
+	if e != nil || doc == nil {
+		panic(lsf.E_NOTEXISTING)
+	}
+}

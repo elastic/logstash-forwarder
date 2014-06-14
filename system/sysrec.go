@@ -171,6 +171,8 @@ func (d *document) Delete(k string) bool {
 	return existed
 }
 
+type DocumentDigestFn func(Document) string
+
 // acquire resource lock
 // create file if not existing.
 // write data
@@ -204,10 +206,10 @@ func newDocument(dockey DocId, fpath, fname string, data map[string][]byte) (doc
 
 	file, e := os.OpenFile(filename, os.O_CREATE|os.O_EXCL|os.O_WRONLY, os.FileMode(0644))
 	PanicOnError(e, "newDocument:", "OpenFile:", filename)
+	defer file.Close()
 
 	//	log.Println("newDocument: created file %q", file)
 	info, _ := file.Stat()
-	defer file.Close()
 
 	records := make(map[string][]byte, len(data))
 	doc = &document{dockey, &info, time.Now(), records, lock, false}
@@ -229,6 +231,9 @@ func (d *document) encode(k string, v []byte) []byte {
 	return buf
 }
 
+func (d *document) String() string {
+	return string(d.Bytes())
+}
 func (d *document) Bytes() []byte {
 	var buf []byte
 	for k, v := range d.records {
