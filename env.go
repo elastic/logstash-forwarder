@@ -445,7 +445,7 @@ func (env *Environment) GetResourceIds(restype string) []string {
 			resIds[i] = dirname; i++
 		}
 	}
-	return resIds
+	return resIds[:i]
 }
 func (env *Environment) GetResourceDigests (restype string, verbose bool, encoder system.DocumentDigestFn) []string {
 

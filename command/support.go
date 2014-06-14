@@ -8,7 +8,7 @@ import (
 
 // support functions for commands
 // NOTE: all functions with names beginning with _ throw panics
-
+// REVU: ALL can be env methods
 // lock resource
 func _lockResource(env *lsf.Environment, resource string, reason string) system.Lock {
 	lockid := env.ResourceId(resource)
