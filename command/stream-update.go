@@ -3,9 +3,9 @@ package command
 import (
 	"fmt"
 	"lsf"
+	"lsf/anomaly"
 	"lsf/schema"
 	"lsf/system"
-	"lsf/anomaly"
 )
 
 const updateStreamCmdCode lsf.CommandCode = "stream-update"
@@ -39,7 +39,7 @@ func runUpdateStream(env *lsf.Environment, args ...string) (err error) {
 	// do not premit concurrent updates to this stream
 	resource := fmt.Sprintf("stream.%s.update", id)
 	lockid := env.ResourceId(resource)
-	oplock, ok, e := system.LockResource(lockid, "add stream - resource " + resource)
+	oplock, ok, e := system.LockResource(lockid, "add stream - resource "+resource)
 	anomaly.PanicOnError(e, "command.runUpdateStream:", "lockResource:", resource)
 	anomaly.PanicOnFalse(ok, "command.runUpdateStream:", "lockResource:", resource)
 	defer oplock.Unlock()
@@ -48,7 +48,7 @@ func runUpdateStream(env *lsf.Environment, args ...string) (err error) {
 	docid := system.DocId(fmt.Sprintf("stream.%s.stream", id))
 	doc, e := env.LoadDocument(docid)
 	anomaly.PanicOnError(e, "BUG command.runUpdateStream:", "LoadDocument:", string(docid))
-	anomaly.PanicOnTrue(doc==nil, "BUG command.runUpdateStream:", "LoadDocument:", string(docid))
+	anomaly.PanicOnTrue(doc == nil, "BUG command.runUpdateStream:", "LoadDocument:", string(docid))
 
 	// update stream config document
 	var option interface{}

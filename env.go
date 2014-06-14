@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	. "lsf/anomaly"
 	"lsf/schema"
 	"lsf/system"
-	"lsf/anomaly"
 	"os"
 	"path"
 	"strings"
@@ -16,6 +16,10 @@ import (
 
 // Base directory of an LSF base
 const RootDir = ".lsf"
+
+// ----------------------------------------------------------------------------
+// error codes
+// ----------------------------------------------------------------------------
 
 var E_USAGE = errors.New("invalid command usage")
 var E_INVALID = errors.New("invalid argument")
@@ -29,7 +33,10 @@ var E_ILLEGALSTATE_REGISTRAR_RUNNING = errors.New("Registrar already running")
 var E_EXISTING_STREAM = errors.New("stream already exists")
 var E_CONCURRENT = errors.New("concurrent operation error")
 
-// keep it package private
+// ----------------------------------------------------------------------------
+// Environment Types
+// ----------------------------------------------------------------------------
+
 type varKey string
 
 const (
@@ -39,10 +46,12 @@ const (
 	VarHomeFileInfo        = "lsf.home.fileinfo"
 )
 
-// Restrict what can go in Var map
-type EnvId string
+// ----------------------------------------------------------------------------
+// LSF Runtime Environment
+// ----------------------------------------------------------------------------
 
-// LSF Runtime environment
+// LSF runtime environment for commands and processes, provides a managed
+// interface to system resources for concurrent goroutines.
 type Environment struct {
 	lock     sync.RWMutex
 	bound    bool
@@ -57,6 +66,7 @@ type Environment struct {
 	journals  map[string]*schema.LogJournal
 }
 
+// Initializes the structural members of Environment.
 func NewEnvironment() *Environment {
 	env := &Environment{
 		bound:    false,
@@ -69,6 +79,8 @@ func NewEnvironment() *Environment {
 	return env
 }
 
+// Returns the path of the LSF Port to which the environment
+// is bound.
 func (env *Environment) Port() string {
 	if !env.bound {
 		panic("BUG - env not bound")
@@ -79,23 +91,27 @@ func (env *Environment) Port() string {
 	}
 	return v.(*schema.Port).Path()
 }
+
+// Returns the absolute id of a resource in context
+// of this environment. The argument 'name' is a
+// relative identifier.
+// This routine will panic if called from an unbound Environment.
 func (env *Environment) ResourceId(name string) string {
 	if !env.bound {
 		panic("BUG - env not bound")
 	}
 	v, found := env.Get(VarHomePort)
-	if !found {
-		panic("BUG - home port should be bound")
-	}
+	PanicOnFalse(found, "BUG", "Environment.ResourceId", "VarHomePort not bound!")
+
 	return path.Join(v.(*schema.Port).Path(), name)
 }
 
+// Creates a document in the bound LSF Port.
 func (env *Environment) CreateDocument(docid system.DocId, datamap system.DataMap) error {
 	if !env.bound {
 		return E_ILLEGALSTATE
 	}
 	mappings := datamap.Mappings()
-	//	mappings["update-time"]=[]byte(time.Now().String())
 	_, e := env.registrar.CreateDocument(docid, mappings)
 	if e != nil {
 		return e
@@ -117,23 +133,29 @@ func (env *Environment) CreateDocument(docid system.DocId, datamap system.DataMa
 // scoping of the matching documents.
 //
 // if not found, will return nil, nil.
-func (env *Environment) GetRecord(record string) ([]byte, error) {
-	//	log.Println("----------------------------------------")
+func (env *Environment) GetRecord(record string) (value []byte, err error) {
+
+	defer Recover(&err)
+
 	if !env.bound {
 		return nil, E_ILLEGALSTATE
 	}
 
 	documents, key, e := getRecordHierarchy(record)
-	if e != nil {
-		return nil, e
-	}
+	PanicOnError(e, "Environment.GetRecord:", "record:", record)
 
-	env.loadDocuments(documents)
+	e = env.loadDocuments(documents)
+	PanicOnError(e, "Environment.GetRecord:")
 
-	value := env.resolveRecord(documents, key)
+	value = env.resolveRecord(documents, key)
 	return value, nil
 }
 
+// A document Record is resolved in context of the resource hierarchy.
+// The record is logically identified by the key parameter.
+// The set of documents sorted from global to local scope.
+// Resolution of the record is to match the value from the most proximate
+// (i.e. local) document provided.
 func (env *Environment) resolveRecord(documents []system.DocId, key string) []byte {
 	env.docslock.RLock()
 	defer env.docslock.RUnlock()
@@ -150,36 +172,59 @@ func (env *Environment) resolveRecord(documents []system.DocId, key string) []by
 	return value
 }
 
-func (env *Environment) DeleteDocument(docid system.DocId) (bool, error) {
+// Deletes the document from the environemnt and the bound LSF Port.
+// REVU TODO clarify ok/error - do we need both?
+func (env *Environment) DeleteDocument(docid system.DocId) (ok bool, err error) {
+	defer Recover(&err)
+
 	ok, e := env.registrar.DeleteDocument(docid)
-	if e == nil && ok {
-		env.docslock.Lock()
-		delete(env.docs, docid)
-		env.docslock.Unlock()
-	}
+	PanicOnError(e, "Environment.DeleteDocument", "docid:", docid)
+	PanicOnFalse(ok, "Environment.DeleteDocument", "docid:", docid)
+
+	//	if e == nil && ok {
+	env.docslock.Lock()
+	delete(env.docs, docid)
+	env.docslock.Unlock()
+	//	}
 	return ok, e
 }
 
-func (env *Environment) UpdateDocument(doc system.Document) (bool, error) {
+// Update fully flushes the document back to the bound LSF Port.
+// REVU TODO clarify ok/error - do we need both?
+func (env *Environment) UpdateDocument(doc system.Document) (ok bool, err error) {
+	defer Recover(&err)
+
 	ok, e := env.registrar.UpdateDocument(doc)
-	if e == nil && ok {
-		env.docslock.Lock()
-		env.docs[doc.Id()] = doc
-		env.docslock.Unlock()
-	}
+	PanicOnError(e, "Environment.UpdateDocument", "docid:", doc.Id())
+	PanicOnFalse(ok, "Environment.UpdateDocument", "docid:", doc.Id())
+	//	if e == nil && ok {
+	env.docslock.Lock()
+	env.docs[doc.Id()] = doc
+	env.docslock.Unlock()
+	//	}
 	return ok, e
 }
 
-func (env *Environment) LoadDocument(docid system.DocId) (system.Document, error) {
+// Load fully reads the identified document from the bound LSF Port.
+func (env *Environment) LoadDocument(docid system.DocId) (doc system.Document, err error) {
+	defer Recover(&err)
+
 	doc, e := env.registrar.ReadDocument(docid)
-	if e == nil {
-		env.docslock.Lock()
-		env.docs[docid] = doc
-		env.docslock.Unlock()
-	}
+	PanicOnError(e, "Environment.LoadDocument", "docid:", docid)
+	//	if e == nil {
+	env.docslock.Lock()
+	env.docs[docid] = doc
+	env.docslock.Unlock()
+	//	}
 	return doc, e
 }
-func (env *Environment) loadDocuments(documents []system.DocId) {
+
+// All documents (ids) are presumed to be valid in context of the bound LSF Port.
+// Returns error (and stops loading) on missing doc(s).
+func (env *Environment) loadDocuments(documents []system.DocId) (err error) {
+
+	defer Recover(&err)
+
 	env.docslock.Lock()
 	defer env.docslock.Unlock()
 
@@ -187,12 +232,13 @@ func (env *Environment) loadDocuments(documents []system.DocId) {
 		_, found := env.docs[docid]
 		if !found {
 			doc, e := env.registrar.ReadDocument(docid)
-			if e == nil {
-				//				log.Printf("DEBUG: Environment.loadDocuments: loaded %q", docid)
-				env.docs[docid] = doc
-			}
+			PanicOnError(e, "Environment.loadDocuments", "docid:", docid)
+			//			if e == nil {
+			env.docs[docid] = doc
+			//			}
 		}
 	}
+	return nil
 }
 
 func getRecordHierarchy(record string) (documents []system.DocId, key string, err error) {
@@ -274,10 +320,12 @@ var defaultDirMode = os.FileMode(0755)
 // Path must be an absolute path.
 // Sets state flag for env.
 // Returns error if called on existing environemnt at path.
-func CreateEnvironment(dir string, force bool) (string, error) {
+func CreateEnvironment(dir string, force bool) (rootpath string, err error) {
 	if !IsAbsPath(dir) {
 		return "", E_RELATIVE_PATH
 	}
+
+	defer Recover(&err)
 
 	userHome := system.UserHome()
 	isUserHome := userHome == dir
@@ -302,30 +350,22 @@ func CreateEnvironment(dir string, force bool) (string, error) {
 	default:
 		resource = path.Join(userHome, RootDir, uid+".lsf-init")
 	}
+
 	lock, ok, e := system.LockResource(resource, "create new lsf port")
-	if e != nil {
-		return "", e
-	}
-	if !ok {
-		return "", E_CONCURRENT
-	}
+	PanicOnError(e, "Environment.CreateEnvironment", "system.LockResource", "resource:", resource)
+	PanicOnFalse(ok, "Environment.CreateEnvironment", "system.LockResource", "resource:", resource, "concurrency violation")
 	defer lock.Unlock()
 
 	e = os.RemoveAll(root)
-	if e != nil {
-		return "", e
-	}
+	PanicOnError(e, "Environment.CreateEnvironment", "os.RemoveAll", "root:", root)
 
 	e = os.Mkdir(root, os.ModeDir|defaultDirMode)
-	if e != nil {
-		panic(e) // what could it be?
-	}
+	PanicOnError(e, "Environment.CreateEnvironment", "os.Mkdir", "root:", root)
 
 	//	log.Printf("open registrar in %q", root)
 	registrar, e := system.StartRegistry(root)
-	if e != nil {
-		return "", e
-	}
+	PanicOnError(e, "Environment.CreateEnvironment", "system.StartRegistry", "root:", root)
+
 	//	log.Printf("DEBUG using registrar %s", registrar)
 	defer func() { registrar.Stop() <- struct{}{} }()
 
@@ -334,9 +374,7 @@ func CreateEnvironment(dir string, force bool) (string, error) {
 		"create-time": []byte(time.Now().String()),
 	}
 	_, e = registrar.CreateDocument(docid, data)
-	if e != nil {
-		return "", e
-	}
+	PanicOnError(e, "Environment.CreateEnvironment", "registrar.CreateDocument", "docid:", docid)
 
 	return root, nil
 }
@@ -366,13 +404,12 @@ func (env *Environment) Shutdown() error {
 }
 func (env *Environment) Initialize(dir string) (err error) {
 
-	defer anomaly.Recover(&err)
+	defer Recover(&err)
 
 	env.lock.Lock()
 	defer env.lock.Unlock() // TODO: these need deadlines.
 
-	if env.bound {
-		//		log.Println("DEBUG: env.Initialize: already bound - ignore Initialize()")
+	if env.bound { // REVU: shouldn't this be an error?
 		return nil
 	}
 	if dir == "" {
@@ -391,16 +428,18 @@ func (env *Environment) Initialize(dir string) (err error) {
 
 	env.bound = true
 	port, e := schema.NewLocalPort(root)
-	anomaly.PanicOnError(e, "Environment.Initialize:", "schema.NewLocalPort")
+	PanicOnError(e, "Environment.Initialize:", "schema.NewLocalPort", "root:", root)
 
 	env.Set(VarHomePort, port) // panics
+
 	e = env.startRegistrar()
-	anomaly.PanicOnError(e, "Environment.Initialize:", "env.startRegistrar")
+	PanicOnError(e, "Environment.Initialize:", "env.startRegistrar")
 
 	sysdoc := system.DocId("system")
 	env.loadDocuments([]system.DocId{sysdoc})
+
 	_, e = env.registrar.ReadDocument(sysdoc)
-	anomaly.PanicOnError(e, "Environment.Initialize:", "env.ReadDocument")
+	PanicOnError(e, "Environment.Initialize:", "env.ReadDocument")
 
 	return nil
 }
@@ -436,18 +475,22 @@ func (env *Environment) GetResourceIds(restype string) []string {
 
 	dirnames, e := dir.Readdirnames(0)
 	// if resource type dir exists and is empty then we have a bug
-	anomaly.PanicOnError(e, "Environment.GetResourceIds:", restype, "BUG - directory is empty", dir.Name())
+	PanicOnError(e, "Environment.GetResourceIds:", restype, "BUG - directory is empty", dir.Name())
 
 	resIds := make([]string, len(dirnames))
 	i := 0
 	for _, dirname := range dirnames {
 		if dirname[0] != '.' {
-			resIds[i] = dirname; i++
+			resIds[i] = dirname
+			i++
 		}
 	}
 	return resIds[:i]
 }
-func (env *Environment) GetResourceDigests (restype string, verbose bool, encoder system.DocumentDigestFn) []string {
+
+type digestFn func(env *Environment, restype string, resid string, encode system.DocumentDigestFn) string
+
+func (env *Environment) GetResourceDigests(restype string, verbose bool, encoder system.DocumentDigestFn) []string {
 
 	resourceIds := env.GetResourceIds(restype)
 
@@ -463,8 +506,6 @@ func (env *Environment) GetResourceDigests (restype string, verbose bool, encode
 	return digests
 }
 
-type digestFn func(env *Environment, restype string, resid string, encode system.DocumentDigestFn) string
-
 func justResourceId(env *Environment, restype string, resid string, encode system.DocumentDigestFn) string {
 	return resid
 }
@@ -472,7 +513,7 @@ func justResourceId(env *Environment, restype string, resid string, encode syste
 func digestForResourceId(env *Environment, restype string, resid string, encode system.DocumentDigestFn) string {
 	docid := system.DocId(fmt.Sprintf("%s.%s.%s", restype, resid, restype))
 	doc, e := env.LoadDocument(docid)
-	anomaly.PanicOnError(e, "BUG", "getResourceDigests:", "loadDocument", docid)
-	anomaly.PanicOnTrue(doc == nil, "BUG", "getResourceDigests:", "loadDocument", docid)
+	PanicOnError(e, "BUG", "getResourceDigests:", "loadDocument", docid)
+	PanicOnTrue(doc == nil, "BUG", "getResourceDigests:", "loadDocument", docid)
 	return encode(doc)
 }

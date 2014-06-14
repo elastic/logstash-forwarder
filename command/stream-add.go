@@ -3,9 +3,9 @@ package command
 import (
 	"fmt"
 	"lsf"
+	"lsf/anomaly"
 	"lsf/schema"
 	"lsf/system"
-	"lsf/anomaly"
 )
 
 const addStreamCmdCode lsf.CommandCode = "stream-add"

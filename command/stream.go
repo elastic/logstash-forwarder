@@ -1,7 +1,7 @@
 package command
 
 import (
-//	"errors"
+	//	"errors"
 	"flag"
 	"lsf"
 	"lsf/anomaly"
@@ -33,7 +33,7 @@ func initEditStreamOptionsSpec(flagset *flag.FlagSet) *editStreamOptionsSpec {
 	}
 }
 func _verifyEditStreamRequiredOpts(env *lsf.Environment, args ...string) (err error) {
-//	defer anomaly.Recover(&err)
+	//	defer anomaly.Recover(&err)
 
 	var e error
 	e = verifyRequiredOption(addStreamOptions.id)
@@ -53,7 +53,7 @@ func _verifyEditStreamRequiredOpts(env *lsf.Environment, args ...string) (err er
 	case "rollover", "rotation":
 	default:
 		anomaly.PanicOnFalse(false, "stream-add", "option", "option mode must be one {rollover, rotation}")
-//		return errors.New("option mode must be one {rollover, rotation}")
+		//		return errors.New("option mode must be one {rollover, rotation}")
 	}
 	return
 }

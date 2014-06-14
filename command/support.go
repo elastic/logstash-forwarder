@@ -2,8 +2,8 @@ package command
 
 import (
 	"lsf"
-	"lsf/system"
 	"lsf/anomaly"
+	"lsf/system"
 )
 
 // support functions for commands
@@ -20,7 +20,7 @@ func _lockResource(env *lsf.Environment, resource string, reason string) system.
 }
 
 // assert resource does not exist
-func _assertNotExists (env *lsf.Environment, docid system.DocId) {
+func _assertNotExists(env *lsf.Environment, docid system.DocId) {
 	doc, e := env.LoadDocument(docid)
 	if e == nil && doc != nil {
 		panic(lsf.E_EXISTING)
@@ -28,7 +28,7 @@ func _assertNotExists (env *lsf.Environment, docid system.DocId) {
 }
 
 // assert resource does not exist
-func _assertExists (env *lsf.Environment, docid system.DocId) {
+func _assertExists(env *lsf.Environment, docid system.DocId) {
 	doc, e := env.LoadDocument(docid)
 	if e != nil || doc == nil {
 		panic(lsf.E_NOTEXISTING)

@@ -1,9 +1,9 @@
 package command
 
 import (
-	"lsf/anomaly"
 	"log"
 	"lsf"
+	"lsf/anomaly"
 )
 
 const cmd_init lsf.CommandCode = "init"

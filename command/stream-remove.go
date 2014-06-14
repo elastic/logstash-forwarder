@@ -3,9 +3,9 @@ package command
 import (
 	"fmt"
 	"lsf"
+	"lsf/anomaly"
 	"lsf/schema"
 	"lsf/system"
-	"lsf/anomaly"
 	"os"
 )
 
@@ -67,7 +67,6 @@ func runRemoveStream(env *lsf.Environment, args ...string) (err error) {
 	ok, e = env.DeleteDocument(docid)
 	anomaly.PanicOnError(e, "command.runRemoveStream:", "DeleteDocument:", string(id))
 	anomaly.PanicOnFalse(ok, "command.runRemoveStream:", "DeleteDocument:", string(id))
-
 
 	// remove the stream's directory
 	// REVU: this command needs a check to see if any procs

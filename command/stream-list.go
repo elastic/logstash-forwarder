@@ -3,8 +3,8 @@ package command
 import (
 	"log"
 	"lsf"
-	"lsf/schema"
 	"lsf/anomaly"
+	"lsf/schema"
 )
 
 const listStreamCmdCode lsf.CommandCode = "stream-list"
