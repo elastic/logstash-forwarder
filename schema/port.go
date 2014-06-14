@@ -49,7 +49,7 @@ func (t *Port) String() string {
 
 func PortDigest(doc system.Document) string {
 	port := DecodePort(doc)
-	return fmt.Sprintf("%s", port.String())
+	return port.String()
 }
 
 func DecodePort(data system.DataMap) *Port {

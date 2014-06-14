@@ -51,6 +51,11 @@ func (t *LogStream) String() string {
 	return fmt.Sprintf("logstream %s %s %s %s %s", t.Id, t.Path, t.JournalModel, t.Pattern, t.Fields)
 }
 
+func LogStreamDigest(doc system.Document) string {
+	logstream := DecodeLogStream(doc)
+	return logstream.String()
+}
+
 func DecodeLogStream(data system.DataMap) *LogStream {
 	m := data.Mappings()
 	return &LogStream{

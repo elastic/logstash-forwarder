@@ -1,14 +1,10 @@
 package command
 
 import (
-	"fmt"
 	"log"
 	"lsf"
 	"lsf/schema"
-	"lsf/system"
 	"lsf/anomaly"
-	"os"
-	"path"
 )
 
 const listStreamCmdCode lsf.CommandCode = "stream-list"
@@ -38,43 +34,16 @@ func init() {
 func runListStream(env *lsf.Environment, args ...string) (err error) {
 	defer anomaly.Recover(&err)
 
-	//	global := *listStreamOptions.global.value
-
 	verbose := *listStreamOptions.verbose.value
 	v, found := env.Get(streamOptionVerbose)
 	if found {
 		verbose = verbose || v.(bool)
 	}
 
-	root := env.Port()
-	dir, e := os.Open(path.Join(root, "stream"))
-	if e != nil {
-		return nil // no stream dir - nothing to list
-	}
-
-	dirnames, e := dir.Readdirnames(0)
-	anomaly.PanicOnError(e, "runListStream:", "BUG - directory is empty", dir.Name())
-
-	for _, sid := range dirnames {
-		if sid[0] == '.' {
-			continue
-		}
-		info := sid
-		if verbose {
-			// REVU: this is generic TODO extract it
-			docid := system.DocId(fmt.Sprintf("stream.%s.stream", sid))
-			doc, e := env.LoadDocument(docid)
-			anomaly.PanicOnError(e, "BUG", "runListStream:", "loadDocument", docid)
-			anomaly.PanicOnTrue(doc == nil, "BUG", "runListStream:", "loadDocument", docid)
-
-			logstream := schema.DecodeLogStream(doc)
-			log.Printf("%s", logstream.String())
-		} else {
-			log.Printf("%s", info)
-		}
+	digests := env.GetResourceDigests("stream", verbose, schema.LogStreamDigest)
+	for _, digest := range digests {
+		log.Println(digest)
 	}
 
 	return nil
 }
-
-type EntityDecodeFn func(doc *system.Document)
