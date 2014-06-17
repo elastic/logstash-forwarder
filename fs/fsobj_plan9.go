@@ -27,9 +27,9 @@ import (
 
 //struct Qid
 //{
-//	uvlong	path;
-//	ulong	vers;
-//	uchar	type;
+//	uvlong	path; // see: http://doc.cat-v.org/plan_9/programming/c_programming_in_plan_9
+//	ulong	vers; // version? this may change ..
+//	uchar	type; // OK.
 //} Qid;
 
 // determine the oid per OS specific FileInfo
