@@ -50,3 +50,20 @@ type object struct {
 	info os.FileInfo // associated file info struct
 	oid  fsoid       // generated oid based on info.
 }
+
+// Returns true if the (base named) file is an ignorable FS artifact.
+// (For example, on *nix, fs.Ingore(".") returns true)
+func Ignore(fname string) bool {
+	for _, f := range StdIgnores() {
+		if fname == f {
+			return true
+		}
+	}
+	return false
+}
+
+// Returns the list of standard ignore list for the FS.
+// See Ignore()
+func StdIgnores() []string {
+	return ignoredFiles()
+}

@@ -3,12 +3,12 @@ package main
 import (
 	"flag"
 	"log"
-	. "lsf/capability"
 	"lsf/fs"
 	"os"
 	"os/signal"
 	"path"
 	"time"
+	. "lsf/capability"
 )
 
 var config struct {
@@ -113,7 +113,6 @@ func track(ctl control, requests <-chan struct{}, out chan<- *Trackreport, basep
 			e = file.Close()
 			anomaly(e)
 
-			//			workingset := make(map[string]os.FileInfo)
 			workingset := make(map[string]fs.Object)
 
 			var eventTime = time.Now()
@@ -122,10 +121,7 @@ func track(ctl control, requests <-chan struct{}, out chan<- *Trackreport, basep
 			var eventNum = 0
 
 			for _, basename := range filenames {
-				// REVU: need os agnostic variant, not just for *nix
-				if basename[0] == '.' {
-					continue
-				}
+				if fs.Ignore(basename) { continue }
 
 				filename := path.Join(basepath, basename)
 				info, e := os.Stat(filename)

@@ -27,3 +27,7 @@ func oid(info os.FileInfo) fsoid {
 
 	return buf.Bytes()
 }
+
+func ignoredFiles() []string {
+	return []string{"."}
+}
