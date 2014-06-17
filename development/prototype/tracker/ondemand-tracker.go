@@ -2,8 +2,8 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
+	. "lsf/capability"
 	"lsf/fs"
 	"os"
 	"os/signal"
@@ -52,7 +52,7 @@ func main() {
 		//		time.Sleep(time.Microsecond)
 		select {
 		case report := <-reports:
-			for _, event := range report.events {
+			for _, event := range report.Events {
 				log.Println(event.String())
 			}
 			// wait a bit before requesting next update
@@ -72,9 +72,9 @@ func main() {
 	os.Exit(0)
 }
 
-func tracker() (*control, chan struct{}, chan *trackreport) {
+func tracker() (*control, chan struct{}, chan *Trackreport) {
 	r := make(chan struct{}, 1)
-	c := make(chan *trackreport, 0)
+	c := make(chan *Trackreport, 0)
 	return procControl(), r, c
 }
 
@@ -93,7 +93,7 @@ type control struct {
 // ----------------------------------------------------------------------
 // tracker task
 // ----------------------------------------------------------------------
-func track(ctl control, requests <-chan struct{}, out chan<- *trackreport, basepath string, pattern string) {
+func track(ctl control, requests <-chan struct{}, out chan<- *Trackreport, basepath string, pattern string) {
 	defer recovery(ctl, "done")
 
 	log.Println("traking..")
@@ -117,8 +117,8 @@ func track(ctl control, requests <-chan struct{}, out chan<- *trackreport, basep
 			workingset := make(map[string]fs.Object)
 
 			var eventTime = time.Now()
-			var eventType fileEventCode
-			var events = make([]fileEvent, len(filenames)+len(snapshot))
+			var eventType FileEventCode
+			var events = make([]FileEvent, len(filenames)+len(snapshot))
 			var eventNum = 0
 
 			for _, basename := range filenames {
@@ -133,7 +133,7 @@ func track(ctl control, requests <-chan struct{}, out chan<- *trackreport, basep
 					// deleted under our nose
 					// were we tracking it?
 					if fsobj, found := snapshot[basename]; found {
-						events[eventNum] = fileEvent{eventTime, TrackEvent.DeletedFile, fsobj}
+						events[eventNum] = FileEvent{eventTime, TrackEvent.DeletedFile, fsobj}
 						eventNum++
 						delete(snapshot, basename)
 						continue
@@ -157,7 +157,7 @@ func track(ctl control, requests <-chan struct{}, out chan<- *trackreport, basep
 					news = true
 				}
 				if news {
-					events[eventNum] = fileEvent{eventTime, eventType, fsobj}
+					events[eventNum] = FileEvent{eventTime, eventType, fsobj}
 					eventNum++
 					snapshot[basename] = fsobj
 				}
@@ -165,58 +165,15 @@ func track(ctl control, requests <-chan struct{}, out chan<- *trackreport, basep
 			// were we tracking anything that is no longer in the dir?
 			for f, _ := range snapshot {
 				if _, found := workingset[f]; !found {
-					events[eventNum] = fileEvent{eventTime, TrackEvent.DeletedFile, snapshot[f]}
+					events[eventNum] = FileEvent{eventTime, TrackEvent.DeletedFile, snapshot[f]}
 					eventNum++
 					delete(snapshot, f)
 				}
 			}
-			report := trackreport{basepath, events[:eventNum]}
+			report := Trackreport{basepath, events[:eventNum]}
 			out <- &report
 		}
 	}
-}
-
-// ----------------------------------------------------------------------
-// tracked file event
-// ----------------------------------------------------------------------
-type fileEventCode string
-
-func (t fileEventCode) String() string { return string(t) }
-
-// enum
-var TrackEvent = struct {
-	NewFile, ModifiedFile, DeletedFile fileEventCode
-}{
-	NewFile:      "TRK",
-	ModifiedFile: "MOD",
-	DeletedFile:  "DEL",
-}
-
-type fileEvent struct {
-	timestamp_ns time.Time
-	event        fileEventCode
-	fsobj        fs.Object
-}
-
-func (t *fileEvent) String() string {
-	return fmt.Sprintf("%d %3s oid:%s %s", t.timestamp_ns.UnixNano(), t.event.String(), t.fsobj.Id(), fileStatString(t.fsobj.Info()))
-}
-
-func fileStatString(f os.FileInfo) string {
-	if f == nil {
-		return "BUG - nil"
-	}
-	return fmt.Sprintf("%020d %s %012d %s", f.Size(), f.Mode(), f.ModTime().Unix(), f.Name())
-}
-
-// ----------------------------------------------------------------------
-// tracker report
-// ----------------------------------------------------------------------
-
-// assumes track focuses on a specific (base)path
-type trackreport struct {
-	basepath string
-	events   []fileEvent
 }
 
 // ----------------------------------------------------------------------
@@ -233,6 +190,7 @@ func recovery(ctl control, ok interface{}) {
 	}
 	ctl.stat <- ok
 }
+
 func anomaly(e error) {
 	if e != nil {
 		panic(e)
