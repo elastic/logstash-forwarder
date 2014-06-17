@@ -34,17 +34,27 @@ type LogStream struct {
 	records map[string]*LogRecord // lazy
 }
 
+// recorded elements of LogStream object
+var logStreamElem = struct {
+	id, basepath, pattern, model string
+}{
+	id:       "id",
+	basepath: "basepath",
+	pattern:  "name-pattern",
+	model:    "journal-model",
+}
+
 var DefaultStreamMappings = defmapping{
-	"journal-model": []byte(JournalModel.Rotation),
+	logStreamElem.model: []byte(JournalModel.Rotation),
 }
 
 // REVU: TODO sort mappings at sysrec..
 func (t *LogStream) Mappings() map[string][]byte {
 	m := make(map[string][]byte)
-	m["id"] = []byte(t.Id)
-	m["file-path"] = []byte(t.Path)
-	m["name-pattern"] = []byte(t.Pattern)
-	m["journal-model"] = []byte(t.JournalModel)
+	m[logStreamElem.id] = []byte(t.Id)
+	m[logStreamElem.basepath] = []byte(t.Path)
+	m[logStreamElem.pattern] = []byte(t.Pattern)
+	m[logStreamElem.model] = []byte(t.JournalModel)
 	return m
 }
 
@@ -60,10 +70,10 @@ func LogStreamDigest(doc system.Document) string {
 func DecodeLogStream(data system.DataMap) *LogStream {
 	m := data.Mappings()
 	return &LogStream{
-		Id:           StreamId(string(m["id"])),
-		Path:         string(m["file-path"]),
-		JournalModel: journalModel(string(m["journal-model"])),
-		Pattern:      string(m["name-pattern"]),
+		Id:           StreamId(string(m[logStreamElem.id])),
+		Path:         string(m[logStreamElem.basepath]),
+		JournalModel: journalModel(string(m[logStreamElem.model])),
+		Pattern:      string(m[logStreamElem.pattern]),
 		Fields:       make(map[string]string), // TODO: fields needs a solution
 		records:      make(map[string]*LogRecord),
 	}
