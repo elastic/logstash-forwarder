@@ -19,23 +19,26 @@ var config struct {
 }
 
 // Options -name is required.
+var delayOpt uint
+var filemode uint
+
 func init() {
 	log.SetFlags(0)
 	flag.StringVar(&config.path, "path", ".", "path to log file dir")
 	flag.StringVar(&config.filename, "name", "", "basename for log files")
 	flag.Uint64Var(&config.maxsize, "size", uint64(16777216), "max size of each log file")
 	flag.UintVar(&config.maxfiles, "num", uint(16), "max number of rotated filesa")
-	config.fileperm = os.FileMode(0644)
-	var delayOpt uint
 	flag.UintVar(&delayOpt, "f", uint(10), "microsec delay between each log event")
-	config.delay = time.Duration(delayOpt) * time.Microsecond
+	flag.UintVar(&filemode, "m", uint(0644), "microsec delay between each log event")
 }
 
-// Simulate a rotating log writer
+// Simulate a rotating log writer.
 // See init() for option details.
 func main() {
 
 	flag.Parse()
+	config.delay = time.Duration(delayOpt) * time.Microsecond
+	config.fileperm = os.FileMode(0644)
 	if config.filename == "" {
 		log.Println("option -name is required.")
 		flag.Usage()
@@ -56,8 +59,8 @@ func writeLog(dir, basename string, maxsize int64, maxfiles uint, delay_msec tim
 	fname := path.Join(dir, basename)
 	file, e := os.OpenFile(fname, os.O_WRONLY|os.O_CREATE, config.fileperm)
 	if e != nil {
-		file, e = os.Create(fname)
-		PanicOnError(e, "os.Create", fname)
+		file, e = os.OpenFile(fname, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, config.fileperm)
+		PanicOnError(e, "os.OpenFile", "CREATE|TRUNC", fname)
 	}
 
 	var seq uint = 0
@@ -103,7 +106,7 @@ func rotate(file *os.File, seq uint, seqmax uint) (newfile *os.File, newseq uint
 	Recover(&err)
 
 	oldname := file.Name()
-	if seq == seqmax {
+	if seq == seqmax-1 {
 		seq = 0
 	} else {
 		seq++

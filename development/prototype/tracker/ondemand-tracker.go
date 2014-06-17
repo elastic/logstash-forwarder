@@ -1,87 +1,74 @@
 package main
 
 import (
-	"expvar"
 	"flag"
-	"log"
 	"fmt"
-	"net/http"
+	"log"
 	"os"
 	"os/signal"
+	"path"
 	"time"
 )
 
-var path string
+var config struct {
+	path  string
+	delay time.Duration
+}
+
+var delayOpt uint
 
 func init() {
 	log.SetFlags(0)
-	const (
-		usage = "path to track"
-	)
-
-	flag.StringVar(&path, "p", ".", usage)
+	flag.StringVar(&config.path, "path", "", "path to log file dir")
+	flag.UintVar(&delayOpt, "f", uint(100), "microsec delay between each log event")
 }
-var publish chan interface{}
-func _var(f func() interface{}) expvar.Func { return expvar.Func(f) }
+
+//var publish chan interface{}
+
 func main() {
 	flag.Parse()
+	config.delay = time.Duration(delayOpt) * time.Microsecond
+	log.Printf("%d", delayOpt)
+	log.Printf("%d", config.delay.Nanoseconds())
+	if config.path == "" {
+		log.Println("option -path is required.")
+		flag.Usage()
+		os.Exit(0)
+	}
 
-	log.Printf("trak %q", path)
+	log.Printf("trak %q", config.path)
 	ctl, requests, reports := tracker()
 
-	expvar.Publish("ctl", _var(func() interface{} { return ctl }))
-	expvar.Publish("reports", _var(func() interface{} { return reports }))
-	expvar.Publish("requests", _var(func() interface{} { return requests }))
-	expvar.Publish("time", _var(func() interface{} { return time.Now() }))
-	publish = make(chan interface{}, 1)
-	var prev []string = []string{}
-	expvar.Publish("hideme", _var(func() interface{} {
-		select {
-		case report := <-publish:
-			prev = append(prev, fmt.Sprintf("%s", report))
-			return report
-		default:
-			return prev
-		}
-	}))
 	user := make(chan os.Signal, 1)
 	signal.Notify(user, os.Interrupt, os.Kill)
 
-	go track(*ctl, requests, reports, path, "*")
+	go track(*ctl, requests, reports, config.path, "*")
 
-	go http.ListenAndServe(":12345", nil)
-
+	// driver
 	flag := true
 	requests <- struct{}{}
 	for flag {
 		//		time.Sleep(time.Microsecond)
 		select {
 		case report := <-reports:
-			var pubmap map[string]string
-			if len(report.files) > 0 {
-				pubmap = make(map[string]string)
-				pubmap["timestamp"] = report.timestamp.String()
+			for _, event := range report.events {
+				log.Println(event.String())
 			}
-			for name, dir := range report.files {
-				pubmap[name] = fmt.Sprintf("%d %s", dir.Size(), dir.ModTime().String())
-				log.Printf("%s %s %d ", name, dir.Name(), dir.Size())
-			}
-			log.Println()
-			if len(report.files) > 0 {
-				publish <- pubmap
-			}
-			time.Sleep(time.Millisecond * 100)
+			// wait a bit before requesting next update
+			time.Sleep(config.delay)
 			requests <- struct{}{}
 		case stat := <-ctl.stat:
-			log.Println("stat: %s", stat)
+			log.Printf("stat: %s", stat)
 			flag = false
 		case <-user:
 			os.Exit(0)
 		default:
 		}
 	}
-	stat := <-ctl.stat
-	log.Printf("stat: %s", stat)
+	// driver
+
+	log.Println("bye")
+	os.Exit(0)
 }
 
 func tracker() (*control, chan struct{}, chan *trackreport) {
@@ -102,78 +89,138 @@ type control struct {
 	stat chan interface{}
 }
 
-func track(ctl control, requests <-chan struct{}, out chan<- *trackreport, path string, pattern string) {
+// ----------------------------------------------------------------------
+// tracker task
+// ----------------------------------------------------------------------
+func track(ctl control, requests <-chan struct{}, out chan<- *trackreport, basepath string, pattern string) {
 	defer recovery(ctl, "done")
 
 	log.Println("traking..")
 
+	// maintains snapshot view of tracker after each request - initially empty
 	var snapshot map[string]os.FileInfo = make(map[string]os.FileInfo)
 
 	for {
 		select {
 		case <-requests:
-			file, e := os.Open(path)
+
+			file, e := os.Open(basepath)
 			anomaly(e)
-			dirs, e := file.Readdirnames(0)
+			filenames, e := file.Readdirnames(0)
 			anomaly(e)
-			if len(dirs) == 0 {
-				panic("zero")
-			}
 			e = file.Close()
 			anomaly(e)
 
-			files := make(map[string]os.FileInfo)
-			files0 := make(map[string]os.FileInfo)
-			for _, dir := range dirs {
-				info, e := os.Stat(dir)
-				anomaly(e)
-				if dir[0] == '.' {
+			workingset := make(map[string]os.FileInfo)
+
+			var eventTime = time.Now()
+			var eventType fileEventCode
+			var events = make([]fileEvent, len(filenames)+len(snapshot))
+			var eventNum = 0
+
+			for _, basename := range filenames {
+				// REVU: need os agnostic variant, not just for *nix
+				if basename[0] == '.' {
 					continue
 				}
-				files0[dir] = info
-				info0 := snapshot[dir]
+
+				filename := path.Join(basepath, basename)
+				info, e := os.Stat(filename)
+				if e != nil {
+					// deleted under our nose
+					// were we tracking it?
+					if _, found := snapshot[basename]; found {
+						events[eventNum] = fileEvent{eventTime, TrackEvent.DeletedFile, snapshot[basename]}
+						eventNum++
+						delete(snapshot, basename)
+						continue
+					}
+				}
+
+				workingset[basename] = info
+				info0 := snapshot[basename]
 				news := false
 				// is it news?
 				if info0 != nil {
 					// compare
 					if info0.Size() != info.Size() {
 						// changed
-						log.Printf("changed %s", dir)
-						publish<- fmt.Sprintf("%s changed", dir)
+						eventType = TrackEvent.ModifiedFile
 						news = true
 					}
 				} else {
-					log.Printf("initial %s", dir)
-					publish<- fmt.Sprintf("%s initial", dir)
+					eventType = TrackEvent.NewFile
 					news = true
 				}
 				if news {
-					files[dir] = info
-					snapshot[dir] = info
+					events[eventNum] = fileEvent{eventTime, eventType, info}
+					eventNum++
+					snapshot[basename] = info
 				}
 			}
+			// were we tracking anything that is no longer in the dir?
 			for f, _ := range snapshot {
-				if _, found := files0[f]; !found {
-					log.Printf("deleted %s", f)
-					publish<- fmt.Sprintf("%s deleted", f)
+				if _, found := workingset[f]; !found {
+					events[eventNum] = fileEvent{eventTime, TrackEvent.DeletedFile, snapshot[f]}
+					eventNum++
 					delete(snapshot, f)
 				}
 			}
-			//			if len(files) > 0 {
-			report := trackreport{files, time.Now()}
+			report := trackreport{basepath, events[:eventNum]}
 			out <- &report
-			//			}
 		}
 	}
 }
 
-type trackreport struct {
-	files     map[string]os.FileInfo `json: "Files"`
-	timestamp time.Time
+// ----------------------------------------------------------------------
+// tracked file event
+// ----------------------------------------------------------------------
+type fileEventCode string
+
+func (t fileEventCode) String() string { return string(t) }
+
+// enum
+var TrackEvent = struct {
+	NewFile, ModifiedFile, DeletedFile fileEventCode
+}{
+	NewFile:      "TRK",
+	ModifiedFile: "MOD",
+	DeletedFile:  "DEL",
 }
 
+type fileEvent struct {
+	timestamp_ns time.Time
+	event        fileEventCode
+	fileinfo     os.FileInfo
+}
+
+func (t *fileEvent) String() string {
+	return fmt.Sprintf("%d %3s stat %s", t.timestamp_ns.UnixNano(), t.event.String(), fileStatString(t.fileinfo))
+}
+
+func fileStatString(f os.FileInfo) string {
+	if f == nil {
+		return "BUG - nil"
+	}
+	return fmt.Sprintf("%020d %s %020d %s", f.Size(), f.Mode(), f.ModTime().Unix(), f.Name())
+}
+
+// ----------------------------------------------------------------------
+// tracker report
+// ----------------------------------------------------------------------
+
+// assumes track focuses on a specific (base)path
+type trackreport struct {
+	basepath string
+	events   []fileEvent
+}
+
+// ----------------------------------------------------------------------
+// temp | replace with anomaly.*
+// ----------------------------------------------------------------------
+
 func recovery(ctl control, ok interface{}) {
-	log.Println("recovery ..")
+	log.Println("recovering error ..")
 	p := recover()
 
 	if p != nil {
