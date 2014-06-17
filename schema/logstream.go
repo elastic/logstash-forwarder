@@ -74,7 +74,7 @@ func DecodeLogStream(data system.DataMap) *LogStream {
 		Path:         string(m[logStreamElem.basepath]),
 		JournalModel: journalModel(string(m[logStreamElem.model])),
 		Pattern:      string(m[logStreamElem.pattern]),
-		Fields:       make(map[string]string), // TODO: fields needs a solution
+		Fields:       make(map[string]string), 			// REVU: an array of tags TODO mod []string ..
 		records:      make(map[string]*LogRecord),
 	}
 }
