@@ -30,7 +30,7 @@ func runAddStream(env *lsf.Environment, args ...string) (err error) {
 
 	id := schema.StreamId(*addStreamOptions.id.value)
 	pattern := *addStreamOptions.pattern.value
-	mode := schema.JournalModel(*addStreamOptions.mode.value)
+	mode := schema.ToJournalModel(*addStreamOptions.mode.value)
 	path := *addStreamOptions.path.value
 	fields := make(map[string]string) // TODO: fields needs a solution
 

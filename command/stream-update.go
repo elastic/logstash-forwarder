@@ -64,7 +64,7 @@ func runUpdateStream(env *lsf.Environment, args ...string) (err error) {
 	}
 	option = updateStreamOptions.mode
 	if OptionProvided(option) {
-		v := []byte(schema.JournalModel(*updateStreamOptions.mode.value))
+		v := []byte(schema.ToJournalModel(*updateStreamOptions.mode.value))
 		doc.Set("journal-mode", v)
 	}
 	ok, e = env.UpdateDocument(doc)

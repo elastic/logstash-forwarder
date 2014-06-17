@@ -22,7 +22,8 @@ type LogStream struct {
 	// Path to the log files
 	Path string
 	// JournalModel
-	JournalModel JournalModel
+	//	JournalModel JournalModel
+	JournalModel journalModel
 	// Log filename pattern
 	Pattern string
 	// Stream's semantic structure
@@ -34,7 +35,7 @@ type LogStream struct {
 }
 
 var DefaultStreamMappings = defmapping{
-	"journal-model": []byte(Rotation),
+	"journal-model": []byte(JournalModel.Rotation),
 }
 
 // REVU: TODO sort mappings at sysrec..
@@ -43,7 +44,7 @@ func (t *LogStream) Mappings() map[string][]byte {
 	m["id"] = []byte(t.Id)
 	m["file-path"] = []byte(t.Path)
 	m["name-pattern"] = []byte(t.Pattern)
-	m["journal-mode"] = []byte(t.JournalModel)
+	m["journal-model"] = []byte(t.JournalModel)
 	return m
 }
 
@@ -61,14 +62,14 @@ func DecodeLogStream(data system.DataMap) *LogStream {
 	return &LogStream{
 		Id:           StreamId(string(m["id"])),
 		Path:         string(m["file-path"]),
-		JournalModel: JournalModel(string(m["name-pattern"])),
-		Pattern:      string(m["journal-model"]),
+		JournalModel: journalModel(string(m["journal-model"])),
+		Pattern:      string(m["name-pattern"]),
 		Fields:       make(map[string]string), // TODO: fields needs a solution
 		records:      make(map[string]*LogRecord),
 	}
 }
 
-func NewLogStream(id StreamId, path string, journalModel JournalModel, namingPattern string, fields map[string]string) *LogStream {
+func NewLogStream(id StreamId, path string, journalModel journalModel, namingPattern string, fields map[string]string) *LogStream {
 	return &LogStream{
 		Id:           id,
 		Path:         path,

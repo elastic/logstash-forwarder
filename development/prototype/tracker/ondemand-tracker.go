@@ -175,6 +175,10 @@ func track(ctl control, requests <-chan struct{}, out chan<- *Trackreport, basep
 	}
 }
 
+func trackingAnalysis(snapshot, workingSet map[string]fs.Object, ) []FileEvent {
+
+	return nil
+}
 // ----------------------------------------------------------------------
 // temp | replace with anomaly.*
 // ----------------------------------------------------------------------

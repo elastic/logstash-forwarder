@@ -37,12 +37,25 @@ type LogRecord struct {
 // JournalModel
 // ----------------------------------------------------------------------
 
-type JournalModel string
+type journalModel string
 
-const (
-	Rotation JournalModel = "rotation" // file sequences
-	Rollover              = "rollover" // truncated
-)
+// enum
+var JournalModel = struct {
+	Rotation, Rollover journalModel
+}{
+	Rotation: "rotation",
+	Rollover: "rollover",
+}
+
+func ToJournalModel(v string) journalModel {
+	switch journalModel(v) {
+	case JournalModel.Rotation:
+		return JournalModel.Rotation
+	case JournalModel.Rollover:
+		return JournalModel.Rollover
+	}
+	return journalModel("")
+}
 
 // ----------------------------------------------------------------------
 // Identifiers
