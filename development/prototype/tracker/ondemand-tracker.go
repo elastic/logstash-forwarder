@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	fs "lsf/filesystem"
+	"lsf/fs"
 	"os"
 	"os/signal"
 	"path"
@@ -139,7 +139,7 @@ func track(ctl control, requests <-chan struct{}, out chan<- *trackreport, basep
 						continue
 					}
 				}
-				fsobj := fs.NewObject(info)
+				fsobj := fs.AsObject(info)
 				workingset[basename] = fsobj
 
 				obj0 := snapshot[basename]
@@ -195,8 +195,7 @@ var TrackEvent = struct {
 type fileEvent struct {
 	timestamp_ns time.Time
 	event        fileEventCode
-	//	fileinfo     os.FileInfo
-	fsobj fs.Object
+	fsobj        fs.Object
 }
 
 func (t *fileEvent) String() string {

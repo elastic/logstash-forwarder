@@ -1,4 +1,4 @@
-package filesystem
+package fs
 
 import (
 	"bytes"

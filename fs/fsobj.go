@@ -1,4 +1,4 @@
-package filesystem
+package fs
 
 import (
 	"encoding/hex"
@@ -31,7 +31,7 @@ func (obj *object) String() string {
 }
 
 // Returns nil for nil.
-func NewObject(info os.FileInfo) Object {
+func AsObject(info os.FileInfo) Object {
 	if info == nil {
 		return nil
 	}
