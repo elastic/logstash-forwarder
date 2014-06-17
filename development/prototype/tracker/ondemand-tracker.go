@@ -3,12 +3,13 @@ package main
 import (
 	"flag"
 	"log"
+	. "lsf/anomaly"
+	. "lsf/capability"
 	"lsf/fs"
 	"os"
 	"os/signal"
 	"path"
 	"time"
-	. "lsf/capability"
 )
 
 var config struct {
@@ -94,7 +95,7 @@ type control struct {
 // tracker task
 // ----------------------------------------------------------------------
 func track(ctl control, requests <-chan struct{}, out chan<- *Trackreport, basepath string, pattern string) {
-	defer recovery(ctl, "done")
+	defer AsyncRecover(ctl.stat, "done")
 
 	log.Println("traking..")
 
@@ -121,7 +122,9 @@ func track(ctl control, requests <-chan struct{}, out chan<- *Trackreport, basep
 			var eventNum = 0
 
 			for _, basename := range filenames {
-				if fs.Ignore(basename) { continue }
+				if fs.Ignore(basename) {
+					continue
+				}
 
 				filename := path.Join(basepath, basename)
 				info, e := os.Stat(filename)

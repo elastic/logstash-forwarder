@@ -101,3 +101,23 @@ func Recover(err *error) error {
 	}
 	return *err
 }
+
+// TODO: no rush but refactor this ..
+func AsyncRecover(stat chan<- interface{}, okstat interface{}) {
+	p := recover()
+	if p == nil {
+		stat <- okstat
+		return
+	}
+
+	switch t := p.(type) {
+	case *Error:
+		stat <- t
+	case error:
+		stat <- t
+	case string:
+		stat <- fmt.Errorf(t)
+	default:
+		stat <- fmt.Errorf("recovered-panic: %q", t)
+	}
+}
