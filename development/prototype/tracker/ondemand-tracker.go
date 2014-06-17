@@ -4,11 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	fs "lsf/filesystem"
 	"os"
 	"os/signal"
 	"path"
 	"time"
-	"lsf/filesystem"
 )
 
 var config struct {
@@ -99,7 +99,8 @@ func track(ctl control, requests <-chan struct{}, out chan<- *trackreport, basep
 	log.Println("traking..")
 
 	// maintains snapshot view of tracker after each request - initially empty
-	var snapshot map[string]os.FileInfo = make(map[string]os.FileInfo)
+	//	var snapshot map[string]os.FileInfo = make(map[string]os.FileInfo)
+	var snapshot map[string]fs.Object = make(map[string]fs.Object)
 
 	for {
 		select {
@@ -112,7 +113,8 @@ func track(ctl control, requests <-chan struct{}, out chan<- *trackreport, basep
 			e = file.Close()
 			anomaly(e)
 
-			workingset := make(map[string]os.FileInfo)
+			//			workingset := make(map[string]os.FileInfo)
+			workingset := make(map[string]fs.Object)
 
 			var eventTime = time.Now()
 			var eventType fileEventCode
@@ -130,21 +132,22 @@ func track(ctl control, requests <-chan struct{}, out chan<- *trackreport, basep
 				if e != nil {
 					// deleted under our nose
 					// were we tracking it?
-					if _, found := snapshot[basename]; found {
-						events[eventNum] = fileEvent{eventTime, TrackEvent.DeletedFile, snapshot[basename]}
+					if fsobj, found := snapshot[basename]; found {
+						events[eventNum] = fileEvent{eventTime, TrackEvent.DeletedFile, fsobj}
 						eventNum++
 						delete(snapshot, basename)
 						continue
 					}
 				}
+				fsobj := fs.NewObject(info)
+				workingset[basename] = fsobj
 
-				workingset[basename] = info
-				info0 := snapshot[basename]
+				obj0 := snapshot[basename]
 				news := false
 				// is it news?
-				if info0 != nil {
+				if obj0 != nil {
 					// compare
-					if info0.Size() != info.Size() {
+					if obj0.Info().Size() != info.Size() {
 						// changed
 						eventType = TrackEvent.ModifiedFile
 						news = true
@@ -154,9 +157,9 @@ func track(ctl control, requests <-chan struct{}, out chan<- *trackreport, basep
 					news = true
 				}
 				if news {
-					events[eventNum] = fileEvent{eventTime, eventType, info}
+					events[eventNum] = fileEvent{eventTime, eventType, fsobj}
 					eventNum++
-					snapshot[basename] = info
+					snapshot[basename] = fsobj
 				}
 			}
 			// were we tracking anything that is no longer in the dir?
@@ -192,18 +195,19 @@ var TrackEvent = struct {
 type fileEvent struct {
 	timestamp_ns time.Time
 	event        fileEventCode
-	fileinfo     os.FileInfo
+	//	fileinfo     os.FileInfo
+	fsobj fs.Object
 }
 
 func (t *fileEvent) String() string {
-	return fmt.Sprintf("%d %3s stat %s", t.timestamp_ns.UnixNano(), t.event.String(), fileStatString(t.fileinfo))
+	return fmt.Sprintf("%d %3s oid:%s %s", t.timestamp_ns.UnixNano(), t.event.String(), t.fsobj.Id(), fileStatString(t.fsobj.Info()))
 }
 
 func fileStatString(f os.FileInfo) string {
 	if f == nil {
 		return "BUG - nil"
 	}
-	return fmt.Sprintf("%020d %s %020d %s", f.Size(), f.Mode(), f.ModTime().Unix(), f.Name())
+	return fmt.Sprintf("%020d %s %012d %s", f.Size(), f.Mode(), f.ModTime().Unix(), f.Name())
 }
 
 // ----------------------------------------------------------------------
