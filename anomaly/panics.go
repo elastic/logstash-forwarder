@@ -2,6 +2,7 @@ package anomaly
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -61,12 +62,12 @@ func fmtInfo(info ...interface{}) string {
 			case bool:
 				str = fmt.Sprintf("%t", t)
 			default:
-				str = fmt.Sprintf("%q", t)
+				str = fmt.Sprintf("%v", t)
 			}
 			str = " " + str
 			msg += str
 		}
-		//		msg += ":"
+		msg = strings.Trim(msg, " ")
 	}
 	return msg
 }
@@ -77,7 +78,7 @@ func PanicOnError(e error, info ...interface{}) {
 	}
 	var err error = e
 	if len(info) > 0 {
-		err = fmt.Errorf("%s - cause: %s", fmtInfo(info...), e)
+		err = fmt.Errorf("error: %s - cause: %s", fmtInfo(info...), e)
 	}
 	panic(&Error{Cause: e, err: err})
 }

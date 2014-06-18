@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	. "lsf/anomaly"
+	"lsf/anomaly"
 	"os"
 	"path"
 	"time"
@@ -47,31 +47,29 @@ func main() {
 	stop, wdone := newProcess()
 	go writeLog(config.path, config.filename, int64(config.maxsize), config.maxfiles, config.delay, stop, wdone)
 
-	log.Printf("%s\n", config)
-	var wait chan struct{}
-	<-wait
+	log.Println(<-wdone)
 }
 
 func writeLog(dir, basename string, maxsize int64, maxfiles uint, delay_msec time.Duration, stop <-chan interface{}, wdone chan<- interface{}) {
-
-	//	os.Open()
+	defer anomaly.AsyncRecover(wdone, "ok")
 
 	fname := path.Join(dir, basename)
 	file, e := os.OpenFile(fname, os.O_WRONLY|os.O_CREATE, config.fileperm)
 	if e != nil {
 		file, e = os.OpenFile(fname, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, config.fileperm)
-		PanicOnError(e, "os.OpenFile", "CREATE|TRUNC", fname)
+		anomaly.PanicOnError(e, "os.OpenFile", "CREATE|TRUNC", fname)
 	}
 
-	var seq uint = 0
+	rotator, e := GetFileRotator(file, dir, 0, config.maxfiles)
+	anomaly.PanicOnError(e, "GetFileRotator")
 
 	// continuing from an earlier run?
 	// note: won't pick up the sequence so it will overwrite ..
 	//       sipmly will append to main log file
 	n, _ := file.Seek(0, os.SEEK_END)
 	if n > maxsize {
-		file, seq, e = rotate(file, seq, config.maxfiles)
-		PanicOnError(e, "rotate", "on-startup")
+		file, e = rotator.Next()
+		anomaly.PanicOnError(e, "rotate", "on-startup")
 		n = 0
 	}
 
@@ -86,12 +84,12 @@ func writeLog(dir, basename string, maxsize int64, maxfiles uint, delay_msec tim
 			line := simulateLogInput()
 
 			_, e := file.Write(line)
-			PanicOnError(e, "file.Write", file)
+			anomaly.PanicOnError(e, "file.Write", file)
 
 			n += int64(len(line))
 			if n > maxsize {
-				file, seq, e = rotate(file, seq, config.maxfiles)
-				PanicOnError(e, "rotate", "on-rotate")
+				file, e = rotator.Next()
+				anomaly.PanicOnError(e, "rotate", "on-rotate")
 				n = 0
 			}
 			time.Sleep(delay_msec)
@@ -99,11 +97,60 @@ func writeLog(dir, basename string, maxsize int64, maxfiles uint, delay_msec tim
 	}
 }
 
-func newProcess() (stop <-chan interface{}, wdone chan<- interface{}) {
+func newProcess() (stop <-chan interface{}, wdone chan interface{}) {
 	return make(chan interface{}, 1), make(chan interface{}, 1)
 }
+
+// ----------------------------------------------------------------------
+// File Rotator
+// ----------------------------------------------------------------------
+
+type fileRotator struct {
+	basepath, filepath string
+	file               *os.File
+	sequence, limit    uint
+}
+
+type FileRotator interface {
+	Next() (*os.File, error)
+}
+
+func GetFileRotatorWithDefaults(file *os.File) (r FileRotator, err error) {
+	return GetFileRotator(file, ".", uint(0), uint(16))
+}
+
+func GetFileRotator(file *os.File, basepath string, initseq, maxseq uint) (r FileRotator, err error) {
+	defer anomaly.Recover(&err)
+
+	// assert a few facts
+	anomaly.PanicOnTrue(file == nil, "GetFileRotator", "file is nil")
+	anomaly.PanicOnTrue(basepath == "", "GetFileRotator", "basepath is nil")
+	anomaly.PanicOnTrue(maxseq < initseq, "GetFileRotator", "maxseq < initseq")
+	_, e := os.Open(basepath) // check basepath exists
+	anomaly.PanicOnError(e, "GetFileRotator")
+	info, e := file.Stat()
+	anomaly.PanicOnError(e, "GetFileRotator")
+	filepath := path.Join(basepath, file.Name())
+	xinfo, e := os.Stat(filepath)
+	anomaly.PanicOnError(e, "GetFileRotator")
+	os.SameFile(info, xinfo)
+
+	return &fileRotator{basepath, filepath, file, initseq, maxseq}, nil
+}
+func (r *fileRotator) Next() (newfile *os.File, err error) {
+
+	newfile, newseq, e := rotate(r.file, r.sequence, r.limit)
+	if err != nil {
+		return nil, fmt.Errorf("rotating file %s - cause: %s", r.filepath, e.Error())
+	}
+	r.file = newfile
+	r.sequence = newseq
+
+	return
+}
+
 func rotate(file *os.File, seq uint, seqmax uint) (newfile *os.File, newseq uint, err error) {
-	Recover(&err)
+	defer anomaly.Recover(&err)
 
 	oldname := file.Name()
 	if seq == seqmax-1 {
@@ -115,14 +162,17 @@ func rotate(file *os.File, seq uint, seqmax uint) (newfile *os.File, newseq uint
 	log.Printf("writer ROTATING %s to %s\n", oldname, newname)
 
 	var e error
+	info, e := file.Stat()
+	anomaly.PanicOnError(e, "file.Stat", file)
+	filemode := info.Mode()
 	e = file.Close()
-	PanicOnError(e, "os.Create", file)
+	anomaly.PanicOnError(e, "file.Close", file)
 
 	e = os.Rename(oldname, newname)
-	PanicOnError(e, "os.Rename", oldname, newname)
+	anomaly.PanicOnError(e, "os.Rename", oldname, newname)
 
-	newfile, e = os.Create(oldname)
-	PanicOnError(e, "os.Create", oldname)
+	newfile, e = os.OpenFile(oldname, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, filemode)
+	anomaly.PanicOnError(e, "os.OpenFile(O_CREATE..)", oldname)
 
 	return newfile, seq, nil
 }
