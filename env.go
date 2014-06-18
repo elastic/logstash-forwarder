@@ -181,11 +181,10 @@ func (env *Environment) DeleteDocument(docid system.DocId) (ok bool, err error) 
 	panics.OnError(e, "Environment.DeleteDocument", "docid:", docid)
 	panics.OnFalse(ok, "Environment.DeleteDocument", "docid:", docid)
 
-	//	if e == nil && ok {
 	env.docslock.Lock()
 	delete(env.docs, docid)
 	env.docslock.Unlock()
-	//	}
+
 	return ok, e
 }
 
@@ -197,11 +196,11 @@ func (env *Environment) UpdateDocument(doc system.Document) (ok bool, err error)
 	ok, e := env.registrar.UpdateDocument(doc)
 	panics.OnError(e, "Environment.UpdateDocument", "docid:", doc.Id())
 	panics.OnFalse(ok, "Environment.UpdateDocument", "docid:", doc.Id())
-	//	if e == nil && ok {
+
 	env.docslock.Lock()
 	env.docs[doc.Id()] = doc
 	env.docslock.Unlock()
-	//	}
+
 	return ok, e
 }
 
@@ -211,11 +210,11 @@ func (env *Environment) LoadDocument(docid system.DocId) (doc system.Document, e
 
 	doc, e := env.registrar.ReadDocument(docid)
 	panics.OnError(e, "Environment.LoadDocument", "docid:", docid)
-	//	if e == nil {
+
 	env.docslock.Lock()
 	env.docs[docid] = doc
 	env.docslock.Unlock()
-	//	}
+
 	return doc, e
 }
 
@@ -233,9 +232,7 @@ func (env *Environment) loadDocuments(documents []system.DocId) (err error) {
 		if !found {
 			doc, e := env.registrar.ReadDocument(docid)
 			panics.OnError(e, "Environment.loadDocuments", "docid:", docid)
-			//			if e == nil {
 			env.docs[docid] = doc
-			//			}
 		}
 	}
 	return nil
@@ -444,21 +441,21 @@ func (env *Environment) Initialize(dir string) (err error) {
 	return nil
 }
 
-func (env *Environment) startRegistrar() error {
+func (env *Environment) startRegistrar() (err error) {
+	defer panics.Recover(&err)
+
 	if env.registrar != nil {
 		return E_ILLEGALSTATE_REGISTRAR_RUNNING
 	}
 
 	port, found := env.Get(VarHomePort)
-	if !found {
-		return fmt.Errorf("BUG - env var %q not set", VarHomePort)
-	}
+	panics.OnFalse(found, "BUG", VarHomePort, "not set")
+
 	home := port.(*schema.Port).Path()
 	//	log.Printf("open registrar in %q", home)
 	registrar, e := system.StartRegistry(home)
-	if e != nil {
-		return e
-	}
+	panics.OnError(e)
+
 	env.registrar = registrar
 	//	log.Printf("DEBUG using registrar %s", env.registrar)
 
@@ -506,10 +503,12 @@ func (env *Environment) GetResourceDigests(restype string, verbose bool, encoder
 	return digests
 }
 
+// See GetResourceDigests()
 func justResourceId(env *Environment, restype string, resid string, encode system.DocumentDigestFn) string {
 	return resid
 }
 
+// See GetResourceDigests()
 func digestForResourceId(env *Environment, restype string, resid string, encode system.DocumentDigestFn) string {
 	docid := system.DocId(fmt.Sprintf("%s.%s.%s", restype, resid, restype))
 	doc, e := env.LoadDocument(docid)
