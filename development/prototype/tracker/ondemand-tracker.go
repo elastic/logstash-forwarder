@@ -51,6 +51,7 @@ func main() {
 		//		time.Sleep(time.Microsecond)
 		select {
 		case report := <-reports:
+			log.Println("\n" + report.String())
 			for _, event := range report.Events {
 				log.Println(event.String())
 			}
