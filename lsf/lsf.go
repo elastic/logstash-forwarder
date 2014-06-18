@@ -25,6 +25,7 @@ var commands = []*lsf.Command{
 	command.Init,
 	command.Stream,
 	command.Remote,
+	command.Track,
 }
 
 var aboutFlag bool

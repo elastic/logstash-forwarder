@@ -4,7 +4,7 @@ import (
 	"lsf"
 )
 
-const cmd_remote lsf.CommandCode = "remote"
+const remoteCmdCode lsf.CommandCode = "remote"
 
 type remoteOptionsSpec struct {
 	verbose BoolOptionSpec
@@ -22,11 +22,11 @@ const (
 func init() {
 
 	Remote = &lsf.Command{
-		Name:  cmd_remote,
+		Name:  remoteCmdCode,
 		About: "Remote is a top level command for remote specific features of LSF",
 		//		Init:  initialCmdEnv,
 		Run:  runRemote,
-		Flag: FlagSet(cmd_remote),
+		Flag: FlagSet(remoteCmdCode),
 	}
 	remoteOptions = &remoteOptionsSpec{
 		verbose: NewBoolFlag(Remote.Flag, "v", "verbose", false, "be verbose in list", false),
@@ -50,11 +50,11 @@ func runRemote(env *lsf.Environment, args ...string) error {
 		switch lsf.CommandCode("remote-" + args[0]) {
 		case addRemoteCmdCode:
 			subcmd = addRemote
-		case cmd_remote_remove:
+		case removeRemoteCmdCode:
 			subcmd = removeRemote
-		case cmd_remote_update:
+		case updateRemoteCmdCode:
 			subcmd = updateRemote
-		case cmd_remote_list:
+		case listRemoteCmdCOde:
 			subcmd = listRemote
 		default:
 			// not panic -- return error TODO

@@ -5,7 +5,7 @@ import (
 	"lsf"
 )
 
-const cmd_remote_update lsf.CommandCode = "remote-update"
+const updateRemoteCmdCode lsf.CommandCode = "remote-update"
 
 type updateRemoteOptionsSpec struct {
 	global BoolOptionSpec
@@ -17,13 +17,13 @@ var updateRemoteOptions *updateRemoteOptionsSpec
 func init() {
 
 	updateRemote = &lsf.Command{
-		Name:  cmd_remote_update,
+		Name:  updateRemoteCmdCode,
 		About: "Update a new log remote",
 		Run:   runUpdateRemote,
-		Flag:  FlagSet(cmd_remote_update),
+		Flag:  FlagSet(updateRemoteCmdCode),
 	}
 	updateRemoteOptions = &updateRemoteOptionsSpec{
-		global: NewBoolFlag(updateRemote.Flag, "g", "gg", false, "ggg", false),
+		global: NewBoolFlag(updateRemote.Flag, "g", "global", false, "apply command in global context", false),
 	}
 }
 

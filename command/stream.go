@@ -5,6 +5,7 @@ import (
 	"flag"
 	"lsf"
 	"lsf/anomaly"
+	"lsf/schema"
 )
 
 const cmd_stream lsf.CommandCode = "stream"
@@ -35,25 +36,19 @@ func initEditStreamOptionsSpec(flagset *flag.FlagSet) *editStreamOptionsSpec {
 func _verifyEditStreamRequiredOpts(env *lsf.Environment, args ...string) (err error) {
 	//	defer anomaly.Recover(&err)
 
-	var e error
-	e = verifyRequiredOption(addStreamOptions.id)
-	anomaly.PanicOnError(e, "stream-add", "option", "id")
-
-	e = verifyRequiredOption(addStreamOptions.pattern)
-	anomaly.PanicOnError(e, "stream-add", "option", "pattern")
-
-	e = verifyRequiredOption(addStreamOptions.path)
-	anomaly.PanicOnError(e, "stream-add", "option", "path")
-
-	e = verifyRequiredOption(addStreamOptions.mode)
-	anomaly.PanicOnError(e, "stream-add", "option", "mode")
+	options := []interface{}{
+		addStreamOptions.id,
+		addStreamOptions.pattern,
+		addStreamOptions.path,
+	}
+	e := verifyRequiredOptions(options)
+	anomaly.PanicOnError(e, "usage")
 
 	mode := *addStreamOptions.mode.value
-	switch mode {
-	case "rollover", "rotation":
-	default:
-		anomaly.PanicOnFalse(false, "stream-add", "option", "option mode must be one {rollover, rotation}")
-		//		return errors.New("option mode must be one {rollover, rotation}")
+	switch schema.ToJournalModel(mode) {
+	case schema.JournalModel.Rotation, schema.JournalModel.Rollover: // OK
+	default: // not OK
+		anomaly.PanicOnFalse(false, "stream-add", "option", "option mode must be one of {rollover, rotation}")
 	}
 	return
 }

@@ -67,6 +67,17 @@ type FlagSpec interface {
 	defineFlag(fs *flag.FlagSet)
 }
 
+// panics
+func verifyRequiredOptions(options []interface{}) error {
+	for _, option := range options {
+		e := verifyRequiredOption(option)
+		if e != nil {
+			return e
+		}
+	}
+	return nil
+}
+
 func verifyRequiredOption(option interface{}) error {
 
 	if !option.(RequiredOption).Provided() {

@@ -7,7 +7,7 @@ import (
 	"lsf/schema"
 )
 
-const cmd_remote_list lsf.CommandCode = "remote-list"
+const listRemoteCmdCOde lsf.CommandCode = "remote-list"
 
 type listRemoteOptionsSpec struct {
 	global  BoolOptionSpec
@@ -20,10 +20,10 @@ var listRemoteOptions *listRemoteOptionsSpec
 func init() {
 
 	listRemote = &lsf.Command{
-		Name:  cmd_remote_list,
+		Name:  listRemoteCmdCOde,
 		About: "List Remotes defined ",
 		Run:   runListRemote,
-		Flag:  FlagSet(cmd_remote_list),
+		Flag:  FlagSet(listRemoteCmdCOde),
 	}
 	listRemoteOptions = &listRemoteOptionsSpec{
 		global:  NewBoolFlag(listRemote.Flag, "G", "global", false, "global scope flag for command", false),

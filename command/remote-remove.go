@@ -5,7 +5,7 @@ import (
 	"lsf"
 )
 
-const cmd_remote_remove lsf.CommandCode = "remote-remove"
+const removeRemoteCmdCode lsf.CommandCode = "remote-remove"
 
 type removeRemoteOptionsSpec struct {
 	global BoolOptionSpec
@@ -17,10 +17,10 @@ var removeRemoteOptions *removeRemoteOptionsSpec
 func init() {
 
 	removeRemote = &lsf.Command{
-		Name:  cmd_remote_remove,
+		Name:  removeRemoteCmdCode,
 		About: "Remove a new log remote",
 		Run:   runRemoveRemote,
-		Flag:  FlagSet(cmd_remote_remove),
+		Flag:  FlagSet(removeRemoteCmdCode),
 	}
 	removeRemoteOptions = &removeRemoteOptionsSpec{
 		global: NewBoolFlag(removeRemote.Flag, "g", "gg", false, "ggg", false),
