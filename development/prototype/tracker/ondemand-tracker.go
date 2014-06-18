@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"log"
-	. "lsf/anomaly"
 	. "lsf/capability"
 	"lsf/fs"
+	"lsf/panics"
 	"os"
 	"os/signal"
 	"path"
@@ -95,7 +95,7 @@ type control struct {
 // tracker task
 // ----------------------------------------------------------------------
 func track(ctl control, requests <-chan struct{}, out chan<- *Trackreport, basepath string, pattern string) {
-	defer AsyncRecover(ctl.stat, "done")
+	defer panics.AsyncRecover(ctl.stat, "done")
 
 	log.Println("traking..")
 
@@ -108,11 +108,11 @@ func track(ctl control, requests <-chan struct{}, out chan<- *Trackreport, basep
 		case <-requests:
 
 			file, e := os.Open(basepath)
-			anomaly(e)
+			panics.OnError(e)
 			filenames, e := file.Readdirnames(0)
-			anomaly(e)
+			panics.OnError(e)
 			e = file.Close()
-			anomaly(e)
+			panics.OnError(e)
 
 			workingset := make(map[string]fs.Object)
 
@@ -175,27 +175,7 @@ func track(ctl control, requests <-chan struct{}, out chan<- *Trackreport, basep
 	}
 }
 
-func trackingAnalysis(snapshot, workingSet map[string]fs.Object, ) []FileEvent {
+func trackingAnalysis(snapshot, workingSet map[string]fs.Object) []FileEvent {
 
 	return nil
-}
-// ----------------------------------------------------------------------
-// temp | replace with anomaly.*
-// ----------------------------------------------------------------------
-
-func recovery(ctl control, ok interface{}) {
-	log.Println("recovering error ..")
-	p := recover()
-
-	if p != nil {
-		ctl.stat <- p
-		return
-	}
-	ctl.stat <- ok
-}
-
-func anomaly(e error) {
-	if e != nil {
-		panic(e)
-	}
 }

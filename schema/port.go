@@ -2,7 +2,7 @@ package schema
 
 import (
 	"fmt"
-	"lsf/anomaly"
+	"lsf/panics"
 	"lsf/system"
 	"net/url"
 )
@@ -64,7 +64,7 @@ func PortDigest(doc system.Document) string {
 func DecodePort(data system.DataMap) *Port {
 	m := data.Mappings()
 	addr, e := url.Parse(string(m[portElem.address]))
-	anomaly.PanicOnError(e, "BUG", "schema.DecodePort")
+	panics.OnError(e, "BUG", "schema.DecodePort")
 	return &Port{
 		Id:      PortId(string(m[portElem.id])),
 		Address: addr,

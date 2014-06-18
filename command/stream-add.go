@@ -3,7 +3,7 @@ package command
 import (
 	"fmt"
 	"lsf"
-	"lsf/anomaly"
+	"lsf/panics"
 	"lsf/schema"
 	"lsf/system"
 )
@@ -26,7 +26,7 @@ func init() {
 }
 
 func runAddStream(env *lsf.Environment, args ...string) (err error) {
-	defer anomaly.Recover(&err)
+	defer panics.Recover(&err)
 
 	id := schema.StreamId(*addStreamOptions.id.value)
 	pattern := *addStreamOptions.pattern.value
@@ -46,7 +46,7 @@ func runAddStream(env *lsf.Environment, args ...string) (err error) {
 	logstream := schema.NewLogStream(id, path, mode, pattern, fields)
 
 	e := env.CreateDocument(docid, logstream)
-	anomaly.PanicOnError(e, "command.runAddStream:", "CreateDocument:", id)
+	panics.OnError(e, "command.runAddStream:", "CreateDocument:", id)
 
 	return nil
 }

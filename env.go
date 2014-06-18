@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	. "lsf/anomaly"
+	"lsf/panics"
 	"lsf/schema"
 	"lsf/system"
 	"os"
@@ -101,7 +101,7 @@ func (env *Environment) ResourceId(name string) string {
 		panic("BUG - env not bound")
 	}
 	v, found := env.Get(VarHomePort)
-	PanicOnFalse(found, "BUG", "Environment.ResourceId", "VarHomePort not bound!")
+	panics.OnFalse(found, "BUG", "Environment.ResourceId", "VarHomePort not bound!")
 
 	return path.Join(v.(*schema.Port).Path(), name)
 }
@@ -135,17 +135,17 @@ func (env *Environment) CreateDocument(docid system.DocId, datamap system.DataMa
 // if not found, will return nil, nil.
 func (env *Environment) GetRecord(record string) (value []byte, err error) {
 
-	defer Recover(&err)
+	defer panics.Recover(&err)
 
 	if !env.bound {
 		return nil, E_ILLEGALSTATE
 	}
 
 	documents, key, e := getRecordHierarchy(record)
-	PanicOnError(e, "Environment.GetRecord:", "record:", record)
+	panics.OnError(e, "Environment.GetRecord:", "record:", record)
 
 	e = env.loadDocuments(documents)
-	PanicOnError(e, "Environment.GetRecord:")
+	panics.OnError(e, "Environment.GetRecord:")
 
 	value = env.resolveRecord(documents, key)
 	return value, nil
@@ -175,11 +175,11 @@ func (env *Environment) resolveRecord(documents []system.DocId, key string) []by
 // Deletes the document from the environemnt and the bound LSF Port.
 // REVU TODO clarify ok/error - do we need both?
 func (env *Environment) DeleteDocument(docid system.DocId) (ok bool, err error) {
-	defer Recover(&err)
+	defer panics.Recover(&err)
 
 	ok, e := env.registrar.DeleteDocument(docid)
-	PanicOnError(e, "Environment.DeleteDocument", "docid:", docid)
-	PanicOnFalse(ok, "Environment.DeleteDocument", "docid:", docid)
+	panics.OnError(e, "Environment.DeleteDocument", "docid:", docid)
+	panics.OnFalse(ok, "Environment.DeleteDocument", "docid:", docid)
 
 	//	if e == nil && ok {
 	env.docslock.Lock()
@@ -192,11 +192,11 @@ func (env *Environment) DeleteDocument(docid system.DocId) (ok bool, err error) 
 // Update fully flushes the document back to the bound LSF Port.
 // REVU TODO clarify ok/error - do we need both?
 func (env *Environment) UpdateDocument(doc system.Document) (ok bool, err error) {
-	defer Recover(&err)
+	defer panics.Recover(&err)
 
 	ok, e := env.registrar.UpdateDocument(doc)
-	PanicOnError(e, "Environment.UpdateDocument", "docid:", doc.Id())
-	PanicOnFalse(ok, "Environment.UpdateDocument", "docid:", doc.Id())
+	panics.OnError(e, "Environment.UpdateDocument", "docid:", doc.Id())
+	panics.OnFalse(ok, "Environment.UpdateDocument", "docid:", doc.Id())
 	//	if e == nil && ok {
 	env.docslock.Lock()
 	env.docs[doc.Id()] = doc
@@ -207,10 +207,10 @@ func (env *Environment) UpdateDocument(doc system.Document) (ok bool, err error)
 
 // Load fully reads the identified document from the bound LSF Port.
 func (env *Environment) LoadDocument(docid system.DocId) (doc system.Document, err error) {
-	defer Recover(&err)
+	defer panics.Recover(&err)
 
 	doc, e := env.registrar.ReadDocument(docid)
-	PanicOnError(e, "Environment.LoadDocument", "docid:", docid)
+	panics.OnError(e, "Environment.LoadDocument", "docid:", docid)
 	//	if e == nil {
 	env.docslock.Lock()
 	env.docs[docid] = doc
@@ -223,7 +223,7 @@ func (env *Environment) LoadDocument(docid system.DocId) (doc system.Document, e
 // Returns error (and stops loading) on missing doc(s).
 func (env *Environment) loadDocuments(documents []system.DocId) (err error) {
 
-	defer Recover(&err)
+	defer panics.Recover(&err)
 
 	env.docslock.Lock()
 	defer env.docslock.Unlock()
@@ -232,7 +232,7 @@ func (env *Environment) loadDocuments(documents []system.DocId) (err error) {
 		_, found := env.docs[docid]
 		if !found {
 			doc, e := env.registrar.ReadDocument(docid)
-			PanicOnError(e, "Environment.loadDocuments", "docid:", docid)
+			panics.OnError(e, "Environment.loadDocuments", "docid:", docid)
 			//			if e == nil {
 			env.docs[docid] = doc
 			//			}
@@ -325,7 +325,7 @@ func CreateEnvironment(dir string, force bool) (rootpath string, err error) {
 		return "", E_RELATIVE_PATH
 	}
 
-	defer Recover(&err)
+	defer panics.Recover(&err)
 
 	userHome := system.UserHome()
 	isUserHome := userHome == dir
@@ -352,19 +352,19 @@ func CreateEnvironment(dir string, force bool) (rootpath string, err error) {
 	}
 
 	lock, ok, e := system.LockResource(resource, "create new lsf port")
-	PanicOnError(e, "Environment.CreateEnvironment", "system.LockResource", "resource:", resource)
-	PanicOnFalse(ok, "Environment.CreateEnvironment", "system.LockResource", "resource:", resource, "concurrency violation")
+	panics.OnError(e, "Environment.CreateEnvironment", "system.LockResource", "resource:", resource)
+	panics.OnFalse(ok, "Environment.CreateEnvironment", "system.LockResource", "resource:", resource, "concurrency violation")
 	defer lock.Unlock()
 
 	e = os.RemoveAll(root)
-	PanicOnError(e, "Environment.CreateEnvironment", "os.RemoveAll", "root:", root)
+	panics.OnError(e, "Environment.CreateEnvironment", "os.RemoveAll", "root:", root)
 
 	e = os.Mkdir(root, os.ModeDir|defaultDirMode)
-	PanicOnError(e, "Environment.CreateEnvironment", "os.Mkdir", "root:", root)
+	panics.OnError(e, "Environment.CreateEnvironment", "os.Mkdir", "root:", root)
 
 	//	log.Printf("open registrar in %q", root)
 	registrar, e := system.StartRegistry(root)
-	PanicOnError(e, "Environment.CreateEnvironment", "system.StartRegistry", "root:", root)
+	panics.OnError(e, "Environment.CreateEnvironment", "system.StartRegistry", "root:", root)
 
 	//	log.Printf("DEBUG using registrar %s", registrar)
 	defer func() { registrar.Stop() <- struct{}{} }()
@@ -374,7 +374,7 @@ func CreateEnvironment(dir string, force bool) (rootpath string, err error) {
 		"create-time": []byte(time.Now().String()),
 	}
 	_, e = registrar.CreateDocument(docid, data)
-	PanicOnError(e, "Environment.CreateEnvironment", "registrar.CreateDocument", "docid:", docid)
+	panics.OnError(e, "Environment.CreateEnvironment", "registrar.CreateDocument", "docid:", docid)
 
 	return root, nil
 }
@@ -404,7 +404,7 @@ func (env *Environment) Shutdown() error {
 }
 func (env *Environment) Initialize(dir string) (err error) {
 
-	defer Recover(&err)
+	defer panics.Recover(&err)
 
 	env.lock.Lock()
 	defer env.lock.Unlock() // TODO: these need deadlines.
@@ -428,18 +428,18 @@ func (env *Environment) Initialize(dir string) (err error) {
 
 	env.bound = true
 	port, e := schema.NewLocalPort(root)
-	PanicOnError(e, "Environment.Initialize:", "schema.NewLocalPort", "root:", root)
+	panics.OnError(e, "Environment.Initialize:", "schema.NewLocalPort", "root:", root)
 
 	env.Set(VarHomePort, port) // panics
 
 	e = env.startRegistrar()
-	PanicOnError(e, "Environment.Initialize:", "env.startRegistrar")
+	panics.OnError(e, "Environment.Initialize:", "env.startRegistrar")
 
 	sysdoc := system.DocId("system")
 	env.loadDocuments([]system.DocId{sysdoc})
 
 	_, e = env.registrar.ReadDocument(sysdoc)
-	PanicOnError(e, "Environment.Initialize:", "env.ReadDocument")
+	panics.OnError(e, "Environment.Initialize:", "env.ReadDocument")
 
 	return nil
 }
@@ -475,7 +475,7 @@ func (env *Environment) GetResourceIds(restype string) []string {
 
 	dirnames, e := dir.Readdirnames(0)
 	// if resource type dir exists and is empty then we have a bug
-	PanicOnError(e, "Environment.GetResourceIds:", restype, "BUG - directory is empty", dir.Name())
+	panics.OnError(e, "Environment.GetResourceIds:", restype, "BUG - directory is empty", dir.Name())
 
 	resIds := make([]string, len(dirnames))
 	i := 0
@@ -513,7 +513,7 @@ func justResourceId(env *Environment, restype string, resid string, encode syste
 func digestForResourceId(env *Environment, restype string, resid string, encode system.DocumentDigestFn) string {
 	docid := system.DocId(fmt.Sprintf("%s.%s.%s", restype, resid, restype))
 	doc, e := env.LoadDocument(docid)
-	PanicOnError(e, "BUG", "getResourceDigests:", "loadDocument", docid)
-	PanicOnTrue(doc == nil, "BUG", "getResourceDigests:", "loadDocument", docid)
+	panics.OnError(e, "BUG", "getResourceDigests:", "loadDocument", docid)
+	panics.OnTrue(doc == nil, "BUG", "getResourceDigests:", "loadDocument", docid)
 	return encode(doc)
 }

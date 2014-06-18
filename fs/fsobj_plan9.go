@@ -3,7 +3,7 @@ package fs
 import (
 	"bytes"
 	"encoding/binary"
-	"lsf/anomaly"
+	"lsf/panics"
 	"os"
 	"syscall"
 )
@@ -38,21 +38,21 @@ func oid(info os.FileInfo) fsoid {
 	// TODO for plan9
 	// basically just make sure we're under the OIDLength limit
 	panic("not implemented!")
-//	if info == nil {
-//		panic("BUG - info is nil")
-//	}
-//	var buf bytes.Buffer
-//
-//	fstat := info.Sys().(*syscall.Stat_t)
-//	ino, dev := fstat.Ino, fstat.Dev
-//
-//	e := binary.Write(&buf, binary.BigEndian, dev)
-//	anomaly.PanicOnError(e, "binary.Write", "device", dev)
-//
-//	e = binary.Write(&buf, binary.BigEndian, ino)
-//	anomaly.PanicOnError(e, "binary.Write", "inode", ino)
-//
-//	return buf.Bytes()
+	//	if info == nil {
+	//		panic("BUG - info is nil")
+	//	}
+	//	var buf bytes.Buffer
+	//
+	//	fstat := info.Sys().(*syscall.Stat_t)
+	//	ino, dev := fstat.Ino, fstat.Dev
+	//
+	//	e := binary.Write(&buf, binary.BigEndian, dev)
+	//	panics.OnError(e, "binary.Write", "device", dev)
+	//
+	//	e = binary.Write(&buf, binary.BigEndian, ino)
+	//	panics.OnError(e, "binary.Write", "inode", ino)
+	//
+	//	return buf.Bytes()
 }
 
 func ignoredFiles() []string {

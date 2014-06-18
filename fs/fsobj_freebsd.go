@@ -3,7 +3,7 @@ package fs
 import (
 	"bytes"
 	"encoding/binary"
-	"lsf/anomaly"
+	"lsf/panics"
 	"os"
 	"syscall"
 )
@@ -20,10 +20,10 @@ func oid(info os.FileInfo) fsoid {
 	ino, dev := fstat.Ino, fstat.Dev
 
 	e := binary.Write(&buf, binary.BigEndian, dev)
-	anomaly.PanicOnError(e, "binary.Write", "device", dev)
+	panics.OnError(e, "binary.Write", "device", dev)
 
 	e = binary.Write(&buf, binary.BigEndian, ino)
-	anomaly.PanicOnError(e, "binary.Write", "inode", ino)
+	panics.OnError(e, "binary.Write", "inode", ino)
 
 	return buf.Bytes()
 }

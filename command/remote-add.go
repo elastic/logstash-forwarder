@@ -3,7 +3,7 @@ package command
 import (
 	"fmt"
 	"lsf"
-	"lsf/anomaly"
+	"lsf/panics"
 	"lsf/schema"
 	"lsf/system"
 )
@@ -38,23 +38,23 @@ func init() {
 }
 
 func _verifyAddRemoteRequiredOpts(env *lsf.Environment, args ...string) (err error) {
-	defer anomaly.Recover(&err)
+	defer panics.Recover(&err)
 
 	var e error
 	e = verifyRequiredOption(addRemoteOptions.id)
-	anomaly.PanicOnError(e, "remote-add", "option", "id")
+	panics.OnError(e, "remote-add", "option", "id")
 
 	e = verifyRequiredOption(addRemoteOptions.host)
-	anomaly.PanicOnError(e, "remote-add", "option", "host")
+	panics.OnError(e, "remote-add", "option", "host")
 
 	e = verifyRequiredOption(addRemoteOptions.port)
-	anomaly.PanicOnError(e, "remote-add", "option", "port")
+	panics.OnError(e, "remote-add", "option", "port")
 
 	return
 }
 
 func runAddRemote(env *lsf.Environment, args ...string) (err error) {
-	defer anomaly.Recover(&err)
+	defer panics.Recover(&err)
 
 	id := *addRemoteOptions.id.value
 	host := *addRemoteOptions.host.value
@@ -69,10 +69,10 @@ func runAddRemote(env *lsf.Environment, args ...string) (err error) {
 	defer lock.Unlock()
 
 	lsfport, e := schema.NewRemotePort(id, host, port)
-	anomaly.PanicOnError(e, "runAddRemote:", "NewRemotePort")
+	panics.OnError(e, "runAddRemote:", "NewRemotePort")
 
 	e = env.CreateDocument(docid, lsfport)
-	anomaly.PanicOnError(e, "command.runAddStream:", "CreateDocument:", id)
+	panics.OnError(e, "command.runAddStream:", "CreateDocument:", id)
 
 	return nil
 }

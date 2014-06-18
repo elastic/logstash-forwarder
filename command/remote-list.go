@@ -3,7 +3,7 @@ package command
 import (
 	"log"
 	"lsf"
-	"lsf/anomaly"
+	"lsf/panics"
 	"lsf/schema"
 )
 
@@ -32,7 +32,7 @@ func init() {
 }
 
 func runListRemote(env *lsf.Environment, args ...string) (err error) {
-	defer anomaly.Recover(&err)
+	defer panics.Recover(&err)
 
 	verbose := *listRemoteOptions.verbose.value
 	v, found := env.Get(remoteOptionVerbose)

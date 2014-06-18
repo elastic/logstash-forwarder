@@ -3,7 +3,7 @@ package command
 import (
 	"fmt"
 	"lsf"
-	"lsf/anomaly"
+	"lsf/panics"
 	"lsf/schema"
 	"lsf/system"
 )
@@ -29,10 +29,10 @@ func init() {
 }
 
 func runUpdateStream(env *lsf.Environment, args ...string) (err error) {
-	defer anomaly.Recover(&err)
+	defer panics.Recover(&err)
 
 	e := verifyRequiredOption(updateStreamOptions.id)
-	anomaly.PanicOnError(e, "runUpdateStream:", "verifyRequiredOption")
+	panics.OnError(e, "runUpdateStream:", "verifyRequiredOption")
 
 	id := schema.StreamId(*updateStreamOptions.id.value)
 
@@ -40,15 +40,15 @@ func runUpdateStream(env *lsf.Environment, args ...string) (err error) {
 	resource := fmt.Sprintf("stream.%s.update", id)
 	lockid := env.ResourceId(resource)
 	oplock, ok, e := system.LockResource(lockid, "add stream - resource "+resource)
-	anomaly.PanicOnError(e, "command.runUpdateStream:", "lockResource:", resource)
-	anomaly.PanicOnFalse(ok, "command.runUpdateStream:", "lockResource:", resource)
+	panics.OnError(e, "command.runUpdateStream:", "lockResource:", resource)
+	panics.OnFalse(ok, "command.runUpdateStream:", "lockResource:", resource)
 	defer oplock.Unlock()
 
 	// verify it exists
 	docid := system.DocId(fmt.Sprintf("stream.%s.stream", id))
 	doc, e := env.LoadDocument(docid)
-	anomaly.PanicOnError(e, "BUG command.runUpdateStream:", "LoadDocument:", string(docid))
-	anomaly.PanicOnTrue(doc == nil, "BUG command.runUpdateStream:", "LoadDocument:", string(docid))
+	panics.OnError(e, "BUG command.runUpdateStream:", "LoadDocument:", string(docid))
+	panics.OnTrue(doc == nil, "BUG command.runUpdateStream:", "LoadDocument:", string(docid))
 
 	// update stream config document
 	var option interface{}
@@ -68,8 +68,8 @@ func runUpdateStream(env *lsf.Environment, args ...string) (err error) {
 		doc.Set("journal-mode", v)
 	}
 	ok, e = env.UpdateDocument(doc)
-	anomaly.PanicOnError(e, "command.runUpdateStream:", "UpdateDocument:", resource)
-	anomaly.PanicOnFalse(ok, "command.runUpdateStream:", "UpdateDocument:", resource)
+	panics.OnError(e, "command.runUpdateStream:", "UpdateDocument:", resource)
+	panics.OnFalse(ok, "command.runUpdateStream:", "UpdateDocument:", resource)
 
 	return nil
 }

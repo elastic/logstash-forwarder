@@ -2,7 +2,7 @@ package lsf
 
 import (
 	"flag"
-	"lsf/anomaly"
+	"lsf/panics"
 )
 
 // REVU: no errors? TODO: consolidate all errors under lsf/errors
@@ -36,7 +36,7 @@ type Command struct {
 // Run the command. Trap any panics and return as error.
 func Run(env *Environment, cmd *Command, args ...string) (err error) {
 
-	defer anomaly.Recover(&err)
+	defer panics.Recover(&err)
 
 	// environment is created only if it is nil
 	// AND command is not an initializer.
@@ -44,7 +44,7 @@ func Run(env *Environment, cmd *Command, args ...string) (err error) {
 	if env == nil && !cmd.Initializer {
 		env = NewEnvironment()
 		e := env.Initialize(Wd())
-		anomaly.PanicOnError(e, "command.Run:", "env.Initialize:")
+		panics.OnError(e, "command.Run:", "env.Initialize:")
 		defer func() {
 			env.Shutdown()
 		}()
@@ -56,22 +56,22 @@ func Run(env *Environment, cmd *Command, args ...string) (err error) {
 	// run cmd initializer func (if any)
 	if cmd.Init != nil {
 		e0 := cmd.Init(env, commandArgs...)
-		anomaly.PanicOnError(e0)
-		//		anomaly.PanicOnError(e0, "command.Run:", cmd.Name.String(), "Init()")
+		panics.OnError(e0)
+		//		panics.OnError(e0, "command.Run:", cmd.Name.String(), "Init()")
 	}
 
 	// treat nil cmd.Run as bug
-	anomaly.PanicOnTrue(cmd.Run == nil, "command.Run:", "BUG - cmd.Run is nil")
+	panics.OnTrue(cmd.Run == nil, "command.Run:", "BUG - cmd.Run is nil")
 
 	e1 := cmd.Run(env, commandArgs...)
-	anomaly.PanicOnError(e1)
-	//	anomaly.PanicOnError(e1, "command.Run:", cmd.Name.String(), "Run()")
+	panics.OnError(e1)
+	//	panics.OnError(e1, "command.Run:", cmd.Name.String(), "Run()")
 
 	// run cmd finalizer func (if any)
 	if cmd.End != nil {
 		e2 := cmd.End(env, commandArgs...)
-		anomaly.PanicOnError(e2)
-		//		anomaly.PanicOnError(e2, "command.Run:", cmd.Name.String(), "End()")
+		panics.OnError(e2)
+		//		panics.OnError(e2, "command.Run:", cmd.Name.String(), "End()")
 	}
 
 	return nil

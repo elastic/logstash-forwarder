@@ -2,7 +2,7 @@ package command
 
 import (
 	"lsf"
-	"lsf/anomaly"
+	"lsf/panics"
 	"lsf/system"
 )
 
@@ -13,8 +13,8 @@ import (
 func _lockResource(env *lsf.Environment, resource string, reason string) system.Lock {
 	lockid := env.ResourceId(resource)
 	lock, ok, e := system.LockResource(lockid, reason)
-	anomaly.PanicOnError(e, "command.runAddStream:", "lockResource:")
-	anomaly.PanicOnFalse(ok, "command.runAddStream:", "lockResource:", lockid)
+	panics.OnError(e, "command.runAddStream:", "lockResource:")
+	panics.OnFalse(ok, "command.runAddStream:", "lockResource:", lockid)
 
 	return lock
 }

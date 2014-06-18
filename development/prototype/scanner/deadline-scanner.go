@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -9,9 +10,7 @@ import (
 	"sort"
 	"syscall"
 	"time"
-	"flag"
 )
-
 
 // ----------------------------------------------------------------------------------------------------------------
 /// SIMULATE LSF Stream Command
@@ -20,7 +19,7 @@ import (
 var time_never time.Time = time.Time{}
 
 var config struct {
-	path  string
+	path string
 }
 
 func init() {
@@ -52,7 +51,7 @@ waitnext:
 			}
 			forwardStream(stream, reports, requestChan)
 		case <-time.After(time.Minute * 3):
-			stop <- true
+			cancel <- true
 			break
 		}
 	}

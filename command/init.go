@@ -3,7 +3,7 @@ package command
 import (
 	"log"
 	"lsf"
-	"lsf/anomaly"
+	"lsf/panics"
 )
 
 const cmd_init lsf.CommandCode = "init"
@@ -37,7 +37,7 @@ func init() {
 // 'force' flag must be set.
 // Init in existing directory will raise error E_EXISTING
 func runInit(env *lsf.Environment, args ...string) (err error) {
-	defer anomaly.Recover(&err)
+	defer panics.Recover(&err)
 
 	home := lsf.AbsolutePath(*initOptions.home.value)
 	force := *initOptions.force.value
@@ -46,12 +46,12 @@ func runInit(env *lsf.Environment, args ...string) (err error) {
 
 	// init w/ existing is an error unless -force flag is set
 	if env.Exists(home) {
-		anomaly.PanicOnFalse(force, "init.runInit:", "existing environment. use -force flag to reinitialize")
+		panics.OnFalse(force, "init.runInit:", "existing environment. use -force flag to reinitialize")
 		what = "Re-Initialize"
 	}
 
 	envpath, e := lsf.CreateEnvironment(home, force)
-	anomaly.PanicOnError(e, "command/init.runInit", "on lsf.CreateEnvironment")
+	panics.OnError(e, "command/init.runInit", "on lsf.CreateEnvironment")
 
 	log.Printf("%s LSF environment at %s\n", what, envpath)
 
