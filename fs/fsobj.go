@@ -2,6 +2,7 @@ package fs
 
 import (
 	"encoding/hex"
+	"errors"
 	"os"
 )
 
@@ -12,6 +13,24 @@ type Object interface {
 
 func SameObject(a, b Object) bool {
 	return os.SameFile(a.Info(), b.Info())
+}
+
+func Modified(a, b Object) (bool, error) {
+	if !SameObject(a, b) {
+		return false, errors.New("not same object")
+	}
+	ainfo, binfo := a.Info(), b.Info()
+
+	return ainfo.Size() != binfo.Size() || ainfo.ModTime() != binfo.ModTime(), nil
+}
+
+// panics
+func Modified0(a, b Object) bool {
+	res, e := Modified(a, b)
+	if e != nil {
+		panic(errors.New("not same object"))
+	}
+	return res
 }
 
 // Return an os agnostic hex representation of
