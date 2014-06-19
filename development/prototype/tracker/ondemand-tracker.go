@@ -255,8 +255,8 @@ func track(ctl control, requests <-chan struct{}, out chan<- *TrackReport, basep
 				log.Println("DEBUG TODO fsobjects size critical: %d", len(fsobjects))
 				for _, fsobj := range fsobjects {
 					if fsobj.Info().ModTime().Add(validDuration).Before(time.Now()) {
-						log.Printf("fsobj %s is older than valid duration -- gc it?", fsobj.Id()) // TEMP DEBUG
-//						delete(fsobjects, fsobj.Id())
+						delete(fsobjects, fsobj.Id())
+						log.Printf("fsobj %s is garbage collected", fsobj.Id()) // TEMP DEBUG
 					}
 				}
 			}
