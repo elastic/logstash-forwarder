@@ -214,6 +214,8 @@ nextfile:
 // ----------------------------------------------------------------------
 // tracker task
 // ----------------------------------------------------------------------
+// TODO: extract config parameters for tracking capability
+// TODO: fsobj_age_limit (for fsobject gc)
 func track(ctl control, requests <-chan struct{}, out chan<- *TrackReport, basepath string, pattern string) {
 	defer panics.AsyncRecover(ctl.stat, "done")
 
@@ -226,8 +228,7 @@ func track(ctl control, requests <-chan struct{}, out chan<- *TrackReport, basep
 	// maintains historic list of all FS Objects we have seen, as
 	// identified by fs.Object.Id() (and not the ephemeral filename)
 	// REVU: this can get huge over time.
-	// TODO: garbage collection for this map
-	// TODO: a simple age check (info.ModTime()) may work.
+	// TODO: REVU the simple age check (info.ModTime())
 	var fsobjects map[string]fs.Object = make(map[string]fs.Object)
 
 	// start report sequence counter - init is 0
@@ -248,6 +249,17 @@ func track(ctl control, requests <-chan struct{}, out chan<- *TrackReport, basep
 				}
 			}
 			out <- report
+			// TEMP HACK
+			validDuration := time.Minute // TODO: config.fsobj_age_limit
+			if len(fsobjects) > 1 {
+				log.Println("DEBUG TODO fsobjects size critical: %d", len(fsobjects))
+				for _, fsobj := range fsobjects {
+					if fsobj.Info().ModTime().Add(validDuration).Before(time.Now()) {
+						log.Printf("fsobj %s is older than valid duration -- gc it?", fsobj.Id()) // TEMP DEBUG
+//						delete(fsobjects, fsobj.Id())
+					}
+				}
+			}
 		}
 	}
 }
