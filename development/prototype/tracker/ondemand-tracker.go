@@ -258,7 +258,7 @@ func track(ctl control, requests <-chan struct{}, out chan<- *TrackReport, basep
 
 			// gc fsobject map (if necessary)
 			validDuration := time.Hour * 1  // REVU: 1HR for testing only TODO: config.fsobj_age_limit
-			sizeThreshold := 100            // TODO: config.fsobject_map_gc_threshold
+			sizeThreshold := 100            // REVU: 100 for testing only TODO: config.fsobject_map_gc_threshold
 			if len(fsobjects) > sizeThreshold {
 				log.Println("DEBUG TODO fsobjects size critical: %d", len(fsobjects))
 				for _, fsobj := range fsobjects {
