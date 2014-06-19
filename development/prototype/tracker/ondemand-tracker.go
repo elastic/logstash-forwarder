@@ -216,6 +216,7 @@ nextfile:
 // ----------------------------------------------------------------------
 // TODO: extract config parameters for tracking capability
 // TODO: fsobj_age_limit (for fsobject gc)
+// TODO: fsobject_map_gc_threshold (for fsobject gc)
 func track(ctl control, requests <-chan struct{}, out chan<- *TrackReport, basepath string, pattern string) {
 	defer panics.AsyncRecover(ctl.stat, "done")
 
@@ -227,20 +228,23 @@ func track(ctl control, requests <-chan struct{}, out chan<- *TrackReport, basep
 
 	// maintains historic list of all FS Objects we have seen, as
 	// identified by fs.Object.Id() (and not the ephemeral filename)
-	// REVU: this can get huge over time.
-	// TODO: REVU the simple age check (info.ModTime())
+	// This map is subject to garbage collection per configration params.
 	var fsobjects map[string]fs.Object = make(map[string]fs.Object)
 
 	// start report sequence counter - init is 0
 	var reportSeq Counter = NewCounter()
 
 	for {
+		// block on requests
 		select {
 		case <-requests:
+			// generate report
 			report, snapshot1, e := reportFileEvents(basepath, pattern, snapshot, fsobjects, reportSeq)
 			panics.OnError(e, "track", "reportFileEvents")
+
 			// swap snapshot
 			snapshot = snapshot1
+
 			// update fsobjects - add any new fsobject
 			for _, fileEvent := range report.Events {
 				if fileEvent.Code == TrackEvent.NewFile {
@@ -248,10 +252,14 @@ func track(ctl control, requests <-chan struct{}, out chan<- *TrackReport, basep
 					fsobjects[fsobj.Id()] = fsobj
 				}
 			}
+
+			// publish report
 			out <- report
-			// TEMP HACK
-			validDuration := time.Minute // TODO: config.fsobj_age_limit
-			if len(fsobjects) > 1 {
+
+			// gc fsobject map (if necessary)
+			validDuration := time.Hour * 1  // REVU: 1HR for testing only TODO: config.fsobj_age_limit
+			sizeThreshold := 100            // TODO: config.fsobject_map_gc_threshold
+			if len(fsobjects) > sizeThreshold {
 				log.Println("DEBUG TODO fsobjects size critical: %d", len(fsobjects))
 				for _, fsobj := range fsobjects {
 					if fsobj.Info().ModTime().Add(validDuration).Before(time.Now()) {
