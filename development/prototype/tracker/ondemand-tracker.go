@@ -8,54 +8,53 @@ import (
 	"lsf/panics"
 	"os"
 	"os/signal"
-	"path"
 	"time"
 )
 
 var config struct {
-	path  string
-	delay time.Duration
+	basepath, pattern string
+	delay             time.Duration
 }
 
 var delayOpt uint
 
 func init() {
 	log.SetFlags(0)
-	flag.StringVar(&config.path, "path", "", "path to log file dir")
+	flag.StringVar(&config.basepath, "p", "", "path to log file dir")
+	flag.StringVar(&config.pattern, "n", "*", "gob pattern")
 	flag.UintVar(&delayOpt, "f", uint(100), "microsec delay between each log event")
 }
 
-//var publish chan interface{}
-
 func main() {
 	flag.Parse()
+
 	config.delay = time.Duration(delayOpt) * time.Microsecond
-	if config.path == "" {
+	if config.basepath == "" {
 		log.Println("option -path is required.")
 		flag.Usage()
 		os.Exit(0)
 	}
 
-	log.Printf("trak %q", config.path)
+	log.Printf("ondemand-tracker: init: %s%s", config.basepath, config.pattern)
 	ctl, requests, reports := tracker()
 
 	user := make(chan os.Signal, 1)
 	signal.Notify(user, os.Interrupt, os.Kill)
 
-	go track(*ctl, requests, reports, config.path, "*")
+	go track(*ctl, requests, reports, config.basepath, config.pattern)
 
 	// driver
 	flag := true
 	requests <- struct{}{}
 	for flag {
-		//		time.Sleep(time.Microsecond)
 		select {
 		case report := <-reports:
-			log.Println("\n" + report.String())
-			for _, event := range report.Events {
-				log.Println(event.String())
+			if len(report.Events) > 0 {
+				log.Println("\n" + report.String())
+				for _, event := range report.Events {
+					log.Println(event.String())
+				}
 			}
-			// wait a bit before requesting next update
 			time.Sleep(config.delay)
 			requests <- struct{}{}
 		case stat := <-ctl.stat:
@@ -128,14 +127,14 @@ type counter struct {
 func (c *counter) Next() (v uint64) { v = c.n; c.n++; return }
 func NewCounter() Counter           { return &counter{} }
 
-//
 // snapshot0 is current state record
 // return report, new-snapshot, nil on success
 // return nil, nil, error on error
-func reportFileEvents(fspath, pattern string, snapshot0 map[string]fs.Object, reportSeq Counter) (report *TrackReport, snapshot map[string]fs.Object, err error) {
+// input args fspath, pattern, snapshot0, fsobjects are not modified.
+func reportFileEvents(fspath, pattern string, snapshot0, fsobjects map[string]fs.Object, reportSeq Counter) (report *TrackReport, snapshot map[string]fs.Object, err error) {
 	defer panics.Recover(&err)
 
-	filenames, e := Ls(fspath)
+	filenames, e := fs.FindMatchingPaths(fspath, pattern)
 	panics.OnError(e, "trackingReport")
 
 	// clone snapshot0 as working set
@@ -149,45 +148,54 @@ func reportFileEvents(fspath, pattern string, snapshot0 map[string]fs.Object, re
 	var eventTime = time.Now()
 	eventNum := 0
 
-	//nextfile:
-	for _, basename := range filenames {
-
-		// assert file (still) exists - if not: delete event
-		filename := path.Join(fspath, basename)
+nextfile:
+	for _, filename := range filenames {
 		info, e := os.Stat(filename)
-		if e != nil {
-			// deleted under our nose - were we tracking it?
-			if fsobj, found := snapshot0[basename]; found {
+		switch {
+		case e == nil:
+		case os.IsNotExist(e): // were we tracking it?
+			if fsobj, found := snapshot0[filename]; found {
 				events[eventNum] = FileEvent{eventTime, TrackEvent.DeletedFile, fsobj}
 				eventNum++
-				continue
 			}
+			continue nextfile
+		default: // permissions? // REVU: log it or what?
+			log.Printf("DEBUG: ERROR: ignoring %s for %s", e.Error(), filename)
+			continue nextfile
 		}
 		fsobj := fs.AsObject(info)
 
 		// add to new snapshot
-		snapshot[basename] = fsobj
+		snapshot[filename] = fsobj
 
-		ssobj, found := workingset[basename]
+		ssobj, found := workingset[filename]
 		switch {
 		case !found:
 			events[eventNum] = FileEvent{eventTime, TrackEvent.NewFile, fsobj}
 			eventNum++
 		default:
-			if fs.SameObject(fsobj, ssobj) {
-				if fs.Modified0(fsobj, ssobj) { // change
+			switch fs.SameObject(fsobj, ssobj) {
+			case true:
+				switch fs.Modified0(fsobj, ssobj) {
+				case true:
 					events[eventNum] = FileEvent{eventTime, TrackEvent.ModifiedFile, fsobj}
 					eventNum++
-					delete(workingset, basename)
-				} else { // static
-					delete(workingset, basename)
+				default:
 				}
-			} else {
-				// found, not same object but shared name at some time .. ? swap
-				events[eventNum] = FileEvent{eventTime, TrackEvent.RenamedFile, fsobj}
+			default:
+				var eventCode FileEventCode
+				_, found := fsobjects[fsobj.Id()]
+				switch found {
+				case true:
+					//					log.Printf("Object %s - RENAMED: %s to %s", fsobj.Id(), knownFsobj.Info().Name(), filename)
+					eventCode = TrackEvent.RenamedFile
+				default:
+					eventCode = TrackEvent.NewFile
+				}
+				events[eventNum] = FileEvent{eventTime, eventCode, fsobj}
 				eventNum++
-				delete(workingset, basename)
 			}
+			delete(workingset, filename)
 		}
 	}
 
@@ -214,16 +222,27 @@ func track(ctl control, requests <-chan struct{}, out chan<- *TrackReport, basep
 	//	var snapshot map[string]os.FileInfo = make(map[string]os.FileInfo)
 	var snapshot map[string]fs.Object = make(map[string]fs.Object)
 
+	// maintains historic list of all FS Objects we have seen, as
+	// identified by fs.Object.Id() (and not the ephemeral filename)
+	var fsobjects map[string]fs.Object = make(map[string]fs.Object)
+
 	// TODO: this should be passed in ..
 	var reportSeq Counter = NewCounter()
 
 	for {
 		select {
 		case <-requests:
-			report, snapshot1, e := reportFileEvents(basepath, pattern, snapshot, reportSeq)
-			panics.OnError(e, "")
-			// swap snapshot and send the report
+			report, snapshot1, e := reportFileEvents(basepath, pattern, snapshot, fsobjects, reportSeq)
+			panics.OnError(e, "track", "reportFileEvents")
+			// swap snapshot
 			snapshot = snapshot1
+			// update fsobjects - add any new fsobject
+			for _, fileEvent := range report.Events {
+				if fileEvent.Code == TrackEvent.NewFile {
+					fsobj := fileEvent.File
+					fsobjects[fsobj.Id()] = fsobj
+				}
+			}
 			out <- report
 		}
 	}

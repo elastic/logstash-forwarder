@@ -9,6 +9,7 @@ import (
 type Object interface {
 	Id() string        // hex rep of object.oid
 	Info() os.FileInfo // associated fileInfo.
+	String() string
 }
 
 func SameObject(a, b Object) bool {
@@ -34,7 +35,8 @@ func Modified0(a, b Object) bool {
 }
 
 // Return an os agnostic hex representation of
-// the unique id of this FS Object
+// the unique id of this FS Object.
+// REVU TODO fix the length
 func (obj *object) Id() string {
 	return hex.EncodeToString(obj.oid)
 }
