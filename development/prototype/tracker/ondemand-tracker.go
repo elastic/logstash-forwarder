@@ -127,6 +127,7 @@ type counter struct {
 func (c *counter) Next() (v uint64) { v = c.n; c.n++; return }
 func NewCounter() Counter           { return &counter{} }
 
+// TODO: refactor to fs.ReportFileEvents
 // snapshot0 is current state record
 // return report, new-snapshot, nil on success
 // return nil, nil, error on error
@@ -224,9 +225,12 @@ func track(ctl control, requests <-chan struct{}, out chan<- *TrackReport, basep
 
 	// maintains historic list of all FS Objects we have seen, as
 	// identified by fs.Object.Id() (and not the ephemeral filename)
+	// REVU: this can get huge over time.
+	// TODO: garbage collection for this map
+	// TODO: a simple age check (info.ModTime()) may work.
 	var fsobjects map[string]fs.Object = make(map[string]fs.Object)
 
-	// TODO: this should be passed in ..
+	// start report sequence counter - init is 0
 	var reportSeq Counter = NewCounter()
 
 	for {
@@ -246,9 +250,4 @@ func track(ctl control, requests <-chan struct{}, out chan<- *TrackReport, basep
 			out <- report
 		}
 	}
-}
-
-func trackingAnalysis(snapshot, workingSet map[string]fs.Object) []FileEvent {
-
-	return nil
 }
