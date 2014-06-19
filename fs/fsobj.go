@@ -4,12 +4,19 @@ import (
 	"encoding/hex"
 	"errors"
 	"os"
+	"time"
 )
 
 type Object interface {
-	Id() string        // hex rep of object.oid
-	Info() os.FileInfo // associated fileInfo.
+	// Hex encoded rep of object oid
+	Id() string
+	// Last recorded FileInfo - will not re-stat
+	Info() os.FileInfo
+	// String rep of Object
 	String() string
+	// returns 'age' since last mod time.
+	// semantic equiv to Object.Info().ModTime().Sub(time.Now())
+	Age() time.Duration
 }
 
 func SameObject(a, b Object) bool {
@@ -44,6 +51,10 @@ func (obj *object) Id() string {
 // Return the associated os.FileInfo
 func (obj *object) Info() os.FileInfo {
 	return obj.info
+}
+
+func (obj *object) Age() time.Duration {
+	return time.Now().Sub(obj.info.ModTime())
 }
 
 // Pretty Print

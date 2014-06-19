@@ -234,22 +234,63 @@ func track(ctl control, requests <-chan struct{}, out chan<- *TrackReport, basep
 	// start report sequence counter - init is 0
 	var reportSeq Counter = NewCounter()
 
+	var trackedObj fs.Object
+
+next:
 	for {
 		// block on requests
 		select {
 		case <-requests:
 			// generate report
+			// TODO: insure returned snapshot is effectively ignorable (same as snapshot) if events len is 0
 			report, snapshot1, e := reportFileEvents(basepath, pattern, snapshot, fsobjects, reportSeq)
 			panics.OnError(e, "track", "reportFileEvents")
 
+			if len(report.Events) == 0 {
+				log.Printf("snapshot1: %d snapshot: %d", len(snapshot1), len(snapshot))
+				log.Printf("report: %s", report)
+				// publish 0 len report
+				out <- report
+				continue next
+			}
+			// TODO: refactor to trackAnalysis
+			// REVU: TODO: n TRK events need to be reduced to 1 per stream def
 			// swap snapshot
 			snapshot = snapshot1
 
 			// update fsobjects - add any new fsobject
+			// select fsobj to track
+			var youngest time.Duration = time.Hour * 24 * 365 * 100
+			var candidateEvent FileEvent
+			var candidateObj fs.Object
 			for _, fileEvent := range report.Events {
+				log.Printf("fileEvent %s", fileEvent)
+				fsobj := fileEvent.File
 				if fileEvent.Code == TrackEvent.NewFile {
-					fsobj := fileEvent.File
 					fsobjects[fsobj.Id()] = fsobj
+				}
+				if fsobj.Age() < youngest {
+					youngest = fsobj.Age()
+					candidateObj = fsobj
+					candidateEvent = fileEvent
+					log.Printf("CANDIDATE %s", candidateEvent)
+				}
+			}
+			log.Printf("final candidate %s", candidateEvent)
+			log.Printf("final candidate %s - age: %d", candidateObj, candidateObj.Age())
+
+			if trackedObj == nil {
+				trackedObj = candidateObj
+			} else if !fs.SameObject(trackedObj, candidateObj) {
+				// If candidateEvent is TRK AND trackedObj.Age() > candidateObj.Age()
+				if candidateEvent.Code == TrackEvent.NewFile {
+					if trackedObj.Age() > candidateObj.Age() {
+						log.Printf("DEBUG: should will be tracking %s", trackedObj.String())
+						trackedObj = candidateObj
+					}
+				} else {
+					// is this possible? exists in map but younger than what is tracked?
+					panics.OnTrue(true, candidateEvent.Code, "candidate:", candidateObj, "tracked:", trackedObj)
 				}
 			}
 
