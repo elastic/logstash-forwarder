@@ -33,12 +33,16 @@ func OnFalse(flag bool, info ...interface{}) {
 	if flag {
 		return
 	}
-	err := fmt.Errorf("%s", fmtInfo(info...))
+	err := fmt.Errorf("%s - assert-fail is FALSE", fmtInfo(info...))
 	panic(&Error{Cause: err, err: err})
 }
 
 func OnTrue(flag bool, info ...interface{}) {
-	OnFalse(!flag, info...)
+	if !flag {
+		return
+	}
+	err := fmt.Errorf("%s - assert-fail is TRUE", fmtInfo(info...))
+	panic(&Error{Cause: err, err: err})
 }
 
 func fmtInfo(info ...interface{}) string {
@@ -75,6 +79,8 @@ func OnError(e error, info ...interface{}) {
 	var err error = e
 	if len(info) > 0 {
 		err = fmt.Errorf("error: %s - cause: %s", fmtInfo(info...), e)
+	} else if !strings.HasPrefix("error:", e.Error()) {
+		err = fmt.Errorf("error: %s%s", fmtInfo(info...), e)
 	}
 	panic(&Error{Cause: e, err: err})
 }
@@ -123,7 +129,7 @@ type fnpanics struct {
 	fname string
 }
 type Panics interface {
-//	Recover(err *error) error
+	Recover(err *error) error
 	OnError(e error, info ...interface{})
 	OnFalse(flag bool, info ...interface{})
 	OnTrue(flag bool, info ...interface{})
@@ -146,7 +152,8 @@ func (t *fnpanics) OnFalse(flag bool, info ...interface{}) {
 	OnFalse(flag, infofn...)
 }
 func (t *fnpanics) OnTrue(flag bool, info ...interface{}) {
-	t.OnFalse(!flag, info...)
+	infofn := t.infoFixup(info...)
+	OnTrue(flag, infofn...)
 }
 
 func ForFunc(fname string) Panics {
@@ -172,6 +179,6 @@ func ExitHandler() {
 		e = fmt.Errorf("recovered-panic: %q", t)
 	}
 	stat := 1
-	log.Printf("panics.ExitHandler: exit-stat:%d %s", stat, e)
+	log.Printf("panics.ExitHandler: exit-stat:%d cause: %s", stat, e)
 	os.Exit(stat)
 }
