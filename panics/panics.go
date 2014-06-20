@@ -96,7 +96,7 @@ func Recover(err *error) error {
 	default:
 		*err = fmt.Errorf("recovered-panic: %q", t)
 	}
-	log.Printf("panics.Recover: %s", *err)
+//	log.Printf("panics.Recover: error: %s", *err)
 	return *err
 }
 
@@ -171,6 +171,7 @@ func ExitHandler() {
 	default:
 		e = fmt.Errorf("recovered-panic: %q", t)
 	}
-	log.Printf("panics.ExitHandler: %s", e)
-	os.Exit(1)
+	stat := 1
+	log.Printf("panics.ExitHandler: exit-stat:%d %s", stat, e)
+	os.Exit(stat)
 }

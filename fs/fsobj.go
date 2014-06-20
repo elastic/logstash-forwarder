@@ -3,6 +3,7 @@ package fs
 import (
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"os"
 	"time"
 )
@@ -15,8 +16,11 @@ type Object interface {
 	// String rep of Object
 	String() string
 	// returns 'age' since last mod time.
-	// semantic equiv to Object.Info().ModTime().Sub(time.Now())
 	Age() time.Duration
+	// returns time Object info was recorded
+	Timestamp() time.Time
+	// returns 'info age' since info was recorded
+	InfoAge() time.Duration
 }
 
 func SameObject(a, b Object) bool {
@@ -41,6 +45,31 @@ func Modified0(a, b Object) bool {
 	return res
 }
 
+type object struct {
+	info     os.FileInfo // associated file info struct
+	oid      fsoid       // generated oid based on info.
+	infotime time.Time   // time info (stat) recorded
+}
+
+// AsObject constructs an object instance for the given info.
+// Returns nil for nil.
+// object InfoTime is set to AsObject function call time.
+func AsObject(info os.FileInfo) Object {
+	if info == nil {
+		return nil
+	}
+	return &object{info, oid(info), time.Now()}
+}
+
+// AsObject constructs an object instance for the given info.
+// Returns nil for nil.
+func AsObjectAt(info os.FileInfo, infotime time.Time) Object {
+	if info == nil {
+		return nil
+	}
+	return &object{info, oid(info), infotime}
+}
+
 // Return an os agnostic hex representation of
 // the unique id of this FS Object.
 // REVU TODO fix the length
@@ -57,17 +86,18 @@ func (obj *object) Age() time.Duration {
 	return time.Now().Sub(obj.info.ModTime())
 }
 
-// Pretty Print
-func (obj *object) String() string {
-	return "fsobject id:" + obj.Id() + " name:" + obj.info.Name()
+func (obj *object) Timestamp() time.Time {
+	return obj.infotime
 }
 
-// Returns nil for nil.
-func AsObject(info os.FileInfo) Object {
-	if info == nil {
-		return nil
-	}
-	return &object{info, oid(info)}
+func (obj *object) InfoAge() time.Duration {
+	return time.Now().Sub(obj.Timestamp())
+}
+
+// Pretty Print
+func (obj *object) String() string {
+	return fmt.Sprintf("fsobject id:%s info-age:%d (nsec) name:%s age:%d (nsec)", obj.Id(), obj.InfoAge(), obj.Info().Name(), obj.Age())
+	//	return "fsobject id:" + obj.Id() + " name:" + obj.info.Name()
 }
 
 // (for now) using *nix oids as maximal. So,
@@ -76,12 +106,6 @@ const OIDLength = 12
 
 // REVU: this really needs to be a fixed sized array
 type fsoid []byte
-
-// for convenience/efficiency. so we compute the oid once.
-type object struct {
-	info os.FileInfo // associated file info struct
-	oid  fsoid       // generated oid based on info.
-}
 
 // Returns true if the (base named) file is an ignorable FS artifact.
 // (For example, on *nix, fs.Ingore(".") returns true)
