@@ -33,7 +33,7 @@ func OnFalse(flag bool, info ...interface{}) {
 	if flag {
 		return
 	}
-	err := fmt.Errorf("%s - assert-fail is FALSE", fmtInfo(info...))
+	err := fmt.Errorf("%s - assert-fail: FALSE", fmtInfo(info...))
 	panic(&Error{Cause: err, err: err})
 }
 
@@ -41,7 +41,7 @@ func OnTrue(flag bool, info ...interface{}) {
 	if !flag {
 		return
 	}
-	err := fmt.Errorf("%s - assert-fail is TRUE", fmtInfo(info...))
+	err := fmt.Errorf("%s - assert-fail: TRUE", fmtInfo(info...))
 	panic(&Error{Cause: err, err: err})
 }
 
