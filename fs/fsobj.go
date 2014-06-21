@@ -21,11 +21,30 @@ type Object interface {
 	Timestamp() time.Time
 	// returns 'info age' since info was recorded
 	InfoAge() time.Duration
+	//
+	Flags() uint8
+	SetFlags(flags uint8)
 }
 
 func SameObject(a, b Object) bool {
 	return os.SameFile(a.Info(), b.Info())
 }
+
+func Renamed(a, b Object) (bool, error) {
+	if !SameObject(a, b) {
+		return false, errors.New("not same object")
+	}
+	return a.Info().Name() != b.Info().Name(), nil
+}
+// panics
+func Renamed0(a, b Object) bool {
+	res, e := Renamed(a, b)
+	if e != nil {
+		panic(errors.New("not same object"))
+	}
+	return res
+}
+
 
 func Modified(a, b Object) (bool, error) {
 	if !SameObject(a, b) {
@@ -49,6 +68,7 @@ type object struct {
 	info     os.FileInfo // associated file info struct
 	oid      fsoid       // generated oid based on info.
 	infotime time.Time   // time info (stat) recorded
+	flags    uint8       // 8bit user flag field
 }
 
 // AsObject constructs an object instance for the given info.
@@ -58,7 +78,7 @@ func AsObject(info os.FileInfo) Object {
 	if info == nil {
 		return nil
 	}
-	return &object{info, oid(info), time.Now()}
+	return &object{info, oid(info), time.Now(), 0}
 }
 
 // AsObject constructs an object instance for the given info.
@@ -67,7 +87,7 @@ func AsObjectAt(info os.FileInfo, infotime time.Time) Object {
 	if info == nil {
 		return nil
 	}
-	return &object{info, oid(info), infotime}
+	return &object{info, oid(info), infotime, 0}
 }
 
 // Return an os agnostic hex representation of
@@ -94,9 +114,17 @@ func (obj *object) InfoAge() time.Duration {
 	return time.Now().Sub(obj.Timestamp())
 }
 
+func (obj *object) SetFlags(flags uint8)  {
+	obj.flags = flags
+}
+
+func (obj *object) Flags() uint8 {
+	return obj.flags
+}
+
 // Pretty Print
 func (obj *object) String() string {
-	return fmt.Sprintf("fsobject id:%s info-age:%d (nsec) name:%s age:%d (nsec)", obj.Id(), obj.InfoAge(), obj.Info().Name(), obj.Age())
+	return fmt.Sprintf("fsobject %s:id %12d:info-age (nsec) %12d:size (b) %12d:age (nsec) %20q:name flags:%b", obj.Id(), obj.InfoAge(), obj.Info().Size(), obj.Age(), obj.Info().Name(), obj.Flags())
 	//	return "fsobject id:" + obj.Id() + " name:" + obj.info.Name()
 }
 

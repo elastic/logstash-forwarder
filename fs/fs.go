@@ -1,7 +1,6 @@
 package fs
 
 import (
-	"log"
 	"lsf/panics"
 	"os"
 	"path"
@@ -22,7 +21,7 @@ func FindMatchingPaths(basepath, pattern string) (matches []string, err error) {
 	}
 
 	glob := path.Join(basepath, pattern)
-	log.Printf("track: %q\n", glob)
+
 	fspaths0, e := filepath.Glob(glob)
 	panics.OnError(e, "FindMatchingPaths", "path.Join", glob)
 
