@@ -16,25 +16,25 @@ import (
 var options = struct {
 	basepath     string
 	pattern      string
-	maxRecords   uint
-	ageThreshold infoAge
+	maxSize   uint
+	maxAge infoAge
 	delaymsec    uint
 	about        func() string
 }{
 	basepath:     ".",
 	pattern:      "*",
-	maxRecords:   0,
-	ageThreshold: infoAge(0),
+	maxSize:   0,
+	maxAge: infoAge(0),
 	delaymsec:    100,
 }
 
 func about() string {
 	var s string = "explore/tracking module:\n"
-	s += fmt.Sprintf("basepath:     %s\n", options.basepath)
-	s += fmt.Sprintf("pattern:      %s\n", options.pattern)
-	s += fmt.Sprintf("maxRecords:   %d\n", options.maxRecords)
-	s += fmt.Sprintf("ageThreshold: %d\n", options.ageThreshold)
-	s += fmt.Sprintf("delaymsec:    %d\n", options.delaymsec)
+	s += fmt.Sprintf("basepath:  %s\n", options.basepath)
+	s += fmt.Sprintf("pattern:   %s\n", options.pattern)
+	s += fmt.Sprintf("maxSize:   %d\n", options.maxSize)
+	s += fmt.Sprintf("maxAge:    %d\n", options.maxAge)
+	s += fmt.Sprintf("delaymsec: %d\n", options.delaymsec)
 	return s
 }
 func init() {
@@ -43,9 +43,9 @@ func init() {
 
 	flag.StringVar(&options.basepath, "p", options.basepath, "base path to track")
 	flag.StringVar(&options.pattern, "n", options.pattern, "filename glob pattern")
-	flag.UintVar(&options.maxRecords, "max-records", options.maxRecords, "maximum number of fs.Objects in cache")
 	flag.UintVar(&options.delaymsec, "delay", options.delaymsec, "delay in msecs between reports")
-	flag.Var(&options.ageThreshold, "age-limit", "limit on age of object in cache")
+	flag.UintVar(&options.maxSize, "max-size", options.maxSize, "maximum number of fs.Objects in cache")
+	flag.Var(&options.maxAge, "max-age", "limit on age of object in cache")
 
 	flag.Usage = func() {
 		log.Print(`
@@ -63,8 +63,8 @@ options:
 
 //panics
 func validateGcOptions() {
-	ageopt := options.ageThreshold != infoAge(0)
-	sizeopt := options.maxRecords != uint(0)
+	ageopt := options.maxAge != infoAge(0)
+	sizeopt := options.maxSize != uint(0)
 	if ageopt && sizeopt {
 		panic("only one of age or size limits can be specified for the cache")
 	} else if !(ageopt || sizeopt) {
@@ -73,14 +73,14 @@ func validateGcOptions() {
 }
 func main() {
 
-	//	defer panics.ExitHandler()
+	defer panics.ExitHandler()
 
 	flag.Parse()
 	validateGcOptions()
 	log.Println(about())
 
 	opt := options
-	var scout TrackScout = newTrackScout(opt.basepath, opt.pattern, uint16(opt.maxRecords), opt.ageThreshold)
+	var scout TrackScout = newTrackScout(opt.basepath, opt.pattern, uint16(opt.maxSize), opt.maxAge)
 
 	for {
 		_, e := scout.Report()
@@ -232,15 +232,16 @@ func (t *trackScout) Report() (report *TrackReport, err error) {
 	for id, obj := range t.objects.cache {
 		if yes, _ := t.objects.IsDeleted(id); !yes {
 			if _, found := workingset[id]; !found {
+				// use timestamp of original fs.Object
 				events = append(events, &capability.FileEvent{now, capability.TrackEvent.DeletedFile, obj})
 				t.objects.MarkDeleted(id)
-				log.Printf("marked deleted: %s %s", id, t.objects.cache[id])
+//				log.Printf("marked deleted: %s %s", id, t.objects.cache[id])
 			}
 		}
 	}
 
 	for _, event := range events {
-		if event.Code != capability.TrackEvent.KnownFile {
+		if event.Code != capability.TrackEvent.KnownFile { // printing NOP events gets noisy
 			log.Println(event)
 		}
 	}
