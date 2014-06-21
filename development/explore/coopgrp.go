@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"lsf/capability"
+	"lsf/lsfun"
 	"lsf/fs"
 	"lsf/panics"
 	"os"
@@ -104,13 +104,13 @@ func (c *Component) debugCompConst() error {
 	return nil
 }
 
-// --- todo: extract lsf/capability
+// --- todo: extract lsf/lsfun
 
 type TrackReport struct {
 	Component
 }
 
-// --- todo: extract lsf/capability
+// --- todo: extract lsf/lsfun
 
 type TrackScout interface {
 	Report() (*TrackReport, error)
@@ -186,8 +186,8 @@ func (t *trackScout) Report() (report *TrackReport, err error) {
 		workingset[fsobj.Id()] = fsobj
 	}
 
-	var events []*capability.FileEvent = make([]*capability.FileEvent, len(workingset))
-	var eventCode capability.FileEventCode
+	var events []*lsfun.FileEvent = make([]*lsfun.FileEvent, len(workingset))
+	var eventCode lsfun.FileEventCode
 	var eventNum int
 
 	// REVU: if polling period is longer than rollover period
@@ -195,17 +195,17 @@ func (t *trackScout) Report() (report *TrackReport, err error) {
 	for id, obj := range workingset {
 		if obj0, found := t.objects.Cache[id]; found {
 			if fs.Renamed0(obj, obj0) {
-				eventCode = capability.TrackEvent.RenamedFile
+				eventCode = lsfun.TrackEvent.RenamedFile
 			} else if fs.Modified0(obj, obj0) {
-				eventCode = capability.TrackEvent.ModifiedFile
+				eventCode = lsfun.TrackEvent.ModifiedFile
 			} else {
-				eventCode = capability.TrackEvent.KnownFile
+				eventCode = lsfun.TrackEvent.KnownFile
 			}
 		} else {
-			eventCode = capability.TrackEvent.NewFile
+			eventCode = lsfun.TrackEvent.NewFile
 		}
 		t.objects.Cache[id] = obj
-		events[eventNum] = &capability.FileEvent{now, eventCode, obj}
+		events[eventNum] = &lsfun.FileEvent{now, eventCode, obj}
 		eventNum++
 	}
 
@@ -215,7 +215,7 @@ func (t *trackScout) Report() (report *TrackReport, err error) {
 		if yes, _ := t.objects.IsDeleted(id); !yes {
 			if _, found := workingset[id]; !found {
 				// use timestamp of original fs.Object
-				events = append(events, &capability.FileEvent{now, capability.TrackEvent.DeletedFile, obj})
+				events = append(events, &lsfun.FileEvent{now, lsfun.TrackEvent.DeletedFile, obj})
 				t.objects.MarkDeleted(id)
 				//				log.Printf("marked deleted: %s %s", id, t.objects.Cache[id])
 			}
@@ -223,7 +223,7 @@ func (t *trackScout) Report() (report *TrackReport, err error) {
 	}
 
 	for _, event := range events {
-		if event.Code != capability.TrackEvent.KnownFile { // printing NOP events gets noisy
+		if event.Code != lsfun.TrackEvent.KnownFile { // printing NOP events gets noisy
 			log.Println(event)
 		}
 	}

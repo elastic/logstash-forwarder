@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"log"
-	. "lsf/capability"
+	. "lsf/lsfun"
 	"lsf/fs"
 	"lsf/panics"
 	"os"
@@ -272,7 +272,7 @@ func (s *scout) Report() (report *TrackReport, err error) {
 // tracker task
 // ----------------------------------------------------------------------
 
-// TODO: extract config parameters for tracking capability
+// TODO: extract config parameters for tracking lsfun
 // TODO: fsobj_age_limit (for fsobject gc)
 // TODO: fsobject_map_gc_threshold (for fsobject gc)
 func track(ctl control, requests <-chan struct{}, out chan<- *TrackReport, config *trackConfig) {
