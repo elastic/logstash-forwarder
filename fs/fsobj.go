@@ -37,6 +37,7 @@ func Renamed(a, b Object) (bool, error) {
 	}
 	return a.Info().Name() != b.Info().Name(), nil
 }
+
 // panics
 func Renamed0(a, b Object) bool {
 	res, e := Renamed(a, b)
@@ -45,7 +46,6 @@ func Renamed0(a, b Object) bool {
 	}
 	return res
 }
-
 
 func Modified(a, b Object) (bool, error) {
 	if !SameObject(a, b) {
@@ -115,7 +115,7 @@ func (obj *object) InfoAge() time.Duration {
 	return time.Now().Sub(obj.Timestamp())
 }
 
-func (obj *object) SetFlags(flags uint8)  {
+func (obj *object) SetFlags(flags uint8) {
 	obj.flags = flags
 }
 
