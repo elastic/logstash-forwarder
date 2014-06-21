@@ -2,16 +2,15 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
+	"lsf/capability"
 	"lsf/fs"
 	"lsf/panics"
-	"lsf/capability"
 	"os"
 	"path"
-//	"path/filepath"
-	"time"
-	"fmt"
 	"strconv"
+	"time"
 )
 
 var options = struct {
@@ -20,15 +19,27 @@ var options = struct {
 	maxRecords   uint
 	ageThreshold infoAge
 	delaymsec    uint
+	about        func() string
 }{
-	basepath: ".",
-	pattern: "*",
-	maxRecords: 100,
+	basepath:     ".",
+	pattern:      "*",
+	maxRecords:   100,
 	ageThreshold: infoAge(time.Millisecond * 1000),
-	delaymsec: 100,
+	delaymsec:    100,
 }
 
+func about() string {
+	var s string = "explore/tracking module:\n"
+	s += fmt.Sprintf("basepath:     %s\n", options.basepath)
+	s += fmt.Sprintf("pattern:      %s\n", options.pattern)
+	s += fmt.Sprintf("maxRecords:   %d\n", options.maxRecords)
+	s += fmt.Sprintf("ageThreshold: %d\n", options.ageThreshold)
+	s += fmt.Sprintf("delaymsec:    %d\n", options.delaymsec)
+	return s
+}
 func init() {
+
+	options.about = about
 
 	flag.StringVar(&options.basepath, "p", options.basepath, "base path to track")
 	flag.StringVar(&options.pattern, "n", options.pattern, "filename glob pattern")
@@ -38,45 +49,48 @@ func init() {
 
 	flag.Usage = func() {
 		log.Print(`
-			usage:
+usage: <exe-name> [options]
+options:
+   -p:           path e.g. /var/log/webserver/
+   -n:           pattern e.g. "apache2.log*"
+   -delay:       msec wait before new report generation
+   -age-limit:   max age of object in fs.Object cache
+   -max-records: max number of objects in fs.Object cache
 		`)
 	}
-
 	log.SetFlags(0)
 }
+
 type infoAge time.Duration
+
 func (t *infoAge) String() string {
 	return fmt.Sprintf("%d", *t)
 }
 func (t *infoAge) Set(vrep string) error {
 	v, e := strconv.ParseInt(vrep, 10, 64)
-	if e != nil { return e }
+	if e != nil {
+		return e
+	}
 	var tt time.Duration = time.Duration(v) * time.Millisecond
 	*t = infoAge(tt)
 	return nil
 }
 func main() {
 
-//	defer panics.ExitHandler()
-
+	defer panics.ExitHandler()
 
 	flag.Parse()
-
+	log.Println(about())
 	opt := options
 	var scout TrackScout = newTrackScout(opt.basepath, opt.pattern, uint16(opt.maxRecords), opt.ageThreshold)
 
 	for {
 		_, e := scout.Report()
 		panics.OnError(e, "main", "scout.Report")
-//		log.Println("-----------")
-//		log.Println(report)
 
 		time.Sleep(time.Millisecond * time.Duration(options.delaymsec))
 	}
 
-//	report, e = scout.Report()
-//	panics.OnError(e, "main", "scout.Report")
-//	log.Print(report)
 }
 func nilInitializer() error { return nil }
 
@@ -93,11 +107,10 @@ type trackScout struct {
 	Component
 	options struct {
 		maxRecords        uint16
-		maxAge			  time.Duration
+		maxAge            time.Duration
 		basepath, pattern string
 	}
 	objects *objcache
-//	objects map[string]fs.Object
 }
 
 func newTrackScout(basepath, pattern string, maxRecords uint16, maxAge infoAge) TrackScout {
@@ -135,7 +148,6 @@ func (t *trackScout) Report() (report *TrackReport, err error) {
 		workingset[fsobj.Id()] = fsobj
 	}
 
-//	var event *FileEvent
 	var events []*capability.FileEvent = make([]*capability.FileEvent, len(workingset))
 	var eventCode capability.FileEventCode
 	var eventNum int
@@ -176,9 +188,7 @@ func (t *trackScout) Report() (report *TrackReport, err error) {
 			log.Println(event)
 		}
 	}
-//	go func() {
-//		t.objects.Gc()
-//	}()
+
 	return nil, nil
 }
 
@@ -190,7 +200,6 @@ func (c *Component) debugCompConst() error {
 
 func (t *trackScout) trackScoutInit() (err error) {
 	defer panics.Recover(&err)
-//	panics := panics.ForFunc("tracksCountConst")
 
 	t.objects = NewObjectCache(t.options.maxRecords, t.options.maxAge)
 	t.initialize = nilInitializer
@@ -199,14 +208,14 @@ func (t *trackScout) trackScoutInit() (err error) {
 }
 
 type objcache struct {
-
 	options struct {
 		maxRecords uint16
-		maxAge time.Duration
+		maxAge     time.Duration
 	}
 	cache map[string]fs.Object
 }
-func NewObjectCache(maxRecords uint16, maxAge time.Duration) *objcache{
+
+func NewObjectCache(maxRecords uint16, maxAge time.Duration) *objcache {
 	oc := new(objcache)
 	oc.options.maxRecords = maxRecords
 	oc.options.maxAge = maxAge
@@ -229,7 +238,7 @@ func (oc *objcache) IsDeleted(id string) (bool, error) {
 
 	return obj.Flags() == uint8(1), nil
 }
-func (oc *objcache) IsDeleted0(id string) (bool) {
+func (oc *objcache) IsDeleted0(id string) bool {
 	obj, found := oc.cache[id]
 	if !found {
 		return true
@@ -238,13 +247,11 @@ func (oc *objcache) IsDeleted0(id string) (bool) {
 	return obj.Flags() == uint8(1)
 }
 func (oc *objcache) Gc() {
-//	log.Printf("gc: %d %d", oc.options.maxRecords, len(oc.cache))
 	n := 0
 	if len(oc.cache) > int(oc.options.maxRecords) {
 		for id, obj := range oc.cache {
-//			log.Printf("gc: %d %d", obj.Age(), oc.options.maxAge)
 			if obj.Age() > oc.options.maxAge && oc.IsDeleted0(id) {
-				log.Printf("cache-gc: %s", obj)
+				//				log.Printf("cache-gc: %s", obj)
 				delete(oc.cache, id)
 				n++
 			}
