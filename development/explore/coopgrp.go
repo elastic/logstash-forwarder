@@ -178,6 +178,7 @@ func (t *trackScout) Report() (report *TrackReport, err error) {
 	}
 
 	t.objects.Gc()
+//	t.objects.gc(t.options.maxRecords)
 
 	for id, obj := range t.objects.cache {
 		if yes, _ := t.objects.IsDeleted(id); !yes {
@@ -207,7 +208,7 @@ func (c *Component) debugCompConst() error {
 func (t *trackScout) trackScoutInit() (err error) {
 	defer panics.Recover(&err)
 
-	t.objects = NewObjectCache(t.options.maxRecords, t.options.maxAge)
+	t.objects = NewObjectCache(gcAlgorithm.bySize, t.options.maxRecords, t.options.maxAge)
 	t.initialize = nilInitializer
 
 	return nil
@@ -219,13 +220,22 @@ type objcache struct {
 		maxAge     time.Duration
 	}
 	cache map[string]fs.Object
+	gc    GcFunc
+	gcArgs []interface{}
 }
-
-func NewObjectCache(maxRecords uint16, maxAge time.Duration) *objcache {
+var gcAlgorithm = struct { byAge, bySize GcFunc } {
+	byAge: AgeBasedGcFunc,
+	bySize: SizeBasedGcFunc,
+}
+func NewObjectCache(gcFunc GcFunc, maxSize uint16, maxAge time.Duration) *objcache {
 	oc := new(objcache)
-	oc.options.maxRecords = maxRecords
+	oc.gc = gcFunc
 	oc.options.maxAge = maxAge
+	oc.options.maxRecords = maxSize
+	oc.gcArgs = []interface{}{oc.options.maxRecords}
+
 	oc.cache = make(map[string]fs.Object)
+
 	return oc
 }
 func (oc *objcache) MarkDeleted(id string) bool {
@@ -242,15 +252,11 @@ func (oc *objcache) IsDeleted(id string) (bool, error) {
 		return false, fmt.Errorf("no such object")
 	}
 
-	return obj.Flags() == uint8(1), nil
+	return IsDeleted0(obj.Flags()), nil
 }
-func (oc *objcache) IsDeleted0(id string) bool {
-	obj, found := oc.cache[id]
-	if !found {
-		return true
-	}
 
-	return obj.Flags() == uint8(1)
+func IsDeleted0(flag uint8) bool {
+	return flag == uint8(1)
 }
 
 // REVU:
@@ -263,18 +269,51 @@ func (oc *objcache) IsDeleted0(id string) bool {
 // if we want to have age threshold BUT we want to limit the max records, then that
 // would make sense. (which means code below is wrong.)
 func (oc *objcache) Gc() {
-	n := 0
-	if len(oc.cache) > int(oc.options.maxRecords) {
-		for id, obj := range oc.cache {
-			if obj.Age() > oc.options.maxAge && oc.IsDeleted0(id) {
-				//				log.Printf("cache-gc: %s", obj)
-				delete(oc.cache, id)
-				n++
-			}
-		}
-	}
+	n := oc.gc(oc.cache, oc.options.maxRecords)
+//	n := 0
+//	if len(oc.cache) > int(oc.options.maxRecords) {
+//		for id, obj := range oc.cache {
+//			if !IsDeleted0(obj.Flags()) {
+//				continue // don't touch active fs.Objects
+//			}
+//			if obj.Age() > oc.options.maxAge {
+//				delete(oc.cache, id)
+//				n++
+//			}
+//		}
+//	}
+//	// check again. If
 	if n > 0 {
 		log.Printf("GC: %d items removed", n)
 		log.Printf("gc: %d %d", oc.options.maxRecords, len(oc.cache))
 	}
 }
+// REVU: TODO: sort these by age descending first
+func AgeBasedGcFunc(cache map[string]fs.Object, args...interface{}) int {
+	panics.OnFalse(len(args)==1, "BUG", "AgeBasedGcFunc", "args:", args)
+	limit, ok := args[0].(time.Duration)
+	panics.OnFalse(ok, "BUG", "AgeBasedGcFunc", "limit:", args[0])
+	n := 0
+	for id, obj := range cache {
+		if !IsDeleted0(obj.Flags()) { continue }
+		if obj.Age() > limit {
+			delete(cache, id)
+			n++
+		}
+	}
+	return n
+}
+func SizeBasedGcFunc(cache map[string]fs.Object, args...interface{}) int {
+	panics.OnFalse(len(args)==1, "BUG", "AgeBasedGcFunc", "args:", args)
+	limit, ok := args[0].(uint16)
+	panics.OnFalse(ok, "BUG", "AgeBasedGcFunc", "limit:", args[0])
+	n := 0
+	if len(cache) <= int(limit) { return 0 }
+	for id, obj := range cache {
+		if !IsDeleted0(obj.Flags()) { continue }
+		delete(cache, id)
+		n++
+	}
+	return n
+}
+type GcFunc func(cache map[string]fs.Object, args...interface{}) int
