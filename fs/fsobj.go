@@ -15,6 +15,7 @@ type Object interface {
 	Info() os.FileInfo
 	// String rep of Object
 	String() string
+	// REVU: todo rename this or just do ModTime() time.Time
 	// returns 'age' since last mod time.
 	Age() time.Duration
 	// returns time Object info was recorded
@@ -124,8 +125,9 @@ func (obj *object) Flags() uint8 {
 
 // Pretty Print
 func (obj *object) String() string {
-	return fmt.Sprintf("fsobject %s:id %12d:info-age (nsec) %12d:size (b) %12d:age (nsec) %20q:name flags:%b", obj.Id(), obj.InfoAge(), obj.Info().Size(), obj.Age(), obj.Info().Name(), obj.Flags())
-	//	return "fsobject id:" + obj.Id() + " name:" + obj.info.Name()
+	return fmt.Sprintf(
+		"fsobject %s:id %12d:info-age (nsec) %12d:size (b) %12d:age (nsec) %20q:name flags:%b",
+		obj.Id(), obj.InfoAge(), obj.Info().Size(), obj.Age(), obj.Info().Name(), obj.Flags())
 }
 
 // (for now) using *nix oids as maximal. So,
