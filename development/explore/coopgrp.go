@@ -217,11 +217,11 @@ func (t *trackScout) Report() (report *TrackReport, err error) {
 				// use timestamp of original fs.Object
 				events = append(events, &lsfun.FileEvent{now, lsfun.TrackEvent.DeletedFile, obj})
 				t.objects.MarkDeleted(id)
-				//				log.Printf("marked deleted: %s %s", id, t.objects.Cache[id])
 			}
 		}
 	}
 
+	// REVU: TODO: this need to be emitted via a RolloverLogWriter(event)
 	for _, event := range events {
 		if event.Code != lsfun.TrackEvent.KnownFile { // printing NOP events gets noisy
 			log.Println(event)
