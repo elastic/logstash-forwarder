@@ -138,12 +138,15 @@ func (t *trackScout) Report() (report *TrackReport, err error) {
 
 	workingset := make(map[string]fs.Object)
 	for _, fspath := range fspaths {
-		dir := path.Dir(gpattern)
-		// REVU:
-		// the file may have been deleted in the interim
-		// TODO: don't panic - can ignore
+		// REVU: resolve this issue of relative paths. It is a pain and design smell.
+		_ = path.Dir(gpattern)
+
 		info, e := os.Stat(fspath)
-		panics.OnError(e, "trackScout.trackScoutConst:", dir, fspath)
+		if e != nil {
+			// ignore: os provided both file names and Stat func.
+			// A brief flicker of fs life.
+			continue
+		}
 		if info.IsDir() {
 			continue
 		}
@@ -249,6 +252,7 @@ func (oc *objcache) IsDeleted0(id string) bool {
 
 	return obj.Flags() == uint8(1)
 }
+
 // REVU:
 // combo of max-age and max-records is a harder algo than
 // simply pick one. it is not clear what the benefits of extra
