@@ -12,28 +12,41 @@ import (
 )
 
 var config struct {
-	basepath, pattern string
-	delay             time.Duration
+	basepath, pattern    string
+	delay                time.Duration
+	fsObjectMaxAge       time.Duration
+	fsObjectCacheMaxSize uint
 }
 
-var delayOpt uint
+type trackConfig struct {
+	basepath, pattern    string
+	fsObjectMaxAge       time.Duration
+	fsObjectCacheMaxSize uint
+}
+
+var delayOpt, ageOpt uint
 
 func init() {
 	log.SetFlags(0)
 	flag.StringVar(&config.basepath, "p", "", "path to log file dir")
 	flag.StringVar(&config.pattern, "n", "*", "gob pattern")
 	flag.UintVar(&delayOpt, "f", uint(100), "microsec delay between each log event")
+	flag.UintVar(&ageOpt, "gc-age", uint(1), "fsobjects cache - max age in days")
+	flag.UintVar(&config.fsObjectCacheMaxSize, "gc-size", uint(100), "fsobjects cache - gc threshold trigger")
 }
 
 func main() {
 	flag.Parse()
 
 	config.delay = time.Duration(delayOpt) * time.Microsecond
+	config.fsObjectMaxAge = time.Duration(ageOpt) * time.Hour * 24
+	config.delay = time.Duration(delayOpt) * time.Microsecond
 	if config.basepath == "" {
 		log.Println("option -path is required.")
 		flag.Usage()
 		os.Exit(0)
 	}
+	trackConfig := &trackConfig{config.basepath, config.pattern, config.fsObjectMaxAge, config.fsObjectCacheMaxSize}
 
 	log.Printf("ondemand-tracker: init: %s%s", config.basepath, config.pattern)
 	ctl, requests, reports := tracker()
@@ -41,7 +54,7 @@ func main() {
 	user := make(chan os.Signal, 1)
 	signal.Notify(user, os.Interrupt, os.Kill)
 
-	go track(*ctl, requests, reports, config.basepath, config.pattern)
+	go track(*ctl, requests, reports, trackConfig)
 
 	// driver
 	flag := true
@@ -54,6 +67,7 @@ func main() {
 				for _, event := range report.Events {
 					log.Println(event.String())
 				}
+				log.Println("\n" + report.String())
 			}
 			time.Sleep(config.delay)
 			requests <- struct{}{}
@@ -210,31 +224,78 @@ nextfile:
 	return
 
 }
+type TrackingScout interface {
+	Report() (*TrackReport, error)
+	Objects() []fs.Object
+}
+type scout struct {
+	basepath string
+	pattern string
+	sequence Counter
+	objects map[string]fs.Object
+}
+func NewTrackingScout(config *trackConfig) TrackingScout {
+	s := new(scout)
+	s.basepath = config.basepath
+	s.pattern = config.pattern
+	s.objects = make(map[string]fs.Object)
+	s.sequence = NewCounter()
+	return s
+}
+func (s *scout) Objects() []fs.Object {
+	objects := make([]fs.Object, len(s.objects))
+	n := 0
+	for _, v := range s.objects {
+		objects[n] = v; n++
+	}
+	return objects
+}
+func (s *scout) Report() (report *TrackReport, err error) {
+	// 2 tasks
+	// 1: filter by glob and determine event (if any) for each file
+	// 2: update fsobjects - we need it to assert file renames.
+	// note: workingset/snapshot appears to be the active subset of snapshop
+	//       if so, then size limit could bound the for..range over that cache
+	//       and we won't have so many and maps to jugle!
+	//
+	// we need only this:
+	// emit an fsobject on each request to tracking
+	//
+	// for report, we need:
+	// emit a report listing events of type NEW, MODIFY, RENAME, DELETE
+
+
+	panic("not implemented")
+}
 
 // ----------------------------------------------------------------------
 // tracker task
 // ----------------------------------------------------------------------
+
 // TODO: extract config parameters for tracking capability
 // TODO: fsobj_age_limit (for fsobject gc)
 // TODO: fsobject_map_gc_threshold (for fsobject gc)
-func track(ctl control, requests <-chan struct{}, out chan<- *TrackReport, basepath string, pattern string) {
+func track(ctl control, requests <-chan struct{}, out chan<- *TrackReport, config *trackConfig) {
 	defer panics.AsyncRecover(ctl.stat, "done")
 
 	log.Println("traking..")
 
-	// maintains snapshot view of tracker after each request - initially empty
-	//	var snapshot map[string]os.FileInfo = make(map[string]os.FileInfo)
-	var snapshot map[string]fs.Object = make(map[string]fs.Object)
+	var scout TrackingScout = NewTrackingScout(config)
+	var tracker TrackingAnalysis = NewTrackingAnalysis(config)
 
-	// maintains historic list of all FS Objects we have seen, as
-	// identified by fs.Object.Id() (and not the ephemeral filename)
-	// This map is subject to garbage collection per configration params.
-	var fsobjects map[string]fs.Object = make(map[string]fs.Object)
+//	// maintains snapshot view of tracker after each request - initially empty
+//	//	var snapshot map[string]os.FileInfo = make(map[string]os.FileInfo)
+//	var snapshot map[string]fs.Object = make(map[string]fs.Object)
+//
+//	// maintains historic list of all FS Objects we have seen, as
+//	// identified by fs.Object.Id() (and not the ephemeral filename)
+//	// This map is subject to garbage collection per configration params.
+//	var fsobjects map[string]fs.Object = make(map[string]fs.Object)
+//
+//	// start report sequence counter - init is 0
+//	var reportSeq Counter = NewCounter()
 
-	// start report sequence counter - init is 0
-	var reportSeq Counter = NewCounter()
-
-	var trackedObj fs.Object
+//	var trackedObj fs.Object
 
 next:
 	for {
@@ -243,72 +304,158 @@ next:
 		case <-requests:
 			// generate report
 			// TODO: insure returned snapshot is effectively ignorable (same as snapshot) if events len is 0
-			report, snapshot1, e := reportFileEvents(basepath, pattern, snapshot, fsobjects, reportSeq)
+			report, e := scout.Report()
+//			report, snapshot1, e := reportFileEvents(config.basepath, config.pattern, snapshot, fsobjects, reportSeq)
 			panics.OnError(e, "track", "reportFileEvents")
-
 			if len(report.Events) == 0 {
-				log.Printf("snapshot1: %d snapshot: %d", len(snapshot1), len(snapshot))
-				log.Printf("report: %s", report)
 				// publish 0 len report
 				out <- report
 				continue next
 			}
-			// TODO: refactor to trackAnalysis
-			// REVU: TODO: n TRK events need to be reduced to 1 per stream def
-			// swap snapshot
-			snapshot = snapshot1
+			out<- report
 
-			// update fsobjects - add any new fsobject
-			// select fsobj to track
-			var youngest time.Duration = time.Hour * 24 * 365 * 100
-			var candidateEvent FileEvent
-			var candidateObj fs.Object
-			for _, fileEvent := range report.Events {
-				log.Printf("fileEvent %s", fileEvent)
-				fsobj := fileEvent.File
-				if fileEvent.Code == TrackEvent.NewFile {
-					fsobjects[fsobj.Id()] = fsobj
-				}
-				if fsobj.Age() < youngest {
-					youngest = fsobj.Age()
-					candidateObj = fsobj
-					candidateEvent = fileEvent
-					log.Printf("CANDIDATE %s", candidateEvent)
-				}
+			selection, e := tracker.Update(snapshot1, report)
+			panics.OnError(e, "track", "tracker.Update")
+
+			log.Printf("PICK: %s\n", selection)
+
+//			// TODO: refactor to trackAnalysis
+//			// REVU: TODO: n TRK events need to be reduced to 1 per stream def
+//			// swap snapshot
+//			snapshot = snapshot1
+//
+//			// update fsobjects - add any new fsobject
+//			// select fsobj to track
+//			var youngest time.Duration = time.Hour * 24 * 365 * 100
+//			var candidateEvent FileEvent
+//			var candidateObj fs.Object
+//			for _, fileEvent := range report.Events {
+//				fsobj := fileEvent.File
+//				if fileEvent.Code == TrackEvent.NewFile {
+//					fsobjects[fsobj.Id()] = fsobj
+//				}
+//				if fsobj.Age() < youngest {
+//					youngest = fsobj.Age()
+//					candidateObj = fsobj
+//					candidateEvent = fileEvent
+//				}
+//			}
+//
+//			if trackedObj == nil {
+//				trackedObj = candidateObj
+//			} else if !fs.SameObject(trackedObj, candidateObj) {
+//				// If candidateEvent is TRK AND trackedObj.Age() > candidateObj.Age()
+//				if candidateEvent.Code == TrackEvent.NewFile {
+//					if trackedObj.Age() > candidateObj.Age() {
+//						trackedObj = candidateObj
+//					}
+//				} else {
+//					// is this possible? exists in map but younger than what is tracked?
+//					// TODO: needs REVU for how to handle it.
+//					panics.OnTrue(true, candidateEvent.Code, "candidate:", candidateObj, "tracked:", trackedObj)
+//				}
+//			}
+//
+//			out <- report
+//
+//			// gc fsobject map (if necessary)
+//			if len(fsobjects) > int(config.fsObjectCacheMaxSize) {
+//				log.Println("DEBUG TODO fsobjects size critical: %d", len(fsobjects))
+//				for _, fsobj := range fsobjects {
+//					if fsobj.Age() > config.fsObjectMaxAge {
+//						delete(fsobjects, fsobj.Id())
+//						log.Printf("fsobj %s is garbage collected", fsobj.Id()) // TEMP DEBUG
+//					}
+//				}
+//			}
+		}
+	}
+}
+
+// tracker performs analysis on TrackReports and makes tracking decisions.
+type TrackingAnalysis interface {
+	Update (snapshot map[string]fs.Object, trackReport *TrackReport) (fs.Object, error)
+	Select () fs.Object
+}
+
+type trackingInfo struct {
+	// currently selected fsobject
+	trackedObj fs.Object
+
+	// maintains historic list of all FS Objects we have seen, as
+	// identified by fs.Object.Id() (and not the ephemeral filename)
+	// This map is subject to garbage collection per configration params.
+	fsobjects map[string]fs.Object
+
+	// maintains snapshot view of tracker after each request - initially empty
+	//	var snapshot map[string]os.FileInfo = make(map[string]os.FileInfo)
+	snapshot map[string]fs.Object
+}
+
+func (t *trackingInfo) Select () fs.Object {
+	panic("not implemented")
+}
+
+func (t *trackingInfo) Update(snapshot1 map[string]fs.Object, report *TrackReport) (selection fs.Object, err error) {
+	defer panics.Recover(&err)
+
+	if len(report.Events) == 0 {
+		return t.trackedObj, nil
+	}
+	// TODO: refactor to trackAnalysis
+	// REVU: TODO: n TRK events need to be reduced to 1 per stream def
+	// swap snapshot
+	t.snapshot = snapshot1
+//	snapshot = snapshot1
+
+	// update fsobjects - add any new fsobject
+	// select fsobj to track
+	var youngest time.Duration = time.Hour * 24 * 365 * 100
+	var candidateEvent FileEvent
+	var candidateObj fs.Object
+	for _, fileEvent := range (*report).Events {
+		fsobj := fileEvent.File
+		if fileEvent.Code == TrackEvent.NewFile {
+			t.fsobjects[fsobj.Id()] = fsobj
+		}
+		if fsobj.Age() < youngest {
+			youngest = fsobj.Age()
+			candidateObj = fsobj
+			candidateEvent = fileEvent
+		}
+	}
+
+	if t.trackedObj == nil {
+		t.trackedObj = candidateObj
+	} else if !fs.SameObject(t.trackedObj, candidateObj) {
+		// If candidateEvent is TRK AND trackedObj.Age() > candidateObj.Age()
+		if candidateEvent.Code == TrackEvent.NewFile {
+			if t.trackedObj.Age() > candidateObj.Age() {
+				t.trackedObj = candidateObj
 			}
-			log.Printf("final candidate %s", candidateEvent)
-			log.Printf("final candidate %s - age: %d", candidateObj, candidateObj.Age())
+		} else {
+			// is this possible? exists in map but younger than what is tracked?
+			// TODO: needs REVU for how to handle it.
+			panics.OnTrue(true, candidateEvent.Code, "candidate:", candidateObj, "tracked:", t.trackedObj)
+		}
+	}
 
-			if trackedObj == nil {
-				trackedObj = candidateObj
-			} else if !fs.SameObject(trackedObj, candidateObj) {
-				// If candidateEvent is TRK AND trackedObj.Age() > candidateObj.Age()
-				if candidateEvent.Code == TrackEvent.NewFile {
-					if trackedObj.Age() > candidateObj.Age() {
-						log.Printf("DEBUG: should will be tracking %s", trackedObj.String())
-						trackedObj = candidateObj
-					}
-				} else {
-					// is this possible? exists in map but younger than what is tracked?
-					panics.OnTrue(true, candidateEvent.Code, "candidate:", candidateObj, "tracked:", trackedObj)
-				}
-			}
-
-			// publish report
-			out <- report
-
-			// gc fsobject map (if necessary)
-			validDuration := time.Hour * 1  // REVU: 1HR for testing only TODO: config.fsobj_age_limit
-			sizeThreshold := 100            // REVU: 100 for testing only TODO: config.fsobject_map_gc_threshold
-			if len(fsobjects) > sizeThreshold {
-				log.Println("DEBUG TODO fsobjects size critical: %d", len(fsobjects))
-				for _, fsobj := range fsobjects {
-					if fsobj.Info().ModTime().Add(validDuration).Before(time.Now()) {
-						delete(fsobjects, fsobj.Id())
-						log.Printf("fsobj %s is garbage collected", fsobj.Id()) // TEMP DEBUG
-					}
-				}
+	// gc fsobject map (if necessary)
+	if len(t.fsobjects) > int(config.fsObjectCacheMaxSize) {
+		log.Println("DEBUG TODO fsobjects size critical: %d", len(t.fsobjects))
+		for _, fsobj := range t.fsobjects {
+			if fsobj.Age() > config.fsObjectMaxAge {
+				delete(t.fsobjects, fsobj.Id())
+				log.Printf("fsobj %s is garbage collected", fsobj.Id()) // TEMP DEBUG
 			}
 		}
 	}
+	return t.trackedObj, nil
+}
+
+func NewTrackingAnalysis (config *trackConfig) TrackingAnalysis {
+	t := new(trackingInfo)
+	t.fsobjects = make(map[string]fs.Object)
+	t.snapshot = make(map[string]fs.Object)
+	return t
 }

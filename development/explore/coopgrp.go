@@ -139,6 +139,9 @@ func (t *trackScout) Report() (report *TrackReport, err error) {
 	workingset := make(map[string]fs.Object)
 	for _, fspath := range fspaths {
 		dir := path.Dir(gpattern)
+		// REVU:
+		// the file may have been deleted in the interim
+		// TODO: don't panic - can ignore
 		info, e := os.Stat(fspath)
 		panics.OnError(e, "trackScout.trackScoutConst:", dir, fspath)
 		if info.IsDir() {
@@ -246,6 +249,15 @@ func (oc *objcache) IsDeleted0(id string) bool {
 
 	return obj.Flags() == uint8(1)
 }
+// REVU:
+// combo of max-age and max-records is a harder algo than
+// simply pick one. it is not clear what the benefits of extra
+// complexity buys:
+// if we want N records but don't want to delete anything younger than A
+// then we will hover around N+c (where c varies per setup but is a fuzzy constant)
+// Whatever that N+c is, it is the same as if we simply use age threshold.
+// if we want to have age threshold BUT we want to limit the max records, then that
+// would make sense. (which means code below is wrong.)
 func (oc *objcache) Gc() {
 	n := 0
 	if len(oc.cache) > int(oc.options.maxRecords) {
