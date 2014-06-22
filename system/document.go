@@ -49,7 +49,7 @@ type Document interface {
 
 type document struct {
 	key      DocId
-	info     *os.FileInfo
+	info     *os.FileInfo // REVU: use fs.Object instead?
 	readtime time.Time
 	records  map[string][]byte
 	lock     Lock
