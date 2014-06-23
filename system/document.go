@@ -13,20 +13,6 @@ import (
 
 var E_EXISTING_DOC = fmt.Errorf("document exists")
 
-func DocpathForKey(lsfpath string, key DocId) (filepath, filename string) {
-	docid := string(key)
-	keyparts := strings.Split(docid, ".")
-	kplen := len(keyparts)
-	switch kplen {
-	case 1:
-		return path.Join(lsfpath, "."), strings.ToUpper(docid)
-	default:
-		docname := keyparts[kplen-1]
-		filepath = strings.Replace(docid, ".", "/", -1)[:len(docid)-len(docname)]
-		return path.Join(lsfpath, filepath), strings.ToUpper(docname)
-	}
-}
-
 // ----------------------------------------------------------------------------
 // Document (k/v)
 // ----------------------------------------------------------------------------

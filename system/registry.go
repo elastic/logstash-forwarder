@@ -6,6 +6,8 @@ import (
 	"path"
 )
 
+// TODO: REVU if distinction between Registrar & Registry still makes sense.
+// TODO: REVU if inclusion of System log api makes sense. (Why not in system?)
 // ----------------------------------------------------------------------------
 // Registry
 // ----------------------------------------------------------------------------
@@ -47,6 +49,20 @@ func openRegistry(dir string) (reg *registry, err error) {
 	return r, nil
 }
 
+// ----------------------------------------------------------------------------
+// System Document Registry
+// ----------------------------------------------------------------------------
+
+// TODO: rename DocPathForKey
+func DocpathForKey(lsfpath string, key DocId) (filepath, filename string) {
+	id := string(key)
+	return ObjectPathForId(lsfpath, id)
+}
+
+// REVU: these basically set the working path (only, as of now).
+// TODO REVU if returning interface (and not support type) makes sense.
+// e.g. *document exposes lock member but why not Document.Lock() .. ?
+
 func (r *registry) updateDocument(doc *document) (bool, error) {
 	docpath, docname := DocpathForKey(r.path, doc.key)
 	return updateDocument(doc, path.Join(docpath, docname))
@@ -65,4 +81,29 @@ func (r *registry) createDocument(key DocId, data map[string][]byte) (*document,
 func (r *registry) deleteDocument(key DocId) (bool, error) {
 	docpath, docname := DocpathForKey(r.path, key)
 	return deleteDocument(key, path.Join(docpath, docname))
+}
+
+// ----------------------------------------------------------------------------
+// System Log Registry
+// ----------------------------------------------------------------------------
+
+func LogPathForKey(lsfpath string, key LogId) (filepath, filename string) {
+	id := string(key)
+	return ObjectPathForId(lsfpath, id)
+}
+
+// TODO REVU if createLog, accessLog (mode), are sufficient here
+// TODO REVU if returning interface (and not support type) makes sense.
+// see ~ note for System Documents (above)
+
+func (r *registry) accessLog(id LogId, mode LogAccessMode) (*syslog, error) {
+	panic("not implemented")
+}
+
+func (r *registry) createLog(id LogId) (*syslog, error) {
+	panic("not implemented")
+}
+
+func (r *registry) deleteLog(id LogId) (bool, error) {
+	panic("not implemented")
 }

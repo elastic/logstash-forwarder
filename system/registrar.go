@@ -167,10 +167,10 @@ func beTheRegistrar(r *registry, ui <-chan req, cancel <-chan struct{}, done cha
 		case request := <-ui:
 			// process request
 			//			log.Printf("@request: Registrar: process request %s", request)
-		request.result <- request.execute()
+			request.result <- request.execute()
 		case <-cancel:
 			//			log.Println("@cancel: Registrar: stopping")
-		done <- stat{nil, NilValue}
+			done <- stat{nil, NilValue}
 			return
 		}
 	}
