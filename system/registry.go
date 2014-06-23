@@ -87,6 +87,8 @@ func (r *registry) deleteDocument(key DocId) (bool, error) {
 // System Log Registry
 // ----------------------------------------------------------------------------
 
+// REVU: this can either do the cast to string as of now or actually implement
+//       the log naming schema.
 func LogPathForKey(lsfpath string, key LogId) (filepath, filename string) {
 	id := string(key)
 	return ObjectPathForId(lsfpath, id)
