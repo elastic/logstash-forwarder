@@ -22,9 +22,6 @@ func ObjectPathForId(lsfpath string, oid string) (basepath, basename string) {
 	kplen := len(keyparts)
 	switch kplen {
 	case 1:
-		//		docname := keyparts[kplen-1]
-		//		basename = strings.Replace(oid, ".", "/", -1)[:len(oid)-len(docname)]
-		//		return path.Join(lsfpath, basepath, basename), strings.ToUpper(docname)
 		return path.Join(lsfpath, basepath), strings.ToUpper(oid)
 	default:
 		docname := keyparts[kplen-1]
