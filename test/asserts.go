@@ -58,11 +58,6 @@ func AssertNil(t *testing.T, testname, resname string, ref interface{}) {
 	}
 }
 
-func isZeroVal(s string) bool { return s == ""}
-func isNotZeroVal(s string) bool { return !isZeroVal(s)}
-func isNil(ref interface{}) bool { return ref == nil }
-func isNotNil(ref interface{}) bool { return !isNil(ref) }
-
 // ----------------------------------------------------------------------------
 // Unit Test Assertions
 // ----------------------------------------------------------------------------

@@ -1,9 +1,9 @@
 package system
 
 import (
-	"testing"
-	"path"
 	"lsf/test"
+	"path"
+	"testing"
 )
 
 // TEST:
@@ -50,7 +50,7 @@ func TestObjectPathForKey(t *testing.T) {
 
 	for n, id := range ids {
 		basepath, basename, err := objectPathForId(lsfpath, id)
-		assert.Nil ("err", err)
+		assert.Nil("err", err)
 		assert.StringsEqual("basepath", expected[n].basepath, basepath)
 		assert.StringsEqual("basename", expected[n].basename, basename)
 	}

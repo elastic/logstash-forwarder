@@ -1,10 +1,10 @@
 package system
 
 import (
+	"errors"
 	"os"
 	"path"
 	"strings"
-	"errors"
 )
 
 var NilValue = []byte{}
