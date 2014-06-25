@@ -97,33 +97,24 @@ type DocumentDigestFn func(Document) string
 // close file
 // release lock
 func newDocument(dockey DocId, fpath, fname string, data map[string][]byte) (doc *document, err error) {
+	panics := panics.ForFunc("lsf/system.newDocument")
 	defer panics.Recover(&err)
 
-	//	log.Printf("newDocument: %q %q %q", dockey, fpath, fname)
-	dstat, e := os.Stat(fpath)
-	if e != nil {
-		// REVU: ok to create the directory
-		e := os.MkdirAll(fpath, os.ModePerm)
-		if e != nil {
-			return nil, fmt.Errorf("newDocument: error creating dir %q - %s", fpath, e.Error())
-		}
-	} else if !dstat.IsDir() {
-		panic(fmt.Errorf("BUG - %s expected to be a directory", fpath))
-	}
+	assertSystemObjectPath(fpath) // panics
 
 	filename := path.Join(fpath, fname)
 
 	// acquire lock for file
 	lock, ok, e := LockResource(filename, "create document "+string(dockey))
-	panics.OnError(e, "newDocument:", "lockResource:", dockey, filename)
-	panics.OnFalse(ok, "newDocument:", "lockResource:", dockey, filename)
+	panics.OnError(e, "lockResource:", dockey, filename)
+	panics.OnFalse(ok, "lockResource:", dockey, filename)
 	defer lock.Unlock()
 
 	_, e = os.Stat(filename)
-	panics.OnFalse(os.IsNotExist(e), "newDocument:", filename)
+	panics.OnFalse(os.IsNotExist(e), filename)
 
 	file, e := os.OpenFile(filename, os.O_CREATE|os.O_EXCL|os.O_WRONLY, os.FileMode(0644))
-	panics.OnError(e, "newDocument:", "OpenFile:", filename)
+	panics.OnError(e, "OpenFile:", filename)
 	defer file.Close()
 
 	//	log.Println("newDocument: created file %q", file)
@@ -135,7 +126,7 @@ func newDocument(dockey DocId, fpath, fname string, data map[string][]byte) (doc
 		records[k] = v
 	}
 	e = doc.Write(file)
-	panics.OnError(e, "newDocument:", "doc.Write:")
+	panics.OnError(e, "doc.Write:")
 
 	return doc, nil
 }
@@ -176,12 +167,13 @@ func (d *document) Write(w io.Writer) error {
 // Write Lock acquired for duration (attempted)
 // New document file is atomically swapped.
 func updateDocument(doc *document, filename string) (ok bool, err error) {
+	panics := panics.ForFunc("lsf/system.updateDocument")
 	defer panics.Recover(&err)
 
 	// create temp file
 	swapfile := filename + ".new"
 	file, e := os.OpenFile(swapfile, os.O_CREATE|os.O_EXCL|os.O_WRONLY, os.FileMode(0644))
-	panics.OnError(e, "updateDocument:", "os.OpenFile:", swapfile)
+	panics.OnError(e, "os.OpenFile:", swapfile)
 	defer file.Close()
 
 	e = doc.Write(file)
@@ -189,17 +181,17 @@ func updateDocument(doc *document, filename string) (ok bool, err error) {
 
 	// acquire lock for doc file
 	lock, ok, e := LockResource(filename, "create document "+string(doc.key))
-	panics.OnError(e, "updateDocument:", "lockResource:", doc.key, filename)
-	panics.OnFalse(ok, "updateDocument:", "lockResource:", doc.key, filename)
+	panics.OnError(e, "lockResource:", doc.key, filename)
+	panics.OnFalse(ok, "lockResource:", doc.key, filename)
 	defer lock.Unlock()
 
 	e = os.Remove(filename)
-	panics.OnError(e, "updateDocument:", "os.Remove:", filename)
+	panics.OnError(e, "os.Remove:", filename)
 
 	e = os.Rename(swapfile, filename)
-	panics.OnError(e, "updateDocument:", "os.Rename:", swapfile, filename)
+	panics.OnError(e, "os.Rename:", swapfile, filename)
 
-	log.Println("updateDocument: updated file %q", filename)
+	log.Println("updated file %q", filename)
 
 	return true, nil
 }
@@ -208,26 +200,27 @@ func updateDocument(doc *document, filename string) (ok bool, err error) {
 // read file and closes it.
 // REVU TODO what if locked?
 func loadDocument(dockey DocId, filename string) (doc *document, err error) {
+	panics := panics.ForFunc("lsf/system.loadDocument")
 	defer panics.Recover(&err)
 
 	// verify document file
 	info, e := os.Stat(filename)
-	panics.OnError(e, "loadDocument", "os.Stat", filename)
-	panics.OnTrue(info.IsDir(), "loadDocument", filename, "is file")
+	panics.OnError(e, "os.Stat", filename)
+	panics.OnTrue(info.IsDir(), filename, "is file")
 
 	// REVU: lock checks could go here.
 
 	// open and defer close document file
 	file, e := os.Open(filename)
-	panics.OnError(e, "loadDocument", "os.OpenFile", filename)
+	panics.OnError(e, "os.OpenFile", filename)
 	defer file.Close()
 
 	// read document file
 	bufsize := int(info.Size())
 	buf := make([]byte, bufsize)
 	n, e := file.Read(buf)
-	panics.OnError(e, "loadDocument", "file.Read")
-	panics.OnTrue(n < bufsize, "loadDocument", "file.Read", "partial read")
+	panics.OnError(e, "file.Read")
+	panics.OnTrue(n < bufsize, "file.Read", "partial read")
 
 	// create and load document
 	doc = &document{dockey, &info, time.Now(), make(map[string][]byte), nil, false}
@@ -236,7 +229,7 @@ func loadDocument(dockey DocId, filename string) (doc *document, err error) {
 		if len(line) > 0 && line[0] != '#' {
 			//			log.Printf("%s\n", line)
 			tuple2 := strings.SplitN(line, ":", 2)
-			panics.OnFalse(len(tuple2) == 2, "loadDocument", "malformed record", line)
+			panics.OnFalse(len(tuple2) == 2, "malformed record", line)
 
 			// trim all whitespace from key and value
 			tuple2[0] = strings.Trim(tuple2[0], "\t ")
@@ -250,21 +243,22 @@ func loadDocument(dockey DocId, filename string) (doc *document, err error) {
 }
 
 func deleteDocument(dockey DocId, filename string) (ok bool, err error) {
+	panics := panics.ForFunc("lsf/system.deleteDocument")
 	defer panics.Recover(&err)
 
 	// verify document file
 	info, e := os.Stat(filename)
-	panics.OnError(e, "system.deleteDocument:")
-	panics.OnTrue(info.IsDir(), "system.deleteDocument:", filename, "must be file")
+	panics.OnError(e, "os.Stat", filename)
+	panics.OnTrue(info.IsDir(), filename, "must be file")
 
 	// acquire lock for file
-	lock, ok, e := LockResource(filename, "delete document "+string(dockey))
-	panics.OnError(e, "deleteDocument:", "lockResource:", dockey, filename)
-	panics.OnFalse(ok, "deleteDocument:", "lockResource:", dockey, filename)
+	lock, ok, e := LockResource(filename, string(dockey))
+	panics.OnError(e, "lockResource:", dockey, filename)
+	panics.OnFalse(ok, "lockResource:", dockey, filename)
 	defer lock.Unlock()
 
 	e = os.Remove(filename)
-	panics.OnError(e, "system.deleteDocument:", "os.Remove", filename)
+	panics.OnError(e, "os.Remove", filename)
 
 	return true, nil
 }

@@ -86,6 +86,7 @@ func NewTrackScout(basepath, pattern string, maxSize uint16, maxAge fs.InfoAge) 
 }
 
 func (t *trackScout) trackScoutInit() (err error) {
+	panics := panics.ForFunc("trackScout.trackScoutInit")
 	defer panics.Recover(&err)
 
 	ageopt := t.options.maxAge != fs.InfoAge(0)
@@ -106,17 +107,17 @@ func (t *trackScout) trackScoutInit() (err error) {
 }
 
 func (t *trackScout) Report() (report *TrackReport, err error) {
-	panics := panics.ForFunc("Report")
+	panics := panics.ForFunc("trackScout.Report")
 	defer panics.Recover(&err)
 
 	e := t.Initialize()
-	panics.OnError(e, "trackScout.Report:", "initialize:")
+	panics.OnError(e, "initialize:")
 
 	gpattern := path.Join(t.options.basepath, t.options.pattern)
 	now := time.Now()
 
 	fspaths, e := fs.FindMatchingPaths(t.options.basepath, t.options.pattern)
-	panics.OnError(e, "trackScout.trackScoutConst:", "filepath.Glob", gpattern)
+	panics.OnError(e, "filepath.Glob", gpattern)
 
 	workingset := make(map[string]fs.Object)
 	for _, fspath := range fspaths {

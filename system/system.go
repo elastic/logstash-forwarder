@@ -2,6 +2,7 @@ package system
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path"
 	"strings"
@@ -34,5 +35,19 @@ func objectPathForId(lsfpath string, oid string) (basepath, basename string, err
 		docname := keyparts[kplen-1]
 		basename = strings.Replace(oid, ".", "/", -1)[:len(oid)-len(docname)]
 		return path.Join(lsfpath, basepath, basename), strings.ToUpper(docname), nil
+	}
+}
+
+// panics
+func assertSystemObjectPath(fpath string) {
+	dstat, e := os.Stat(fpath)
+	if e != nil {
+		// REVU: ok to create the directory
+		e := os.MkdirAll(fpath, os.ModePerm)
+		if e != nil {
+			panic(fmt.Errorf("system: error creating dir %q - %s", fpath, e.Error()))
+		}
+	} else if !dstat.IsDir() {
+		panic(fmt.Errorf("BUG - %s expected to be a directory", fpath))
 	}
 }

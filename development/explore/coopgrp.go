@@ -68,6 +68,8 @@ func validateGcOptions() {
 		panic("one of age or size limits must be specified for the cache")
 	}
 }
+
+//
 func main() {
 
 	defer panics.ExitHandler()
@@ -76,7 +78,7 @@ func main() {
 	validateGcOptions()
 	log.Println(about())
 
-	opt := options
+	opt := options //
 	var scout lsfun.TrackScout = lsfun.NewTrackScout(opt.basepath, opt.pattern, uint16(opt.maxSize), opt.maxAge)
 
 	for {
@@ -92,5 +94,4 @@ func main() {
 
 		time.Sleep(time.Millisecond * time.Duration(options.delaymsec))
 	}
-
 }
