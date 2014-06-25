@@ -53,10 +53,13 @@ func openRegistry(dir string) (reg *registry, err error) {
 // System Document Registry
 // ----------------------------------------------------------------------------
 
-// TODO: rename DocPathForKey
+// REVU: these should formalize the XXX_LOG/XXX pattern for docs/logs.
+// Panics on zero-value/nil 'key' arg.
 func DocpathForKey(lsfpath string, key DocId) (filepath, filename string) {
 	id := string(key)
-	return ObjectPathForId(lsfpath, id)
+	filepath, filename, e := objectPathForId(lsfpath, string(id))
+	panics.OnError(e, "BUG")
+	return
 }
 
 // REVU: these basically set the working path (only, as of now).
@@ -91,7 +94,10 @@ func (r *registry) deleteDocument(key DocId) (bool, error) {
 //       the log naming schema.
 func LogPathForKey(lsfpath string, key LogId) (filepath, filename string) {
 	id := string(key)
-	return ObjectPathForId(lsfpath, id)
+
+	filepath, filename, e := objectPathForId(lsfpath, id)
+	panics.OnError(e, "BUG")
+	return
 }
 
 // TODO REVU if createLog, accessLog (mode), are sufficient here

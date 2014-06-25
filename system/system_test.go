@@ -6,8 +6,28 @@ import (
 	"lsf/test"
 )
 
-// REVU: this belongs to system-test.go
+// TEST:
+// nil/zero-value (zv) args should result in error
+func TestObjectPathForKeyInvalidArgs(t *testing.T) {
+	// REVU: can this be automated
+	assert := test.GetAssertionFor(t, "TestObjectPathForKeyInvalidArgs")
+
+	lsfpath, oid := "", ""
+	basepath, basename, e := objectPathForId(lsfpath, oid)
+	assert.NotNil("e", e)
+	assert.Nil("basepath", basepath)
+	assert.Nil("basename", basename)
+
+}
+
+// TEST:
+// No errors.
+// Match expected path to provided OIDs.
 func TestObjectPathForKey(t *testing.T) {
+
+	// REVU: can this be automated
+	assert := test.GetAssertionFor(t, "TestLogPathForKey")
+
 	lsfpath := "/Users/alphazero/.lsf"
 	// just test the 2 possible patterns:
 	// 1 - top level resources
@@ -29,9 +49,9 @@ func TestObjectPathForKey(t *testing.T) {
 	}
 
 	for n, id := range ids {
-		basepath, basename := LogPathForKey(lsfpath, LogId(id))
-		test.AssertStringResult(t, "TestLogPathForKey", "basepath", expected[n].basepath, basepath)
-		test.AssertStringResult(t, "TestLogPathForKey", "basename", expected[n].basename, basename)
+		basepath, basename, err := objectPathForId(lsfpath, id)
+		assert.Nil ("err", err)
+		assert.StringsEqual("basepath", expected[n].basepath, basepath)
+		assert.StringsEqual("basename", expected[n].basename, basename)
 	}
-
 }
