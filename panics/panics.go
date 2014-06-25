@@ -2,10 +2,10 @@ package panics
 
 import (
 	"fmt"
-	"strings"
-	"time"
 	"log"
 	"os"
+	"strings"
+	"time"
 )
 
 type StringCodec interface {
@@ -102,7 +102,7 @@ func Recover(err *error) error {
 	default:
 		*err = fmt.Errorf("recovered-panic: %q", t)
 	}
-//	log.Printf("panics.Recover: error: %s", *err)
+	//	log.Printf("panics.Recover: error: %s", *err)
 	return *err
 }
 
@@ -125,6 +125,7 @@ func AsyncRecover(stat chan<- interface{}, okstat interface{}) {
 		stat <- fmt.Errorf("recovered-panic: %q", t)
 	}
 }
+
 type fnpanics struct {
 	fname string
 }
@@ -133,17 +134,17 @@ type Panics interface {
 	OnError(e error, info ...interface{})
 	OnFalse(flag bool, info ...interface{})
 	OnTrue(flag bool, info ...interface{})
-
 }
+
 func (t *fnpanics) Recover(err *error) error {
 	e := Recover(err)
 	return e
 }
-func (t *fnpanics) infoFixup(info...interface{}) []interface{} {
+func (t *fnpanics) infoFixup(info ...interface{}) []interface{} {
 	infofn := []interface{}{t.fname + ":"}
 	return append(infofn, info...)
 }
-func (t *fnpanics) OnError(e error, info ...interface{})  {
+func (t *fnpanics) OnError(e error, info ...interface{}) {
 	infofn := t.infoFixup(info...)
 	OnError(e, infofn...)
 }
@@ -157,7 +158,7 @@ func (t *fnpanics) OnTrue(flag bool, info ...interface{}) {
 }
 
 func ForFunc(fname string) Panics {
-	return &fnpanics {fname}
+	return &fnpanics{fname}
 }
 
 func ExitHandler() {

@@ -1,8 +1,8 @@
 package test
 
-import(
-	"testing"
+import (
 	"reflect"
+	"testing"
 )
 
 // ----------------------------------------------------------------------------
@@ -21,7 +21,7 @@ func AssertEquals(t *testing.T, testname, resname string, expected, have interfa
 	vexp := reflect.ValueOf(expected)
 	vhave := reflect.ValueOf(have)
 	kexp := vexp.Kind()
-	khave:= vhave.Kind()
+	khave := vhave.Kind()
 	if kexp != khave {
 		t.Fatalf("'expected' and 'have' are not the same Kind", kexp, khave)
 	}
@@ -68,15 +68,18 @@ type Assertion interface {
 	Nil(label string, v interface{})
 }
 
-
 func GetAssertionFor(t *testing.T, testName string) Assertion {
-	if t == nil { panic ("BUG: t is nil") }
-	if testName == "" { panic ("BUG: testName is nil") }
-	return &assertion { t, testName, }
+	if t == nil {
+		panic("BUG: t is nil")
+	}
+	if testName == "" {
+		panic("BUG: testName is nil")
+	}
+	return &assertion{t, testName}
 }
 
 type assertion struct {
-	t *testing.T
+	t        *testing.T
 	testName string
 }
 
