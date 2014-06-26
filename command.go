@@ -31,8 +31,12 @@ type Command struct {
 	Flag        *flag.FlagSet
 	Usage       string
 	Initializer bool
+	IsActive	bool
 }
 
+// REVU: os signal trap should be here.
+// REVU: fork on IsActive, keep 2 Run flavors.
+// REVU: (non-critical) (os level) process fork the command runner
 // Run the command. Trap any panics and return as error.
 func Run(env *Environment, cmd *Command, args ...string) (err error) {
 
