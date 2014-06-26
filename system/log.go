@@ -54,10 +54,9 @@ func (sl *syslog) Tail() string {
 
 // this is NOT creating a log file. It is entirely analogous to document's newDocument.
 func newLog(id LogId, fpath, fname string, data []string) (l *syslog, err error) {
-	panics := panics.ForFunc("newLog")
 	defer panics.Recover(&err)
 
-	assertSystemObjectPath(fpath) // panics
+	assertSystemObjectPath(fpath, fname) // panics
 
 	panic("not implemented")
 }

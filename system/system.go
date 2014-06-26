@@ -38,16 +38,23 @@ func objectPathForId(lsfpath string, oid string) (basepath, basename string, err
 	}
 }
 
-// panics
-func assertSystemObjectPath(fpath string) {
+// REVU: the func name is wrong - this will do for now but needs to be addressed.
+func assertSystemObjectPath(fpath, fname string) (filename string, err error) {
 	dstat, e := os.Stat(fpath)
 	if e != nil {
 		// REVU: ok to create the directory
 		e := os.MkdirAll(fpath, os.ModePerm)
 		if e != nil {
-			panic(fmt.Errorf("system: error creating dir %q - %s", fpath, e.Error()))
+			return "", fmt.Errorf("system: error creating dir %q - %s", fpath, e.Error())
 		}
 	} else if !dstat.IsDir() {
-		panic(fmt.Errorf("BUG - %s expected to be a directory", fpath))
+		return "", fmt.Errorf("BUG - %s expected to be a directory", fpath)
 	}
+	filename = path.Join(fpath, fname)
+	return filename, nil
+}
+
+func createSystemFile(filename string) (file *os.File, err error) {
+	// REVU: hardcoded file mode ..
+	return os.OpenFile(filename, os.O_CREATE|os.O_EXCL|os.O_WRONLY, os.FileMode(0644))
 }

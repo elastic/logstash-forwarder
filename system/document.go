@@ -6,7 +6,6 @@ import (
 	"log"
 	"lsf/panics"
 	"os"
-	"path"
 	"strings"
 	"time"
 )
@@ -52,6 +51,7 @@ func (d *document) Mappings() map[string][]byte {
 	}
 	return mappings
 }
+
 func (d *document) Keys() []string {
 	if d == nil {
 		return []string{}
@@ -97,12 +97,9 @@ type DocumentDigestFn func(Document) string
 // close file
 // release lock
 func newDocument(dockey DocId, fpath, fname string, data map[string][]byte) (doc *document, err error) {
-	panics := panics.ForFunc("lsf/system.newDocument")
 	defer panics.Recover(&err)
 
-	assertSystemObjectPath(fpath) // panics
-
-	filename := path.Join(fpath, fname)
+	filename, err := assertSystemObjectPath(fpath, fname) // panics
 
 	// acquire lock for file
 	lock, ok, e := LockResource(filename, "create document "+string(dockey))
@@ -110,16 +107,14 @@ func newDocument(dockey DocId, fpath, fname string, data map[string][]byte) (doc
 	panics.OnFalse(ok, "lockResource:", dockey, filename)
 	defer lock.Unlock()
 
-	_, e = os.Stat(filename)
-	panics.OnFalse(os.IsNotExist(e), filename)
-
-	file, e := os.OpenFile(filename, os.O_CREATE|os.O_EXCL|os.O_WRONLY, os.FileMode(0644))
+	file, e := createSystemFile(filename)
 	panics.OnError(e, "OpenFile:", filename)
 	defer file.Close()
 
-	//	log.Println("newDocument: created file %q", file)
-	info, _ := file.Stat()
+	info, e := file.Stat()
+	panics.OnError(e, "Unexpected fault:", "Stat", filename)
 
+	// record specific
 	records := make(map[string][]byte, len(data))
 	doc = &document{dockey, &info, time.Now(), records, lock, false}
 	for k, v := range data {
@@ -143,6 +138,7 @@ func (d *document) encode(k string, v []byte) []byte {
 func (d *document) String() string {
 	return string(d.Bytes())
 }
+
 func (d *document) Bytes() []byte {
 	var buf []byte
 	for k, v := range d.records {
@@ -167,7 +163,6 @@ func (d *document) Write(w io.Writer) error {
 // Write Lock acquired for duration (attempted)
 // New document file is atomically swapped.
 func updateDocument(doc *document, filename string) (ok bool, err error) {
-	panics := panics.ForFunc("lsf/system.updateDocument")
 	defer panics.Recover(&err)
 
 	// create temp file
@@ -200,7 +195,6 @@ func updateDocument(doc *document, filename string) (ok bool, err error) {
 // read file and closes it.
 // REVU TODO what if locked?
 func loadDocument(dockey DocId, filename string) (doc *document, err error) {
-	panics := panics.ForFunc("lsf/system.loadDocument")
 	defer panics.Recover(&err)
 
 	// verify document file
@@ -238,12 +232,10 @@ func loadDocument(dockey DocId, filename string) (doc *document, err error) {
 		}
 	}
 
-	//	log.Println("newDocument: done")
 	return
 }
 
 func deleteDocument(dockey DocId, filename string) (ok bool, err error) {
-	panics := panics.ForFunc("lsf/system.deleteDocument")
 	defer panics.Recover(&err)
 
 	// verify document file

@@ -79,7 +79,7 @@ func OnError(e error, info ...interface{}) {
 	var err error = e
 	if len(info) > 0 {
 		err = fmt.Errorf("error: %s - cause: %s", fmtInfo(info...), e)
-	} else if !strings.HasPrefix("error:", e.Error()) {
+	} else if !strings.HasPrefix(e.Error(), "error:") {
 		err = fmt.Errorf("error: %s%s", fmtInfo(info...), e)
 	}
 	panic(&Error{Cause: e, err: err})
@@ -102,7 +102,6 @@ func Recover(err *error) error {
 	default:
 		*err = fmt.Errorf("recovered-panic: %q", t)
 	}
-	//	log.Printf("panics.Recover: error: %s", *err)
 	return *err
 }
 
@@ -157,9 +156,9 @@ func (t *fnpanics) OnTrue(flag bool, info ...interface{}) {
 	OnTrue(flag, infofn...)
 }
 
-func ForFunc(fname string) Panics {
-	return &fnpanics{fname}
-}
+//func ForFunc(fname string) Panics {
+//	return &fnpanics{fname}
+//}
 
 func ExitHandler() {
 	p := recover()

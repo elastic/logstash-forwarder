@@ -96,7 +96,7 @@ func getCommand(code lsf.CommandCode) *lsf.Command {
 
 // system exits
 func onError(e error, code syserrCode) {
-	log.Printf("error: %s", e.Error())
+	log.Printf("%s", e.Error())
 	os.Exit(int(code))
 }
 

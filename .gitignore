@@ -25,3 +25,4 @@ logstash-forwarder
 *.idea
 *.iml
 *.DS_Store
+*.lsf
