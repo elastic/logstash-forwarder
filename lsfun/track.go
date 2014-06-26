@@ -86,20 +86,19 @@ func NewTrackScout(basepath, pattern string, maxSize uint16, maxAge fs.InfoAge) 
 }
 
 func (t *trackScout) trackScoutInit() (err error) {
-	panics := panics.ForFunc("trackScout.trackScoutInit")
 	defer panics.Recover(&err)
 
 	ageopt := t.options.maxAge != fs.InfoAge(0)
 	sizeopt := t.options.maxSize != uint16(0)
 	switch {
 	case ageopt && sizeopt:
-		panic("only one of age or size limits can be specified for the tracking scout object cache")
+		panic("trackScout.trackScoutInit: only one of age or size limits can be specified for the tracking scout object cache")
 	case ageopt:
 		t.objects = fs.NewTimeWindowObjectCache(t.options.maxAge)
 	case sizeopt:
 		t.objects = fs.NewFixedSizeObjectCache(t.options.maxSize)
 	default:
-		panic("one of age or size limits must be specified for the tracking scout object cache")
+		panic("trackScout.trackScoutInit: one of age or size limits must be specified for the tracking scout object cache")
 	}
 	t.Initialize = lsf.NilInitializer
 
@@ -107,17 +106,17 @@ func (t *trackScout) trackScoutInit() (err error) {
 }
 
 func (t *trackScout) Report() (report *TrackReport, err error) {
-	panics := panics.ForFunc("trackScout.Report")
+//	panics := panics.ForFunc("trackScout.Report")
 	defer panics.Recover(&err)
 
 	e := t.Initialize()
-	panics.OnError(e, "initialize:")
+	panics.OnError(e, "trackScout.Report:", "initialize:")
 
 	gpattern := path.Join(t.options.basepath, t.options.pattern)
 	now := time.Now()
 
 	fspaths, e := fs.FindMatchingPaths(t.options.basepath, t.options.pattern)
-	panics.OnError(e, "filepath.Glob", gpattern)
+	panics.OnError(e, "trackScout.Report:", "filepath.Glob", gpattern)
 
 	workingset := make(map[string]fs.Object)
 	for _, fspath := range fspaths {
