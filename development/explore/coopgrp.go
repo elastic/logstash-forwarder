@@ -51,8 +51,8 @@ options:
    -p:           path e.g. /var/log/webserver/
    -n:           pattern e.g. "apache2.log*"
    -delay:       msec wait before new report generation
-   -age-limit:   max age of object in fs.Object cache. mutually exlusive w/ -max-records
-   -max-records: max number of objects in fs.Object cache. mutually exlusive w/ -age-limit
+   -age-age:     max age of object in fs.Object cache. mutually exlusive w/ -max-records
+   -max-size:    max number of objects in fs.Object cache. mutually exlusive w/ -age-limit
 		`)
 	}
 	log.SetFlags(0)
