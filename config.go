@@ -24,6 +24,7 @@ type NetworkConfig struct {
 type FileConfig struct {
   Paths  []string          `json:paths`
   Fields map[string]string `json:fields`
+  Grep   string            `json:grep`
   //DeadTime time.Duration `json:"dead time"`
 }
 

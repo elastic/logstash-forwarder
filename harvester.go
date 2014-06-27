@@ -7,12 +7,14 @@ import (
   "log"
   "os" // for File and friends
   "time"
+  "regexp"
 )
 
 type Harvester struct {
   Path   string /* the file path to harvest */
   Fields map[string]string
   Offset int64
+  Grep   string
 
   file *os.File /* the file being watched */
 }
@@ -22,6 +24,10 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
     log.Printf("Starting harvester at position %d: %s\n", h.Offset, h.Path)
   } else {
     log.Printf("Starting harvester: %s\n", h.Path)
+  }
+
+  if (h.Grep != "") {
+    log.Printf("Using regex: %s\n", h.Grep)
   }
 
   h.open()
@@ -80,7 +86,19 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
     }
     offset += int64(len(*event.Text)) + 1 // +1 because of the line terminator
 
-    output <- event // ship the new event downstream
+    // Check if this line matches the grep, if a grep was supplied
+    if h.Grep == "" {
+      output <- event // ship the new event downstream
+    } else {
+      // Does this line match
+      matched, err := regexp.MatchString(h.Grep, *event.Text)
+      if (matched) {
+        output <- event // ship the new event downstream
+      } else if err != nil {
+        log.Printf("Regex error: %s\n", err)
+      }
+    }
+
   } /* forever */
 }
 
