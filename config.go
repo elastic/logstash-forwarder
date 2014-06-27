@@ -13,6 +13,7 @@ type Config struct {
 }
 
 type NetworkConfig struct {
+  PreferredServer string   `json:"preferred server"`
   Servers        []string `json:servers`
   SSLCertificate string   `json:"ssl certificate"`
   SSLKey         string   `json:"ssl key"`

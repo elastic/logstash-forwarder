@@ -166,9 +166,25 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
     tlsconfig.RootCAs.AddCert(cert)
   }
 
+  var preferred bool
+  if len(config.PreferredServer) > 0 {
+    preferred = true
+  } else {
+    preferred = false
+  }
+
   for {
-    // Pick a random server from the list.
-    hostport := config.Servers[rand.Int()%len(config.Servers)]
+    hostport := ""
+    if preferred {
+      // Try preferred server first, if defined
+      log.Printf("Trying to connect to preferred server %s", config.PreferredServer)
+      hostport = config.PreferredServer
+      preferred = false
+    } else {
+      // Pick a random server from the list.
+      hostport = config.Servers[rand.Int()%len(config.Servers)]
+    }
+
     submatch := hostport_re.FindSubmatch([]byte(hostport))
     if submatch == nil {
       log.Fatalf("Invalid host:port given: %s", hostport)
