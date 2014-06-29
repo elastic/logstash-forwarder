@@ -3,6 +3,8 @@ package lsf
 import (
 	"flag"
 	"lsf/panics"
+	"os"
+	"os/signal"
 )
 
 // REVU: no errors? TODO: consolidate all errors under lsf/errors
@@ -57,25 +59,62 @@ func Run(env *Environment, cmd *Command, args ...string) (err error) {
 	cmd.Flag.Parse(args)
 	commandArgs := cmd.Flag.Args()
 
-	// run cmd initializer func (if any)
-	if cmd.Init != nil {
-		e0 := cmd.Init(env, commandArgs...)
-		panics.OnError(e0)
-		//		panics.OnError(e0, "command.Run:", cmd.Name.String(), "Init()")
+	if cmd.IsActive {
+		return RunActive(env, cmd, commandArgs...)
 	}
 
-	// treat nil cmd.Run as bug
-	panics.OnTrue(cmd.Run == nil, "command.Run:", "BUG - cmd.Run is nil")
+	return RunPassive(env, cmd, commandArgs...)
+}
 
-	e1 := cmd.Run(env, commandArgs...)
+func RunPassive(env *Environment, cmd *Command, args ...string) (err error) {
+
+	defer panics.Recover(&err)
+
+	// run cmd initializer func (if any)
+	if cmd.Init != nil {
+		e0 := cmd.Init(env, args...)
+		panics.OnError(e0)
+	}
+	panics.OnTrue(cmd.Run == nil, "command.RunPassive:", "BUG - cmd.Run is nil")
+
+	e1 := cmd.Run(env, args...)
 	panics.OnError(e1)
-	//	panics.OnError(e1, "command.Run:", cmd.Name.String(), "Run()")
 
 	// run cmd finalizer func (if any)
 	if cmd.End != nil {
-		e2 := cmd.End(env, commandArgs...)
+		e2 := cmd.End(env, args...)
 		panics.OnError(e2)
-		//		panics.OnError(e2, "command.Run:", cmd.Name.String(), "End()")
+	}
+
+	return nil
+}
+
+func RunActive(env *Environment, cmd *Command, args ...string) (err error) {
+
+	defer panics.Recover(&err)
+
+	if cmd.Init != nil {
+		e0 := cmd.Init(env, args...)
+		panics.OnError(e0)
+	}
+	panics.OnTrue(cmd.Run == nil, "command.RunActive:", "BUG - cmd.Run is nil")
+
+	user := make(chan os.Signal, 1)
+	user0 := make(chan os.Signal, 1)
+	signal.Notify(user, os.Interrupt, os.Kill)
+	signal.Notify(user0, os.Interrupt, os.Kill)
+
+	prev, e := env.Set(VarUserSigChan, user)
+	panics.OnError(e, "command.RunActive:", "BUG", "env.Set(VarUserSigChan)")
+	panics.OnTrue(prev != nil, "command.RunActive:", "BUG", "env.Set(VarUserSigChan) returned non-nil value")
+
+	e1 := cmd.Run(env, args...)
+	panics.OnError(e1)
+
+	// run cmd finalizer func (if any)
+	if cmd.End != nil {
+		e2 := cmd.End(env, args...)
+		panics.OnError(e2)
 	}
 
 	return nil
