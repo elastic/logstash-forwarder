@@ -8,33 +8,33 @@ import (
 	"fmt"
 )
 
-// ----------------------------------------------------------------------------
-// Registrar
-// ----------------------------------------------------------------------------
-
-type Registrar interface {
-	// Reads the document and returns snapshot value.
-	// No locks held. No files open
-	ReadDocument(DocId) (Document, error)
-	// Creates new document with given map (of record data).
-	// Returns the document snapshot (per ReadDocument)
-	// No locks head. No files open
-	CreateDocument(DocId, map[string][]byte) (Document, error)
-	// Saves document (if dirty) - dirty flag cleared; otherwise NOP.
-	// Write Lock acquired for duration (attempted)
-	// New document file is atomically swapped.
-	UpdateDocument(Document) (bool, error)
-	//
-	DeleteDocument(DocId) (bool, error)
-	// stop.
-	// release all resources.
-	Stop() chan<- struct{}
-	// signals Registrar stopped.
-	// signals all resources released.
-	Done() <-chan stat
-	// identity info & status
-	String() string
-}
+//// ----------------------------------------------------------------------------
+//// Registrar
+//// ----------------------------------------------------------------------------
+//
+//type Registrar interface {
+//	// Reads the document and returns snapshot value.
+//	// No locks held. No files open
+//	ReadDocument(DocId) (Document, error)
+//	// Creates new document with given map (of record data).
+//	// Returns the document snapshot (per ReadDocument)
+//	// No locks head. No files open
+//	CreateDocument(DocId, map[string][]byte) (Document, error)
+//	// Saves document (if dirty) - dirty flag cleared; otherwise NOP.
+//	// Write Lock acquired for duration (attempted)
+//	// New document file is atomically swapped.
+//	UpdateDocument(Document) (bool, error)
+//	//
+//	DeleteDocument(DocId) (bool, error)
+//	// stop.
+//	// release all resources.
+//	Stop() chan<- struct{}
+//	// signals Registrar stopped.
+//	// signals all resources released.
+//	Done() <-chan stat
+//	// identity info & status
+//	String() string
+//}
 
 func StartRegistry(path string) (Registrar, error) {
 	r, e := openRegistry(path)
@@ -51,12 +51,23 @@ func StartRegistry(path string) (Registrar, error) {
 	return registrar, nil
 }
 
+// ----------------------------------------------------------------------------
+// registrar
+// ----------------------------------------------------------------------------
+
+// registrar implements system doc registrar functionality and supports the
+// lsf/system.Registrar interface.
 type registrar struct {
 	reg    *registry
 	ui     chan req
 	done   chan stat
 	cancel chan struct{}
 }
+
+
+// ----------------------------------------------------------------------------
+// interface: Registrar
+// ----------------------------------------------------------------------------
 
 func (r *registrar) String() string {
 	s := fmt.Sprintf("registrar: path %s", r.reg.path)
@@ -124,13 +135,21 @@ func (r *registrar) CreateDocument(key DocId, data map[string][]byte) (Document,
 	return mapDocResult(result)
 }
 
+// ----------------------------------------------------------------------------
+// request dispatch mechanism
+// ----------------------------------------------------------------------------
+
+
 type stat struct {
 	err error
 	dat []byte
 }
 
+// query type just wraps the delegated registrar func invokes
 type query func() interface{}
 
+// an async request is a tuple wrapping result callback channel
+// and the actual (query) func invoke
 type req struct {
 	result  chan<- interface{}
 	execute query
@@ -148,6 +167,7 @@ func mapDocResult(result interface{}) (Document, error) {
 		panic("BUG - unexpected type value")
 	}
 }
+
 func mapBoolResult(result interface{}) (bool, error) {
 	switch t := result.(type) {
 	case bool:
