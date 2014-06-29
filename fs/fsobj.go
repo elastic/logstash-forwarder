@@ -22,8 +22,11 @@ type Object interface {
 	Timestamp() time.Time
 	// returns 'info age' since info was recorded
 	InfoAge() time.Duration
-	//
+	// returns the associated user flags for this fsobject.
+	// Note that flags are purely specific to the reference and not the underlying filesystem object.
 	Flags() uint8
+	// Sets the associated user flags for this fsobject.
+	// Note that flags are purely specific to the reference and not the underlying filesystem object.
 	SetFlags(flags uint8)
 }
 
