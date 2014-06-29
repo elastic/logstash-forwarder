@@ -360,12 +360,11 @@ func CreateEnvironment(dir string, force bool) (rootpath string, err error) {
 	e = os.Mkdir(root, os.ModeDir|defaultDirMode)
 	panics.OnError(e, "Environment.CreateEnvironment", "os.Mkdir", "root:", root)
 
-	//	log.Printf("open registrar in %q", root)
 	registrar, e := system.StartRegistry(root)
 	panics.OnError(e, "Environment.CreateEnvironment", "system.StartRegistry", "root:", root)
 
 	//	log.Printf("DEBUG using registrar %s", registrar)
-	defer func() { registrar.Stop() <- struct{}{} }()
+	defer func() { registrar.Signal() <- struct{}{} }()
 
 	docid := system.DocId("system")
 	data := map[string][]byte{
@@ -391,8 +390,8 @@ func (env *Environment) Shutdown() error {
 	}
 
 	if registrar := env.registrar; registrar != nil {
-		registrar.Stop() <- struct{}{}
-		<-registrar.Done()
+		registrar.Signal() <- struct{}{}
+		<-registrar.Status()
 	}
 
 	//	port, _ := env.Get(VarHomePort)
@@ -445,6 +444,7 @@ func (env *Environment) Initialize(dir string) (err error) {
 func (env *Environment) startRegistrar() (err error) {
 	defer panics.Recover(&err)
 
+	// REVU: what's the issue? why not just ignore it?
 	if env.registrar != nil {
 		return E_ILLEGALSTATE_REGISTRAR_RUNNING
 	}
@@ -453,12 +453,10 @@ func (env *Environment) startRegistrar() (err error) {
 	panics.OnFalse(found, "BUG", VarHomePort, "not set")
 
 	home := port.(*schema.Port).Path()
-	//	log.Printf("open registrar in %q", home)
 	registrar, e := system.StartRegistry(home)
 	panics.OnError(e)
 
 	env.registrar = registrar
-	//	log.Printf("DEBUG using registrar %s", env.registrar)
 
 	return nil
 }

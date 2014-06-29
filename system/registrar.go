@@ -4,6 +4,7 @@ package system
 
 import (
 	"fmt"
+	"lsf/system/process"
 )
 
 func StartRegistry(basepath string) (Registrar, error) {
@@ -31,8 +32,8 @@ func (r *registrar) run() {
 		select {
 		case request := <-r.ui:
 			request.result <- request.execute()
-		case <-r.cancel:
-			r.done <- stat{nil, NilValue}
+		case <-r.Command():
+			r.Report() <- stat{nil, NilValue}
 			return
 		}
 	}
@@ -45,10 +46,9 @@ func (r *registrar) run() {
 // registrar implements system doc registrar functionality and supports the
 // lsf/system.Registrar interface.
 type registrar struct {
-	reg    *registry
-	ui     chan req
-	done   chan stat
-	cancel chan struct{}
+	*process.Control
+	reg *registry
+	ui  chan req
 }
 
 func newRegistrar(basepath string) (*registrar, error) {
@@ -58,10 +58,9 @@ func newRegistrar(basepath string) (*registrar, error) {
 	}
 
 	regisrar := &registrar{
-		reg:    registry,
-		ui:     make(chan req, 12),
-		cancel: make(chan struct{}, 1),
-		done:   make(chan stat, 1),
+		process.NewProcessControl(),
+		registry,
+		make(chan req, 12),
 	}
 	return regisrar, nil
 }
@@ -74,8 +73,6 @@ func (r *registrar) String() string {
 	s := fmt.Sprintf("registrar: path %s", r.reg.path)
 	return s
 }
-func (r *registrar) Done() <-chan stat     { return r.done }
-func (r *registrar) Stop() chan<- struct{} { return r.cancel }
 
 func (r *registrar) DeleteDocument(key DocId) (bool, error) {
 	fn := func() interface{} {

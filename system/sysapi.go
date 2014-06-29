@@ -7,6 +7,8 @@ package system
 // Registrar defines the semantics of accessing and manipulating (lsf/system)
 // system documents.
 type Registrar interface {
+	// identity info & status
+	String() string
 	// Reads the document and returns snapshot value.
 	// No locks held. No files open
 	ReadDocument(DocId) (Document, error)
@@ -20,14 +22,9 @@ type Registrar interface {
 	UpdateDocument(Document) (bool, error)
 	//
 	DeleteDocument(DocId) (bool, error)
-	// stop.
-	// release all resources.
-	Stop() chan<- struct{}
-	// signals Registrar stopped.
-	// signals all resources released.
-	Done() <-chan stat
-	// identity info & status
-	String() string
+
+	// Registrar is a controlled process. See system.Process.
+	Process
 }
 
 // ----------------------------------------------------------------------------
