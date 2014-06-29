@@ -100,6 +100,8 @@ func verifyRequiredOption(option interface{}) error {
 			return fmt.Errorf("option '%s'|'%s' must be provided", t.long, t.short)
 		case Int64OptionSpec:
 			return fmt.Errorf("option '%s'|'%s' must be provided", t.long, t.short)
+		case UintOptionSpec:
+			return fmt.Errorf("option '%s'|'%s' must be provided", t.long, t.short)
 		}
 	}
 	return nil

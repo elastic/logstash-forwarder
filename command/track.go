@@ -15,10 +15,11 @@ import (
 const trackCmdCode lsf.CommandCode = "track"
 
 type trackOptionSpec struct {
-	global BoolOptionSpec
-	id     StringOptionSpec
-	freq   UintOptionSpec
-	//	frequency Int64OptionSpec
+	global  BoolOptionSpec
+	id      StringOptionSpec
+	freq    UintOptionSpec
+	maxSize UintOptionSpec
+	maxAge  UintOptionSpec
 }
 
 var Track *lsf.Command
@@ -36,9 +37,11 @@ func init() {
 	}
 	// TODO: just get the stream id. optional flag for persistence of state and events
 	trackCmdOptions = &trackOptionSpec{
-		global: NewBoolFlag(Track.Flag, "G", "global", false, "command applies globally", false),
-		id:     NewStringFlag(Track.Flag, "s", "stream-id", "", "unique identifier for stream", true),
-		freq:   NewUintFlag(Track.Flag, "f", "frequency", 1, "report frequency - n / sec (e.g. 1000 1/ms)", true),
+		global:  NewBoolFlag(Track.Flag, "G", "global", false, "command applies globally", false),
+		id:      NewStringFlag(Track.Flag, "s", "stream-id", "", "unique identifier for stream", true),
+		freq:    NewUintFlag(Track.Flag, "f", "frequency", 1, "report frequency - n / sec (e.g. 1000 1/ms)", true),
+		maxSize: NewUintFlag(Track.Flag, "N", "max-size", 0, "max size of fs object cache", true),
+		maxAge:  NewUintFlag(Track.Flag, "T", "max-age", 0, "max age of objects in fs object cache", true),
 	}
 }
 
@@ -48,24 +51,16 @@ func initTrack(env *lsf.Environment, args ...string) (err error) {
 	e := verifyRequiredOption(trackCmdOptions.id)
 	panics.OnError(e, "initTrack:", "verifyRequiredOption")
 
-	return
-}
+	// either age or size needs to be capped.
+	ageoptDefined := *trackCmdOptions.maxAge.value != trackCmdOptions.maxAge.defval
+	sizeoptDefined := *trackCmdOptions.maxSize.value != trackCmdOptions.maxSize.defval
+	if ageoptDefined && sizeoptDefined {
+		panic("only one of age or size limits can be specified for the cache. run with -h flag for details.")
+	} else if !(ageoptDefined || sizeoptDefined) {
+		panic("one of age or size limits must be specified for the cache. run with -h flag for details.")
+	}
 
-// Track runs continuously, generating a tracking scout report per
-// configuration.
-var opt = struct {
-	//	basepath  string
-	//	pattern   string
-	maxSize   uint
-	maxAge    fs.InfoAge
-	delaymsec uint
-	about     func() string
-}{
-	//	basepath:  "/Users/alphazero/Code/es/go/src/lsf/development/tools/rotating-logger",
-	//	pattern:   "apache2*",
-	maxSize:   17,
-	maxAge:    fs.InfoAge(0),
-	delaymsec: 100,
+	return
 }
 
 func runTrack(env *lsf.Environment, args ...string) (err error) {
@@ -92,7 +87,9 @@ func runTrack(env *lsf.Environment, args ...string) (err error) {
 	panics.OnFalse(ok, "command.runUpdateStream:", "lockResource:", resource)
 	defer oplock.Unlock()
 
-	var scout lsfun.TrackScout = lsfun.NewTrackScout(logStream.Path, logStream.Pattern, uint16(opt.maxSize), opt.maxAge)
+	maxSize := uint16(*trackCmdOptions.maxSize.value)
+	maxAge := time.Duration(*trackCmdOptions.maxAge.value)
+	var scout lsfun.TrackScout = lsfun.NewTrackScout(logStream.Path, logStream.Pattern, maxSize, fs.InfoAge(maxAge))
 
 	freq := int(*trackCmdOptions.freq.value) // delay is time.Second
 	delay := int(time.Second) / freq
