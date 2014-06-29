@@ -1,7 +1,7 @@
 package command
 
 import (
-//	"os"
+	//	"os"
 	"log"
 	"lsf"
 	"lsf/panics"
@@ -20,13 +20,13 @@ var Track *lsf.Command
 var trackCmdOptions *trackOptionSpec
 
 /* Ref: prototype options
-	flag.StringVar(&options.basepath, "p", options.basepath, "base path to track")
-	flag.StringVar(&options.pattern, "n", options.pattern, "filename glob pattern")
-	flag.UintVar(&options.delaymsec, "delay", options.delaymsec, "delay in msecs between reports")
-	flag.UintVar(&options.maxSize, "max-size", options.maxSize, "maximum number of fs.Objects in cache")
-	flag.Var(&options.maxAge, "max-age", "limit on age of object in cache")
+flag.StringVar(&options.basepath, "p", options.basepath, "base path to track")
+flag.StringVar(&options.pattern, "n", options.pattern, "filename glob pattern")
+flag.UintVar(&options.delaymsec, "delay", options.delaymsec, "delay in msecs between reports")
+flag.UintVar(&options.maxSize, "max-size", options.maxSize, "maximum number of fs.Objects in cache")
+flag.Var(&options.maxAge, "max-age", "limit on age of object in cache")
 
- */
+*/
 func init() {
 	Track = &lsf.Command{
 		Name:     trackCmdCode,
@@ -75,14 +75,14 @@ func runActiveCommandFn(cmdRunFn lsf.CommandFn) lsf.CommandFn {
 	}
 }
 
-
 func initTrack(env *lsf.Environment, args ...string) (err error) {
 	log.Println("command/track: initTrack:")
 	// TODO: put this scout into
-//	opt := options //
-//	var scout lsfun.TrackScout = lsfun.NewTrackScout(opt.basepath, opt.pattern, uint16(opt.maxSize), opt.maxAge)
+	//	opt := options //
+	//	var scout lsfun.TrackScout = lsfun.NewTrackScout(opt.basepath, opt.pattern, uint16(opt.maxSize), opt.maxAge)
 	return nil
 }
+
 //
 func runTrack(env *lsf.Environment, args ...string) (err error) {
 	defer panics.Recover(&err)
@@ -90,15 +90,15 @@ func runTrack(env *lsf.Environment, args ...string) (err error) {
 
 	go func() {
 		log.Printf("command/track.runTrack:::go func()")
-//		for {
-//			select {
-//			case <-user:
-//				log.Printf("command/track.initTrack SIG STOP")
-//				break
-//			default:
-//				log.Printf("command/track.initTrack RUNNING")
-//			}
-//		}
+		//		for {
+		//			select {
+		//			case <-user:
+		//				log.Printf("command/track.initTrack SIG STOP")
+		//				break
+		//			default:
+		//				log.Printf("command/track.initTrack RUNNING")
+		//			}
+		//		}
 	}()
 
 	return

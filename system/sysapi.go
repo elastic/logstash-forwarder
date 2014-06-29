@@ -36,11 +36,16 @@ type Registrar interface {
 
 // ProcControl provides system process supervisors the means to
 // interact with the managed process.
-type ProcControl interface {
+type Process interface {
 	// Returns Signal channel to the process
 	Sig() chan<- interface{}
 	// Returns Stat channel from the process
 	Stat() <-chan interface{}
 }
 
-
+type ProcessSpi interface {
+	// Returns Signal channel to the process
+	Sig() <-chan interface{}
+	// Returns Stat channel from the process
+	Stat() chan<- interface{}
+}

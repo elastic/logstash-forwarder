@@ -33,7 +33,7 @@ type Command struct {
 	Flag        *flag.FlagSet
 	Usage       string
 	Initializer bool
-	IsActive	bool
+	IsActive    bool
 }
 
 // REVU: os signal trap should be here.

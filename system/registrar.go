@@ -6,17 +6,13 @@ import (
 	"fmt"
 )
 
-func StartRegistry(path string) (Registrar, error) {
-	r, e := openRegistry(path)
+func StartRegistry(basepath string) (Registrar, error) {
+	registrar, e := newRegistrar(basepath)
 	if e != nil {
 		return nil, e
 	}
-	ui := make(chan req, 12) 			// REVU: magic number.. aim is to allow fast enqueue of requests.
-	cancel := make(chan struct{}, 1)
-	done := make(chan stat, 1)
-
-	registrar := &registrar{r, ui, done, cancel}
-	go beTheRegistrar(r, ui, cancel, done)
+	// start the registrar active component
+	go registrar.run()
 
 	return registrar, nil
 }
@@ -24,7 +20,7 @@ func StartRegistry(path string) (Registrar, error) {
 // Launches a goroutine to process user requests from a request queue.
 // This mechanism provides the in-memory linearlization of access to the
 // shared system resources managed by system, per semantics of system.Registrar
-func beTheRegistrar(r *registry, ui <-chan req, cancel <-chan struct{}, done chan<- stat) {
+func (r *registrar) run() {
 	defer func() {
 		// REVU: request.execute() returns errors via channels
 		//       and wraps calls to lsf/lsfun functions (which
@@ -33,16 +29,14 @@ func beTheRegistrar(r *registry, ui <-chan req, cancel <-chan struct{}, done cha
 
 	for {
 		select {
-		case request := <-ui:
-			// REVU: TODO:
+		case request := <-r.ui:
 			request.result <- request.execute()
-		case <-cancel:
-			done <- stat{nil, NilValue}
+		case <-r.cancel:
+			r.done <- stat{nil, NilValue}
 			return
 		}
 	}
 }
-
 
 // ----------------------------------------------------------------------------
 // registrar
@@ -57,6 +51,20 @@ type registrar struct {
 	cancel chan struct{}
 }
 
+func newRegistrar(basepath string) (*registrar, error) {
+	registry, e := openRegistry(basepath)
+	if e != nil {
+		return nil, e
+	}
+
+	regisrar := &registrar{
+		reg:    registry,
+		ui:     make(chan req, 12),
+		cancel: make(chan struct{}, 1),
+		done:   make(chan stat, 1),
+	}
+	return regisrar, nil
+}
 
 // ----------------------------------------------------------------------------
 // interface: Registrar
@@ -70,7 +78,6 @@ func (r *registrar) Done() <-chan stat     { return r.done }
 func (r *registrar) Stop() chan<- struct{} { return r.cancel }
 
 func (r *registrar) DeleteDocument(key DocId) (bool, error) {
-	resch := makeResChan()
 	fn := func() interface{} {
 		ok, e := r.reg.deleteDocument(key)
 		if e != nil {
@@ -78,13 +85,10 @@ func (r *registrar) DeleteDocument(key DocId) (bool, error) {
 		}
 		return ok
 	}
-	r.ui <- req{resch, fn}
-	result := <-resch
-	return mapBoolResult(result)
+	return r.dispatch1(fn)
 }
 
 func (r *registrar) UpdateDocument(doc Document) (bool, error) {
-	resch := makeResChan()
 	fn := func() interface{} {
 		ok, e := r.reg.updateDocument(doc.(*document))
 		if e != nil {
@@ -92,12 +96,9 @@ func (r *registrar) UpdateDocument(doc Document) (bool, error) {
 		}
 		return ok
 	}
-	r.ui <- req{resch, fn}
-	result := <-resch
-	return mapBoolResult(result)
+	return r.dispatch1(fn)
 }
 func (r *registrar) ReadDocument(key DocId) (Document, error) {
-	resch := makeResChan()
 	fn := func() interface{} {
 		doc, e := r.reg.readDocument(key)
 		if e != nil {
@@ -105,13 +106,10 @@ func (r *registrar) ReadDocument(key DocId) (Document, error) {
 		}
 		return doc
 	}
-	r.ui <- req{resch, fn}
-	result := <-resch
-	return mapDocResult(result)
+	return r.dispatch0(fn)
 }
 
 func (r *registrar) CreateDocument(key DocId, data map[string][]byte) (Document, error) {
-	resch := makeResChan()
 	fn := func() interface{} {
 		doc, e := r.reg.createDocument(key, data)
 		if e != nil {
@@ -119,9 +117,21 @@ func (r *registrar) CreateDocument(key DocId, data map[string][]byte) (Document,
 		}
 		return doc
 	}
+	return r.dispatch0(fn)
+}
+
+func (r *registrar) dispatch0(fn func() interface{}) (Document, error) {
+	resch := makeResChan()
 	r.ui <- req{resch, fn}
 	result := <-resch
 	return mapDocResult(result)
+}
+
+func (r *registrar) dispatch1(fn func() interface{}) (bool, error) {
+	resch := makeResChan()
+	r.ui <- req{resch, fn}
+	result := <-resch
+	return mapBoolResult(result)
 }
 
 // ----------------------------------------------------------------------------

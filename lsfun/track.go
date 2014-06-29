@@ -106,7 +106,7 @@ func (t *trackScout) trackScoutInit() (err error) {
 }
 
 func (t *trackScout) Report() (report *TrackReport, err error) {
-//	panics := panics.ForFunc("trackScout.Report")
+	//	panics := panics.ForFunc("trackScout.Report")
 	defer panics.Recover(&err)
 
 	e := t.Initialize()
