@@ -82,7 +82,7 @@ func IsDeleted0(flag uint8) bool {
 func (oc *ObjectCache) Gc() {
 	n := oc.gc(oc.Cache, oc.gcArgs...)
 	if n > 0 {
-		log.Printf("GC: %d items removed - object-cnt: %d", n, len(oc.Cache))
+		log.Printf("DEBUG: GC: %d items removed - object-cnt: %d", n, len(oc.Cache))
 	}
 }
 

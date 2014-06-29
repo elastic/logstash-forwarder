@@ -44,7 +44,8 @@ const (
 	VarHomePort            = "lsf.home.port"
 	VarConfig              = "lsf.config"
 	VarHomeFileInfo        = "lsf.home.fileinfo"
-	VarUserSigChan         = "user.signal.channel"
+	//	VarUserSigChan         = "user.signal.channel"
+	VarSupervisor = "lsf.process.supervisor"
 )
 
 // ----------------------------------------------------------------------------

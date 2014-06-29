@@ -2,7 +2,10 @@ package lsf
 
 import (
 	"flag"
+	"log"
 	"lsf/panics"
+	"lsf/system"
+	"lsf/system/process"
 	"os"
 	"os/signal"
 )
@@ -34,7 +37,13 @@ type Command struct {
 	Usage       string
 	Initializer bool
 	IsActive    bool
+	process     system.Process
 }
+
+//type ActiveCommand struct {
+//	*Command
+//	*process.Control
+//}
 
 // REVU: os signal trap should be here.
 // REVU: fork on IsActive, keep 2 Run flavors.
@@ -89,31 +98,57 @@ func RunPassive(env *Environment, cmd *Command, args ...string) (err error) {
 	return nil
 }
 
-func RunActive(env *Environment, cmd *Command, args ...string) (err error) {
+func RunActive(env *Environment, cmd0 *Command, args ...string) (err error) {
 
 	defer panics.Recover(&err)
 
-	if cmd.Init != nil {
-		e0 := cmd.Init(env, args...)
+	procControl := process.NewProcessControl()
+	env.Set(VarSupervisor, system.Supervisor(procControl))
+
+	if cmd0.Init != nil {
+		e0 := cmd0.Init(env, args...)
 		panics.OnError(e0)
 	}
-	panics.OnTrue(cmd.Run == nil, "command.RunActive:", "BUG - cmd.Run is nil")
+	panics.OnTrue(cmd0.Run == nil, "command.RunActive:", "BUG - cmd.Run is nil")
+
+	var cmd = struct {
+		cmd  *Command
+		proc *process.Control
+	}{
+		cmd:  cmd0,
+		proc: procControl,
+	}
 
 	user := make(chan os.Signal, 1)
-	user0 := make(chan os.Signal, 1)
 	signal.Notify(user, os.Interrupt, os.Kill)
-	signal.Notify(user0, os.Interrupt, os.Kill)
 
-	prev, e := env.Set(VarUserSigChan, user)
-	panics.OnError(e, "command.RunActive:", "BUG", "env.Set(VarUserSigChan)")
-	panics.OnTrue(prev != nil, "command.RunActive:", "BUG", "env.Set(VarUserSigChan) returned non-nil value")
-
-	e1 := cmd.Run(env, args...)
+	// expected to run a go routine
+	// this call should NOT block
+	e1 := cmd.cmd.Run(env, args...)
 	panics.OnError(e1)
 
+	// act as command process supervisor
+	//
+	var stat interface{}
+	select {
+	case stat = <-cmd.proc.Status():
+		// For now any stat message is read as 'done'.
+		// Here it can only mean that either the task
+		// inherently is done OR it encountered an error.
+		break
+	case usersig := <-user:
+		// stop the command process on user signal
+		cmd.proc.Signal() <- usersig
+		<-cmd.proc.Status()
+		break
+	}
+
+	// TODO: act on 'stat'
+	log.Printf("TODO: use stat: %s", stat)
+
 	// run cmd finalizer func (if any)
-	if cmd.End != nil {
-		e2 := cmd.End(env, args...)
+	if cmd.cmd.End != nil {
+		e2 := cmd.cmd.End(env, args...)
 		panics.OnError(e2)
 	}
 

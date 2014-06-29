@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"lsf"
+	"lsf/panics"
+	"lsf/system"
 )
 
 // nil CommandFn is a nop function
@@ -27,6 +29,16 @@ var nil_command *lsf.Command = &lsf.Command{
 // -----------------------------------------------------------------------
 // runtime environment & command runner
 // -----------------------------------------------------------------------
+
+// panics on error
+func getSupervisor(env *lsf.Environment) system.Supervisor {
+	v, found := env.Get(lsf.VarSupervisor)
+	panics.OnFalse(found, "BUG", "Get lsf.VarSupervisor")
+	supervisor, ok := v.(system.Supervisor)
+	panics.OnFalse(ok, "BUG", "Cast lsf.VarSupervisor")
+
+	return supervisor
+}
 
 // Go process global scope, runtime environment for all commands
 //var env *lsf.Environment = lsf.NewEnvironment() // not initialized ..
