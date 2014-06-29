@@ -85,12 +85,14 @@ func main() {
 	os.Exit(0)
 }
 
+// REVU: so what is 'c'? (n days later) TODO: be more explicit in var names here.
 func tracker() (*control, chan struct{}, chan *TrackReport) {
 	r := make(chan struct{}, 1)
 	c := make(chan *TrackReport, 0)
 	return procControl(), r, c
 }
 
+// REVU: TODO: use Control type from system/process
 func procControl() *control {
 	return &control{
 		sig:  make(chan interface{}, 1),
