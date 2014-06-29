@@ -34,6 +34,8 @@ type Registrar interface {
 // System Process Control
 // ----------------------------------------------------------------------------
 
+// REVU: do we (really) need this?
+
 // ProcControl provides system process supervisors the means to
 // interact with the managed process.
 type Process interface {
