@@ -17,6 +17,7 @@ const trackCmdCode lsf.CommandCode = "track"
 type trackOptionSpec struct {
 	global BoolOptionSpec
 	id     StringOptionSpec
+	freq   UintOptionSpec
 	//	frequency Int64OptionSpec
 }
 
@@ -37,6 +38,7 @@ func init() {
 	trackCmdOptions = &trackOptionSpec{
 		global: NewBoolFlag(Track.Flag, "G", "global", false, "command applies globally", false),
 		id:     NewStringFlag(Track.Flag, "s", "stream-id", "", "unique identifier for stream", true),
+		freq:   NewUintFlag(Track.Flag, "f", "frequency", 1, "report frequency - n / sec (e.g. 1000 1/ms)", true),
 	}
 }
 
@@ -92,6 +94,10 @@ func runTrack(env *lsf.Environment, args ...string) (err error) {
 
 	var scout lsfun.TrackScout = lsfun.NewTrackScout(logStream.Path, logStream.Pattern, uint16(opt.maxSize), opt.maxAge)
 
+	freq := int(*trackCmdOptions.freq.value) // delay is time.Second
+	delay := int(time.Second) / freq
+	log.Printf("delay is %d", delay)
+
 	everUntilInterrupted := true
 	go func() {
 		for everUntilInterrupted {
@@ -107,7 +113,7 @@ func runTrack(env *lsf.Environment, args ...string) (err error) {
 						log.Println(event)
 					}
 				}
-				time.Sleep(time.Millisecond * time.Duration(opt.delaymsec))
+				time.Sleep(time.Duration(delay))
 			}
 		}
 		supervisor.Report() <- "done"

@@ -129,6 +129,16 @@ func (opt Int64OptionSpec) Provided() bool {
 	return *opt.value != opt.defval
 }
 
+type UintOptionSpec struct {
+	OptionSpec
+	value  *uint
+	defval uint
+}
+
+func (opt UintOptionSpec) Provided() bool {
+	return *opt.value != opt.defval
+}
+
 type BoolOptionSpec struct {
 	OptionSpec
 	value  *bool
@@ -147,6 +157,11 @@ func (t StringOptionSpec) defineFlag(fs *flag.FlagSet) {
 func (t Int64OptionSpec) defineFlag(fs *flag.FlagSet) {
 	fs.Int64Var(t.value, t.short, t.defval, t.usage)
 	fs.Int64Var(t.value, t.long, t.defval, t.usage)
+}
+
+func (t UintOptionSpec) defineFlag(fs *flag.FlagSet) {
+	fs.UintVar(t.value, t.short, t.defval, t.usage)
+	fs.UintVar(t.value, t.long, t.defval, t.usage)
 }
 
 func (t BoolOptionSpec) defineFlag(fs *flag.FlagSet) {
@@ -174,6 +189,18 @@ func NewInt64OptionSpec(short, long string, defval int64, usage string, required
 }
 func NewInt64Flag(fs *flag.FlagSet, short, long string, defval int64, usage string, required bool) Int64OptionSpec {
 	f := NewInt64OptionSpec(short, long, defval, usage, required)
+	f.defineFlag(fs)
+	return f
+}
+
+func NewUintOptionSpec(short, long string, defval uint, usage string, required bool) UintOptionSpec {
+	return UintOptionSpec{
+		OptionSpec{short, long, usage, true},
+		new(uint), defval,
+	}
+}
+func NewUintFlag(fs *flag.FlagSet, short, long string, defval uint, usage string, required bool) UintOptionSpec {
+	f := NewUintOptionSpec(short, long, defval, usage, required)
 	f.defineFlag(fs)
 	return f
 }
