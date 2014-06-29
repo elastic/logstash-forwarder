@@ -42,42 +42,25 @@ func init() {
 
 func initTrack(env *lsf.Environment, args ...string) (err error) {
 	log.Println("command/track: initTrack:")
-	// TODO:
-	// 1 - verify ~/.lsf (LS/F environment)
+
 	e := verifyRequiredOption(trackCmdOptions.id)
 	panics.OnError(e, "initTrack:", "verifyRequiredOption")
 
-	id := schema.StreamId(*trackCmdOptions.id.value)
-	docid := system.DocId(fmt.Sprintf("stream.%s.stream", id))
-	doc, e := env.LoadDocument(docid)
-	panics.OnError(e, "BUG command.initTrack:", "LoadDocument:", string(docid))
-	panics.OnTrue(doc == nil, "BUG command.initTrack:", "LoadDocument:", string(docid))
-
-	// Run in exclusive mode
-	resource := fmt.Sprintf("stream.%s.track", id)
-	lockid := env.ResourceId(resource)
-	oplock, ok, e := system.LockResource(lockid, "track stream - resource "+resource)
-	panics.OnError(e, "command.runUpdateStream:", "lockResource:", resource)
-	panics.OnFalse(ok, "command.runUpdateStream:", "lockResource:", resource)
-	defer oplock.Unlock()
-
-	// 2- get stream info from ~/.lsf
-
-	return nil
+	return
 }
 
 // Track runs continuously, generating a tracking scout report per
 // configuration.
 var opt = struct {
-	basepath  string
-	pattern   string
+	//	basepath  string
+	//	pattern   string
 	maxSize   uint
 	maxAge    fs.InfoAge
 	delaymsec uint
 	about     func() string
 }{
-	basepath:  "/Users/alphazero/Code/es/go/src/lsf/development/tools/rotating-logger",
-	pattern:   "apache2*",
+	//	basepath:  "/Users/alphazero/Code/es/go/src/lsf/development/tools/rotating-logger",
+	//	pattern:   "apache2*",
 	maxSize:   17,
 	maxAge:    fs.InfoAge(0),
 	delaymsec: 100,
@@ -88,8 +71,26 @@ func runTrack(env *lsf.Environment, args ...string) (err error) {
 	log.Printf("command/track.runTrack")
 
 	supervisor := getSupervisor(env) // panics // REVU: generic to all active cmds
-	// TODO: all args must be from env or options
-	var scout lsfun.TrackScout = lsfun.NewTrackScout(opt.basepath, opt.pattern, uint16(opt.maxSize), opt.maxAge)
+
+	// Load stream doc and get LogStream instance
+	id := schema.StreamId(*trackCmdOptions.id.value)
+	docid := system.DocId(fmt.Sprintf("stream.%s.stream", id))
+	doc, e := env.LoadDocument(docid)
+	panics.OnError(e, "BUG command.initTrack:", "LoadDocument:", string(docid))
+	panics.OnTrue(doc == nil, "BUG command.initTrack:", "LoadDocument:", string(docid))
+
+	logStream := schema.DecodeLogStream(doc)
+	log.Println(logStream.String())
+
+	// Run in exclusive mode
+	resource := fmt.Sprintf("stream.%s.track", id)
+	lockid := env.ResourceId(resource)
+	oplock, ok, e := system.LockResource(lockid, "track stream - resource "+resource)
+	panics.OnError(e, "command.runUpdateStream:", "lockResource:", resource)
+	panics.OnFalse(ok, "command.runUpdateStream:", "lockResource:", resource)
+	defer oplock.Unlock()
+
+	var scout lsfun.TrackScout = lsfun.NewTrackScout(logStream.Path, logStream.Pattern, uint16(opt.maxSize), opt.maxAge)
 
 	everUntilInterrupted := true
 	go func() {

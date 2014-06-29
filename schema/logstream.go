@@ -40,7 +40,7 @@ var LogStreamElem = struct {
 }{
 	Id:           "id",
 	BasePath:     "basepath",
-	Pattern:      "name-Pattern",
+	Pattern:      "name-pattern",
 	JournalModel: "journal-model",
 }
 
