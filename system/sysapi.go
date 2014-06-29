@@ -40,14 +40,17 @@ type Registrar interface {
 // interact with the managed process.
 type Process interface {
 	// Returns Signal channel to the process
-	Sig() chan<- interface{}
+	Signal() chan<- interface{}
 	// Returns Stat channel from the process
-	Stat() <-chan interface{}
+	Status() <-chan interface{}
 }
 
-type ProcessSpi interface {
+// REVU: This contortion is to have a bipolar view
+// on the 2 one-way channels between a supervisor and process
+// The ProcessSpi is
+type Supervisor interface {
 	// Returns Signal channel to the process
-	Sig() <-chan interface{}
+	Command() <-chan interface{}
 	// Returns Stat channel from the process
-	Stat() chan<- interface{}
+	Report() chan<- interface{}
 }
