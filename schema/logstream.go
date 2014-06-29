@@ -24,7 +24,7 @@ type LogStream struct {
 	// JournalModel
 	//	JournalModel JournalModel
 	JournalModel journalModel
-	// Log filename pattern
+	// Log filename Pattern
 	Pattern string
 	// Stream's semantic structure
 	Fields map[string]string // lazy
@@ -35,26 +35,26 @@ type LogStream struct {
 }
 
 // recorded elements of LogStream object
-var logStreamElem = struct {
-	id, basepath, pattern, model string
+var LogStreamElem = struct {
+	Id, BasePath, Pattern, JournalModel string
 }{
-	id:       "id",
-	basepath: "basepath",
-	pattern:  "name-pattern",
-	model:    "journal-model",
+	Id:           "id",
+	BasePath:     "basepath",
+	Pattern:      "name-Pattern",
+	JournalModel: "journal-model",
 }
 
 var DefaultStreamMappings = defmapping{
-	logStreamElem.model: []byte(JournalModel.Rotation),
+	LogStreamElem.JournalModel: []byte(JournalModel.Rotation),
 }
 
 // REVU: TODO sort mappings at sysrec..
 func (t *LogStream) Mappings() map[string][]byte {
 	m := make(map[string][]byte)
-	m[logStreamElem.id] = []byte(t.Id)
-	m[logStreamElem.basepath] = []byte(t.Path)
-	m[logStreamElem.pattern] = []byte(t.Pattern)
-	m[logStreamElem.model] = []byte(t.JournalModel)
+	m[LogStreamElem.Id] = []byte(t.Id)
+	m[LogStreamElem.BasePath] = []byte(t.Path)
+	m[LogStreamElem.Pattern] = []byte(t.Pattern)
+	m[LogStreamElem.JournalModel] = []byte(t.JournalModel)
 	return m
 }
 
@@ -70,10 +70,10 @@ func LogStreamDigest(doc system.Document) string {
 func DecodeLogStream(data system.DataMap) *LogStream {
 	m := data.Mappings()
 	return &LogStream{
-		Id:           StreamId(string(m[logStreamElem.id])),
-		Path:         string(m[logStreamElem.basepath]),
-		JournalModel: journalModel(string(m[logStreamElem.model])),
-		Pattern:      string(m[logStreamElem.pattern]),
+		Id:           StreamId(string(m[LogStreamElem.Id])),
+		Path:         string(m[LogStreamElem.BasePath]),
+		JournalModel: journalModel(string(m[LogStreamElem.JournalModel])),
+		Pattern:      string(m[LogStreamElem.Pattern]),
 		Fields:       make(map[string]string), // REVU: an array of tags TODO mod []string ..
 		records:      make(map[string]*LogRecord),
 	}

@@ -1,21 +1,23 @@
 package command
 
 import (
+	"fmt"
 	"log"
 	"lsf"
 	"lsf/fs"
 	"lsf/lsfun"
 	"lsf/panics"
+	"lsf/schema"
+	"lsf/system"
 	"time"
 )
 
 const trackCmdCode lsf.CommandCode = "track"
 
 type trackOptionSpec struct {
-	verbose BoolOptionSpec
-	global  BoolOptionSpec
-	path    StringOptionSpec
-	pattern StringOptionSpec
+	global BoolOptionSpec
+	id     StringOptionSpec
+	//	frequency Int64OptionSpec
 }
 
 var Track *lsf.Command
@@ -33,10 +35,8 @@ func init() {
 	}
 	// TODO: just get the stream id. optional flag for persistence of state and events
 	trackCmdOptions = &trackOptionSpec{
-		verbose: NewBoolFlag(Track.Flag, "v", "verbose", false, "be verbose in list", false),
-		global:  NewBoolFlag(Track.Flag, "G", "global", false, "command applies globally", false),
-		path:    NewStringFlag(Track.Flag, "p", "path", "", "path to log files", true),
-		pattern: NewStringFlag(Track.Flag, "n", "name-pattern", "", "naming pattern of journaled log files", true),
+		global: NewBoolFlag(Track.Flag, "G", "global", false, "command applies globally", false),
+		id:     NewStringFlag(Track.Flag, "s", "stream-id", "", "unique identifier for stream", true),
 	}
 }
 
@@ -44,6 +44,23 @@ func initTrack(env *lsf.Environment, args ...string) (err error) {
 	log.Println("command/track: initTrack:")
 	// TODO:
 	// 1 - verify ~/.lsf (LS/F environment)
+	e := verifyRequiredOption(trackCmdOptions.id)
+	panics.OnError(e, "initTrack:", "verifyRequiredOption")
+
+	id := schema.StreamId(*trackCmdOptions.id.value)
+	docid := system.DocId(fmt.Sprintf("stream.%s.stream", id))
+	doc, e := env.LoadDocument(docid)
+	panics.OnError(e, "BUG command.initTrack:", "LoadDocument:", string(docid))
+	panics.OnTrue(doc == nil, "BUG command.initTrack:", "LoadDocument:", string(docid))
+
+	// Run in exclusive mode
+	resource := fmt.Sprintf("stream.%s.track", id)
+	lockid := env.ResourceId(resource)
+	oplock, ok, e := system.LockResource(lockid, "track stream - resource "+resource)
+	panics.OnError(e, "command.runUpdateStream:", "lockResource:", resource)
+	panics.OnFalse(ok, "command.runUpdateStream:", "lockResource:", resource)
+	defer oplock.Unlock()
+
 	// 2- get stream info from ~/.lsf
 
 	return nil

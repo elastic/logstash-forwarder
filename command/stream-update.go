@@ -55,17 +55,17 @@ func runUpdateStream(env *lsf.Environment, args ...string) (err error) {
 	option = updateStreamOptions.pattern
 	if OptionProvided(option) {
 		v := []byte(string(*updateStreamOptions.pattern.value))
-		doc.Set("name-pattern", v)
+		doc.Set(schema.LogStreamElem.Pattern, v)
 	}
 	option = updateStreamOptions.path
 	if OptionProvided(option) {
 		v := []byte(string(*updateStreamOptions.path.value))
-		doc.Set("file-path", v)
+		doc.Set(schema.LogStreamElem.BasePath, v)
 	}
 	option = updateStreamOptions.mode
 	if OptionProvided(option) {
 		v := []byte(schema.ToJournalModel(*updateStreamOptions.mode.value))
-		doc.Set("journal-mode", v)
+		doc.Set(schema.LogStreamElem.JournalModel, v)
 	}
 	ok, e = env.UpdateDocument(doc)
 	panics.OnError(e, "command.runUpdateStream:", "UpdateDocument:", resource)
