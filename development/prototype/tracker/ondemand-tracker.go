@@ -1,3 +1,5 @@
+/* THIS IS JUST A PROTOTYPE AND DEPRECATED - DON'T BOTHER TO FIX - was used to derive track func in lsfun */
+
 package main
 
 import (
