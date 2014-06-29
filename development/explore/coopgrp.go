@@ -63,9 +63,9 @@ func validateGcOptions() {
 	ageopt := options.maxAge != fs.InfoAge(0)
 	sizeopt := options.maxSize != uint(0)
 	if ageopt && sizeopt {
-		panic("only one of age or size limits can be specified for the cache")
+		panic("only one of age or size limits can be specified for the cache. run with -h flag for details.")
 	} else if !(ageopt || sizeopt) {
-		panic("one of age or size limits must be specified for the cache")
+		panic("one of age or size limits must be specified for the cache. run with -h flag for details.")
 	}
 }
 
