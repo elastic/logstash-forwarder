@@ -66,6 +66,7 @@ type Assertion interface {
 	StringsEqual(label string, expected, have string)
 	NotNil(label string, v interface{})
 	Nil(label string, v interface{})
+	SameReference(label string, expected, have interface{})
 }
 
 func GetAssertionFor(t *testing.T, testName string) Assertion {
@@ -85,6 +86,10 @@ type assertion struct {
 
 func (t *assertion) StringsEqual(label string, expected, have string) {
 	AssertStringsEqual(t.t, t.testName, label, expected, have)
+}
+
+func (t *assertion) SameReference(label string, expected, have interface{}) {
+	AssertEquals(t.t, t.testName, label, expected, have)
 }
 
 func (t *assertion) NotNil(label string, v interface{}) {
