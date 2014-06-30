@@ -406,6 +406,32 @@ func CreateEnvironment(dir string, force bool) (rootpath string, err error) {
 	return root, nil
 }
 
+func (env *Environment) AddLogStream(id, basepath, pattern, journalModel string, fields map[string]string) error {
+	opLock, _, e := system.ExclusiveResourceOp(env.Port(), system.Op.StreamAdd, id, "stream-add")
+	if e != nil {
+		return e
+	}
+	defer opLock.Unlock()
+
+	// check if exists
+	docId := fmt.Sprintf("stream.%s.stream", id)
+	doc, e := env.LoadDocument(docId)
+	if e == nil && doc != nil {
+		panic(E_EXISTING)
+	}
+
+	// create the stream-conf file.
+	mode := schema.ToJournalModel(journalModel)
+	logstream := schema.NewLogStream(id, basepath, mode, pattern, fields)
+
+	e = env.CreateDocument(docId, logstream)
+	if e != nil {
+		return e
+	}
+
+	return nil
+}
+
 func (env *Environment) AddRemotePort(id, host string, port int) error {
 	// lock lsf port's "remotes" resource to prevent race condition
 	opLock, _, e := system.ExclusiveResourceOp(env.Port(), system.Op.RemoteAdd, id, "remote-add")
@@ -417,15 +443,14 @@ func (env *Environment) AddRemotePort(id, host string, port int) error {
 	// check if exists
 	docId := fmt.Sprintf("remote.%s.remote", id)
 	doc, e := env.LoadDocument(docId)
-	if doc != nil {
-		return E_EXISTING
+	if e == nil && doc != nil {
+		panic(E_EXISTING)
 	}
 
 	lsfport, e := schema.NewRemotePort(id, host, port)
 	if e != nil {
 		return e
 	}
-	//	panics.OnError(e, "runAddRemote:", "NewRemotePort")
 
 	e = env.CreateDocument(docId, lsfport)
 	if e != nil {

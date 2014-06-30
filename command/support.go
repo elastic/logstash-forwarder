@@ -4,9 +4,7 @@ import (
 	"lsf"
 )
 
-// support functions for commands
-// NOTE: all functions with names beginning with _ throw panics
-// REVU: ALL can be env methods
+// REVU: ALL can be env methods TODO
 
 // assert resource does not exist
 func _assertNotExists(env *lsf.Environment, docId string) {
