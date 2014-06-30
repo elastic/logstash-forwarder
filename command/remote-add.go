@@ -1,11 +1,8 @@
 package command
 
 import (
-	"fmt"
 	"lsf"
 	"lsf/panics"
-	"lsf/schema"
-	"lsf/system"
 )
 
 const addRemoteCmdCode lsf.CommandCode = "remote-add"
@@ -54,31 +51,15 @@ func _verifyAddRemoteRequiredOpts(env *lsf.Environment, args ...string) (err err
 }
 
 func runAddRemote(env *lsf.Environment, args ...string) (err error) {
-	defer panics.Recover(&err)
 
 	id := *addRemoteOptions.id.value
 	host := *addRemoteOptions.host.value
 	port := int(*addRemoteOptions.port.value)
 
-	// REVU: all of this belongs in system/
-	// -----------------------------------------------------------------
-	// check if exists
-	docId := fmt.Sprintf("remote.%s.remote", id)
-	_assertNotExists(env, docId)
-
-	// lock lsf port's "remotes" resource to prevent race condition
-	opLock, _, e := env.ExclusiveResourceOp(system.Op.RemoteAdd, id, "remote-add command")
+	e := env.AddRemotePort(id, host, port)
 	if e != nil {
 		return e
 	}
-	defer opLock.Unlock()
-
-	lsfport, e := schema.NewRemotePort(id, host, port)
-	panics.OnError(e, "runAddRemote:", "NewRemotePort")
-
-	e = env.CreateDocument(docId, lsfport)
-	panics.OnError(e, "command.runAddStream:", "CreateDocument:", id)
-	// -----------------------------------------------------------------
 
 	return nil
 }

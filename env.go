@@ -406,6 +406,35 @@ func CreateEnvironment(dir string, force bool) (rootpath string, err error) {
 	return root, nil
 }
 
+func (env *Environment) AddRemotePort(id, host string, port int) error {
+	// lock lsf port's "remotes" resource to prevent race condition
+	opLock, _, e := system.ExclusiveResourceOp(env.Port(), system.Op.RemoteAdd, id, "remote-add")
+	if e != nil {
+		return e
+	}
+	defer opLock.Unlock()
+
+	// check if exists
+	docId := fmt.Sprintf("remote.%s.remote", id)
+	doc, e := env.LoadDocument(docId)
+	if doc != nil {
+		return E_EXISTING
+	}
+
+	lsfport, e := schema.NewRemotePort(id, host, port)
+	if e != nil {
+		return e
+	}
+	//	panics.OnError(e, "runAddRemote:", "NewRemotePort")
+
+	e = env.CreateDocument(docId, lsfport)
+	if e != nil {
+		return e
+	}
+
+	return nil
+}
+
 func (env *Environment) Shutdown() error {
 
 	if env == nil {

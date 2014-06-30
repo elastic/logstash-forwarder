@@ -2,8 +2,6 @@ package command
 
 import (
 	"lsf"
-	//	"lsf/panics"
-	//	"lsf/system"
 )
 
 // support functions for commands
