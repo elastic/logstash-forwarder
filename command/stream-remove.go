@@ -56,14 +56,12 @@ func runRemoveStream(env *lsf.Environment, args ...string) (err error) {
 	}
 
 	// lock lsf port's "streams" resource
-	lockid := env.ResourceId("streams")
-	lock, ok, e := system.LockResource(lockid, "add stream "+id)
-	panics.OnError(e, "command.runRemoveStream:", "lockResource:")
-	panics.OnFalse(ok, "command.runRemoveStream:", "lockResource:", id)
-	defer lock.Unlock()
+	opLock, _, e := system.ExclusiveResourceOp(env.Port(), system.Op.StreamRemove, id, "stream-remove command")
+	panics.OnError(e, "system.Op.StreamRemove")
+	defer opLock.Unlock()
 
 	// remove doc
-	ok, e = env.DeleteDocument(docId)
+	ok, e := env.DeleteDocument(docId)
 	panics.OnError(e, "command.runRemoveStream:", "DeleteDocument:", id)
 	panics.OnFalse(ok, "command.runRemoveStream:", "DeleteDocument:", id)
 

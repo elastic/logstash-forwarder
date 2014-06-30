@@ -46,6 +46,8 @@ func init() {
 }
 
 func initTrack(env *lsf.Environment, args ...string) (err error) {
+	defer panics.Recover(&err)
+
 	log.Println("command/track: initTrack:")
 
 	e := verifyRequiredOption(trackCmdOptions.id)
@@ -70,17 +72,15 @@ func initTrack(env *lsf.Environment, args ...string) (err error) {
 
 	logStream := schema.DecodeLogStream(doc)
 	_, e = env.Set(lsf.VarKey(docId), logStream)
-	panics.OnError(e, "env.Set(lockid)")
+	panics.OnError(e, "env.Set(docId)")
 
 	// Run in exclusive mode - lock stream's op
-	lockid := trackResourceId(env, id, "track")
-	oplock, ok, e := system.LockResource(lockid, "track stream cmd lock")
-	panics.OnError(e, "command.runTrack:", "lockResource:", lockid)
-	if !ok {
-		return fmt.Errorf("tracking for stream %s is already in progress.", id)
+	opLock, opLockId, e := env.ExclusiveResourceOp(system.Op.StreamTrack, id, "track command")
+	if e != nil {
+		return e
 	}
 
-	_, e = env.Set(lsf.VarKey(lockid), oplock)
+	_, e = env.Set(lsf.VarKey(opLockId), opLock)
 	panics.OnError(e, "env.Set(lockid)")
 
 	return

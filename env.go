@@ -502,7 +502,9 @@ func (env *Environment) GetResourceIds(restype string) []string {
 	return resIds[:i]
 }
 
-type digestFn func(env *Environment, restype string, resid string, encode system.DocumentDigestFn) string
+func (env *Environment) ExclusiveResourceOp(opcode system.OpCode, resId string, meta string) (opLock system.Lock, lockId string, err error) {
+	return system.ExclusiveResourceOp(env.Port(), opcode, resId, meta)
+}
 
 func (env *Environment) GetResourceDigests(restype string, verbose bool, encoder system.DocumentDigestFn) []string {
 
@@ -519,6 +521,8 @@ func (env *Environment) GetResourceDigests(restype string, verbose bool, encoder
 	}
 	return digests
 }
+
+type digestFn func(env *Environment, restype string, resid string, encode system.DocumentDigestFn) string
 
 // See GetResourceDigests()
 func justResourceId(env *Environment, restype string, resid string, encode system.DocumentDigestFn) string {

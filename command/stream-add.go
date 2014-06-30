@@ -5,6 +5,7 @@ import (
 	"lsf"
 	"lsf/panics"
 	"lsf/schema"
+	"lsf/system"
 )
 
 const addStreamCmdCode lsf.CommandCode = "stream-add"
@@ -38,13 +39,14 @@ func runAddStream(env *lsf.Environment, args ...string) (err error) {
 	_assertNotExists(env, docId)
 
 	// lock lsf port's "streams" resource to prevent race condition
-	lock := _lockResource(env, "streams", "add stream")
-	defer lock.Unlock()
+	opLock, _, e := env.ExclusiveResourceOp(system.Op.StreamAdd, id, "stream-add command")
+	panics.OnError(e, "system.Op.StreamAdd")
+	defer opLock.Unlock()
 
 	// create the stream-conf file.
 	logstream := schema.NewLogStream(id, path, mode, pattern, fields)
 
-	e := env.CreateDocument(docId, logstream)
+	e = env.CreateDocument(docId, logstream)
 	panics.OnError(e, "command.runAddStream:", "CreateDocument:", id)
 
 	return nil

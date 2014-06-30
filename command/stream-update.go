@@ -37,12 +37,9 @@ func runUpdateStream(env *lsf.Environment, args ...string) (err error) {
 	id := *updateStreamOptions.id.value
 
 	// do not premit concurrent updates to this stream
-	resource := fmt.Sprintf("stream.%s.update", id)
-	lockid := env.ResourceId(resource)
-	oplock, ok, e := system.LockResource(lockid, "add stream - resource "+resource)
-	panics.OnError(e, "command.runUpdateStream:", "lockResource:", resource)
-	panics.OnFalse(ok, "command.runUpdateStream:", "lockResource:", resource)
-	defer oplock.Unlock()
+	opLock, _, e := system.ExclusiveResourceOp(env.Port(), system.Op.StreamUpdate, id, "stream-update command")
+	panics.OnError(e, "system.Op.StreamUpdate")
+	defer opLock.Unlock()
 
 	// verify it exists
 	docId := fmt.Sprintf("stream.%s.stream", id)
@@ -67,9 +64,9 @@ func runUpdateStream(env *lsf.Environment, args ...string) (err error) {
 		v := []byte(schema.ToJournalModel(*updateStreamOptions.mode.value))
 		doc.Set(schema.LogStreamElem.JournalModel, v)
 	}
-	ok, e = env.UpdateDocument(doc)
-	panics.OnError(e, "command.runUpdateStream:", "UpdateDocument:", resource)
-	panics.OnFalse(ok, "command.runUpdateStream:", "UpdateDocument:", resource)
+	ok, e := env.UpdateDocument(doc)
+	panics.OnError(e, "command.runUpdateStream:", "UpdateDocument:", id)
+	panics.OnFalse(ok, "command.runUpdateStream:", "UpdateDocument:", id)
 
 	return nil
 }
