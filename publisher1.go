@@ -25,6 +25,7 @@ import _ "crypto/sha512"
 
 var hostname string
 var hostport_re, _ = regexp.Compile("^(.+):([0-9]+)$")
+var srvRecordCount int = 0
 
 func init() {
   log.Printf("publisher init\n")
@@ -168,13 +169,7 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
 
   for {
     // Pick a random server from the list.
-    hostport := config.Servers[rand.Int()%len(config.Servers)]
-    submatch := hostport_re.FindSubmatch([]byte(hostport))
-    if submatch == nil {
-      log.Fatalf("Invalid host:port given: %s", hostport)
-    }
-    host := string(submatch[1])
-    port := string(submatch[2])
+    host, port := getHostPort(config)
     addresses, err := net.LookupHost(host)
 
     if err != nil {
@@ -211,6 +206,32 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
     return
   }
   return
+}
+
+func getHostPort(config *NetworkConfig) (host, port string) {
+  if(config.UseSRV) {
+    _, addrs, err := net.LookupSRV("lumberjack", "tcp", string(config.Servers[0]))
+    if err != nil {
+      log.Fatalf("Bad domain: %s", string(config.Servers[0]))
+    }
+    if(len(addrs) < srvRecordCount){
+      srvRecordCount = 0
+    }
+    hostport := fmt.Sprintf("%s:%d",addrs[srvRecordCount].Target, addrs[srvRecordCount].Port)
+    host, port, err := net.SplitHostPort(hostport)
+    if err != nil {
+      log.Fatalf("Invalid host:port given: %s", hostport)
+    }
+    return host, port
+  } else {
+    // Pick a random server from the list.
+    hostport := config.Servers[rand.Int()%len(config.Servers)]
+    host, port, err := net.SplitHostPort(hostport)
+    if err != nil {
+      log.Fatalf("Invalid host:port given: %s", hostport)
+    }
+    return host, port
+  }
 }
 
 func writeDataFrame(event *FileEvent, sequence uint32, output io.Writer) {
