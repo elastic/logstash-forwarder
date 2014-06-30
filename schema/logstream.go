@@ -6,9 +6,8 @@ import (
 )
 
 // All streams have a unique identity.
-// The simple identity 'string' is unique in context of the stream's home port.
+// The simple identity is unique in context of the stream's home port.
 // The globally unique Stream Identifier is PortHome/string
-//type string string
 
 const AnonStreamId string = "" // TODO REVU
 
@@ -40,7 +39,7 @@ var LogStreamElem = struct {
 }{
 	Id:           "id",
 	BasePath:     "basepath",
-	Pattern:      "name-pattern",
+	Pattern:      "pattern",
 	JournalModel: "journal-model",
 }
 
