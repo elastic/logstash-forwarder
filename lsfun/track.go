@@ -22,7 +22,7 @@ func (t FileEventCode) String() string { return string(t) }
 var TrackEvent = struct {
 	NewFile, KnownFile, ModifiedFile, DeletedFile, RenamedFile FileEventCode
 }{
-	NewFile:      "TRK",
+	NewFile:      "NEW",
 	KnownFile:    "NOP",
 	RenamedFile:  "NAM",
 	ModifiedFile: "MOD",
@@ -63,6 +63,7 @@ func (t *TrackReport) String() string {
 
 type TrackScout interface {
 	Report() (*TrackReport, error)
+	ObjectMap() map[string]fs.Object
 }
 
 type trackScout struct {
@@ -103,6 +104,14 @@ func (t *trackScout) trackScoutInit() (err error) {
 	t.Initialize = lsf.NilInitializer
 
 	return nil
+}
+
+func (t *trackScout) ObjectMap() map[string]fs.Object {
+	copy := make(map[string]fs.Object)
+	for k, v := range t.objects.Cache {
+		copy[k] = v
+	}
+	return copy
 }
 
 func (t *trackScout) Report() (report *TrackReport, err error) {

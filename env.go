@@ -224,16 +224,29 @@ func (env *Environment) LoadDocument(docid system.DocId) (doc system.Document, e
 	return doc, e
 }
 
+// Get document by id. Loads the document if not already loaded.
+func (env *Environment) GetDocument(docid system.DocId) (doc system.Document, err error) {
+	env.docslock.Lock()
+	doc = env.docs[docid]
+	env.docslock.Unlock()
+
+	if doc == nil {
+		return env.LoadDocument(docid)
+	}
+
+	return doc, nil
+}
+
 // All documents (ids) are presumed to be valid in context of the bound LSF Port.
 // Returns error (and stops loading) on missing doc(s).
-func (env *Environment) loadDocuments(documents []system.DocId) (err error) {
+func (env *Environment) loadDocuments(docIds []system.DocId) (err error) {
 
 	defer panics.Recover(&err)
 
 	env.docslock.Lock()
 	defer env.docslock.Unlock()
 
-	for _, docid := range documents {
+	for _, docid := range docIds {
 		_, found := env.docs[docid]
 		if !found {
 			doc, e := env.registrar.ReadDocument(docid)

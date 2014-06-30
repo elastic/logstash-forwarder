@@ -116,11 +116,20 @@ func runTrack(env *lsf.Environment, args ...string) (err error) {
 				report, e := scout.Report()
 				panics.OnError(e, "main", "scout.Report") // REVU: wrong. send error via channel and close
 
+				log.Println("--- events -------------------------------------------")
 				for _, event := range report.Events {
 					if event.Code != lsfun.TrackEvent.KnownFile { // printing NOP events gets noisy
 						log.Println(event)
 					}
 				}
+
+				objects := scout.ObjectMap()
+
+				log.Println("--- objects ------------------------------------------")
+				for _, fsobj := range objects {
+					log.Println(fsobj.String())
+				}
+				log.Println()
 				time.Sleep(time.Duration(delay))
 			}
 		}
