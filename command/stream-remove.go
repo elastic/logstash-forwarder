@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"lsf"
 	"lsf/panics"
-	"lsf/schema"
 	"lsf/system"
 	"os"
 )
@@ -47,7 +46,7 @@ func verifyRemoveStreamRequiredOpts(env *lsf.Environment, args ...string) error 
 func runRemoveStream(env *lsf.Environment, args ...string) (err error) {
 	panics.Recover(&err)
 
-	id := schema.StreamId(*removeStreamOptions.id.value)
+	id := *removeStreamOptions.id.value
 
 	// check existing
 	docid := system.DocId(fmt.Sprintf("stream.%s.stream", id))

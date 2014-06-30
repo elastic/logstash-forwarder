@@ -34,7 +34,7 @@ func runUpdateStream(env *lsf.Environment, args ...string) (err error) {
 	e := verifyRequiredOption(updateStreamOptions.id)
 	panics.OnError(e, "runUpdateStream:", "verifyRequiredOption")
 
-	id := schema.StreamId(*updateStreamOptions.id.value)
+	id := *updateStreamOptions.id.value
 
 	// do not premit concurrent updates to this stream
 	resource := fmt.Sprintf("stream.%s.update", id)

@@ -28,7 +28,7 @@ func init() {
 func runAddStream(env *lsf.Environment, args ...string) (err error) {
 	defer panics.Recover(&err)
 
-	id := schema.StreamId(*addStreamOptions.id.value)
+	id := *addStreamOptions.id.value
 	pattern := *addStreamOptions.pattern.value
 	mode := schema.ToJournalModel(*addStreamOptions.mode.value)
 	path := *addStreamOptions.path.value

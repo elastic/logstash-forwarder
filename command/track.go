@@ -60,7 +60,7 @@ func initTrack(env *lsf.Environment, args ...string) (err error) {
 		panic("one of age or size limits must be specified for the cache. run with -h flag for details.")
 	}
 
-	id := schema.StreamId(*trackCmdOptions.id.value)
+	id := *trackCmdOptions.id.value
 
 	// Load stream doc and get LogStream instance
 	docid := docIdForStream(id)
@@ -90,7 +90,7 @@ func runTrack(env *lsf.Environment, args ...string) (err error) {
 	defer panics.Recover(&err)
 	log.Printf("command/track.runTrack")
 
-	id := schema.StreamId(*trackCmdOptions.id.value)
+	id := *trackCmdOptions.id.value
 	supervisor := getSupervisor(env) // panics // REVU: generic to all active cmds
 
 	docid := docIdForStream(id)
@@ -143,7 +143,7 @@ func runTrack(env *lsf.Environment, args ...string) (err error) {
 func endTrack(env *lsf.Environment, args ...string) (err error) {
 	defer panics.Recover(&err)
 
-	id := schema.StreamId(*trackCmdOptions.id.value)
+	id := *trackCmdOptions.id.value
 
 	// - unlock track action for stream
 	lockid := trackResourceId(env, id, "track")
@@ -153,10 +153,10 @@ func endTrack(env *lsf.Environment, args ...string) (err error) {
 	return v.(system.Lock).Unlock()
 }
 
-func docIdForStream(id schema.StreamId) system.DocId {
+func docIdForStream(id string) system.DocId {
 	return system.DocId(fmt.Sprintf("stream.%s.stream", id))
 }
-func trackResourceId(env *lsf.Environment, stream schema.StreamId, restype string) string {
-	resource := fmt.Sprintf("stream.%s.%s", stream, restype)
+func trackResourceId(env *lsf.Environment, streamId string, restype string) string {
+	resource := fmt.Sprintf("stream.%s.%s", streamId, restype)
 	return env.ResourceId(resource)
 }

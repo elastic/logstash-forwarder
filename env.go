@@ -68,7 +68,7 @@ type Environment struct {
 	docs      map[system.DocId]system.Document
 	docslock  sync.RWMutex
 	remotes   map[string]*schema.Port
-	streams   map[schema.StreamId]*schema.LogStream
+	streams   map[string]*schema.LogStream
 	journals  map[string]*schema.LogJournal
 }
 
@@ -78,7 +78,7 @@ func NewEnvironment() *Environment {
 		bound:    false,
 		vars:     make(map[varKey]interface{}),
 		docs:     make(map[system.DocId]system.Document),
-		streams:  make(map[schema.StreamId]*schema.LogStream),
+		streams:  make(map[string]*schema.LogStream),
 		remotes:  make(map[string]*schema.Port),
 		journals: make(map[string]*schema.LogJournal),
 	}
