@@ -28,7 +28,7 @@ var DefaultSystemMappings = defmapping{}
 // ----------------------------------------------------------------------
 
 type LogRecord struct {
-	stream    StreamId
+	stream    string
 	command   string
 	Timestamp time.Time
 }
@@ -63,7 +63,7 @@ func ToJournalModel(v string) journalModel {
 
 // The Stash - universal journal schema for log streams
 type LogJournal struct {
-	Stream  StreamId
+	Stream  string
 	Entries []*LogJournalEntry
 }
 

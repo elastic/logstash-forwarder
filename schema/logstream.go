@@ -6,11 +6,10 @@ import (
 )
 
 // All streams have a unique identity.
-// The simple identity 'StreamId' is unique in context of the stream's home port.
-// The globally unique Stream Identifier is PortHome/StreamId
-type StreamId string
+// The simple identity is unique in context of the stream's home port.
+// The globally unique Stream Identifier is PortHome/string
 
-const AnonStreamId StreamId = "" // TODO REVU
+const AnonStreamId string = "" // TODO REVU
 
 // ----------------------------------------------------------------------
 // LogStream
@@ -18,7 +17,7 @@ const AnonStreamId StreamId = "" // TODO REVU
 
 type LogStream struct {
 	// Unique (in context of Port/Env) identifier of a stream
-	Id StreamId
+	Id string
 	// Path to the log files
 	Path string
 	// JournalModel
@@ -40,7 +39,7 @@ var LogStreamElem = struct {
 }{
 	Id:           "id",
 	BasePath:     "basepath",
-	Pattern:      "name-pattern",
+	Pattern:      "pattern",
 	JournalModel: "journal-model",
 }
 
@@ -70,7 +69,7 @@ func LogStreamDigest(doc system.Document) string {
 func DecodeLogStream(data system.DataMap) *LogStream {
 	m := data.Mappings()
 	return &LogStream{
-		Id:           StreamId(string(m[LogStreamElem.Id])),
+		Id:           string(m[LogStreamElem.Id]),
 		Path:         string(m[LogStreamElem.BasePath]),
 		JournalModel: journalModel(string(m[LogStreamElem.JournalModel])),
 		Pattern:      string(m[LogStreamElem.Pattern]),
@@ -79,7 +78,7 @@ func DecodeLogStream(data system.DataMap) *LogStream {
 	}
 }
 
-func NewLogStream(id StreamId, path string, journalModel journalModel, namingPattern string, fields map[string]string) *LogStream {
+func NewLogStream(id string, path string, journalModel journalModel, namingPattern string, fields map[string]string) *LogStream {
 	return &LogStream{
 		Id:           id,
 		Path:         path,

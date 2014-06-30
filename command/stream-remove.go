@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"lsf"
 	"lsf/panics"
-	"lsf/schema"
 	"lsf/system"
 	"os"
 )
@@ -47,31 +46,31 @@ func verifyRemoveStreamRequiredOpts(env *lsf.Environment, args ...string) error 
 func runRemoveStream(env *lsf.Environment, args ...string) (err error) {
 	panics.Recover(&err)
 
-	id := schema.StreamId(*removeStreamOptions.id.value)
+	id := *removeStreamOptions.id.value
 
 	// check existing
-	docid := system.DocId(fmt.Sprintf("stream.%s.stream", id))
-	doc, e := env.LoadDocument(docid)
+	docId := fmt.Sprintf("stream.%s.stream", id)
+	doc, e := env.LoadDocument(docId)
 	if e != nil || doc == nil {
 		return lsf.E_NOTEXISTING
 	}
 
 	// lock lsf port's "streams" resource
 	lockid := env.ResourceId("streams")
-	lock, ok, e := system.LockResource(lockid, "add stream "+string(id))
+	lock, ok, e := system.LockResource(lockid, "add stream "+id)
 	panics.OnError(e, "command.runRemoveStream:", "lockResource:")
-	panics.OnFalse(ok, "command.runRemoveStream:", "lockResource:", string(id))
+	panics.OnFalse(ok, "command.runRemoveStream:", "lockResource:", id)
 	defer lock.Unlock()
 
 	// remove doc
-	ok, e = env.DeleteDocument(docid)
-	panics.OnError(e, "command.runRemoveStream:", "DeleteDocument:", string(id))
-	panics.OnFalse(ok, "command.runRemoveStream:", "DeleteDocument:", string(id))
+	ok, e = env.DeleteDocument(docId)
+	panics.OnError(e, "command.runRemoveStream:", "DeleteDocument:", id)
+	panics.OnFalse(ok, "command.runRemoveStream:", "DeleteDocument:", id)
 
 	// remove the stream's directory
 	// REVU: this command needs a check to see if any procs
 	// related to this stream are running . OK for initial.
-	dir, fname := system.DocpathForKey(env.Port(), docid)
+	dir, fname := system.DocpathForKey(env.Port(), docId)
 	fmt.Printf("DEBUG: runRemoveStream: %s %s\n", dir, fname)
 
 	e = os.RemoveAll(dir)

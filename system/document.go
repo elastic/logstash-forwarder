@@ -19,12 +19,9 @@ var E_EXISTING_DOC = fmt.Errorf("document exists")
 type DataMap interface {
 	Mappings() map[string][]byte
 }
-type DocId string
-
-func (t DocId) String() string { return string(t) }
 
 type Document interface {
-	Id() DocId
+	Id() string
 	Keys() []string
 	Mappings() map[string][]byte
 	Get(key string) []byte
@@ -33,7 +30,7 @@ type Document interface {
 }
 
 type document struct {
-	key      DocId
+	key      string
 	info     *os.FileInfo // REVU: use fs.Object instead?
 	readtime time.Time
 	records  map[string][]byte
@@ -65,7 +62,7 @@ func (d *document) Keys() []string {
 	return keys
 }
 
-func (d *document) Id() DocId {
+func (d *document) Id() string {
 	return d.key
 }
 
@@ -96,7 +93,7 @@ type DocumentDigestFn func(Document) string
 // write data
 // close file
 // release lock
-func newDocument(dockey DocId, fpath, fname string, data map[string][]byte) (doc *document, err error) {
+func newDocument(dockey string, fpath, fname string, data map[string][]byte) (doc *document, err error) {
 	defer panics.Recover(&err)
 
 	filename, err := assertSystemObjectPath(fpath, fname) // panics
@@ -194,7 +191,7 @@ func updateDocument(doc *document, filename string) (ok bool, err error) {
 // load for read.
 // read file and closes it.
 // REVU TODO what if locked?
-func loadDocument(dockey DocId, filename string) (doc *document, err error) {
+func loadDocument(dockey string, filename string) (doc *document, err error) {
 	defer panics.Recover(&err)
 
 	// verify document file
@@ -235,7 +232,7 @@ func loadDocument(dockey DocId, filename string) (doc *document, err error) {
 	return
 }
 
-func deleteDocument(dockey DocId, filename string) (ok bool, err error) {
+func deleteDocument(dockey string, filename string) (ok bool, err error) {
 	defer panics.Recover(&err)
 
 	// verify document file

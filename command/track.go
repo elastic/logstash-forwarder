@@ -60,16 +60,16 @@ func initTrack(env *lsf.Environment, args ...string) (err error) {
 		panic("one of age or size limits must be specified for the cache. run with -h flag for details.")
 	}
 
-	id := schema.StreamId(*trackCmdOptions.id.value)
+	id := *trackCmdOptions.id.value
 
 	// Load stream doc and get LogStream instance
-	docid := docIdForStream(id)
-	doc, e := env.LoadDocument(docid)
+	docId := docIdForStream(id)
+	doc, e := env.LoadDocument(docId)
 	panics.OnError(e, "no such stream:", id)
 	panics.OnNil(doc, "BUG - doc is nil")
 
 	logStream := schema.DecodeLogStream(doc)
-	_, e = env.Set(lsf.VarKey(string(docid)), logStream)
+	_, e = env.Set(lsf.VarKey(docId), logStream)
 	panics.OnError(e, "env.Set(lockid)")
 
 	// Run in exclusive mode - lock stream's op
@@ -90,12 +90,12 @@ func runTrack(env *lsf.Environment, args ...string) (err error) {
 	defer panics.Recover(&err)
 	log.Printf("command/track.runTrack")
 
-	id := schema.StreamId(*trackCmdOptions.id.value)
+	id := *trackCmdOptions.id.value
 	supervisor := getSupervisor(env) // panics // REVU: generic to all active cmds
 
-	docid := docIdForStream(id)
-	v, found := env.Get(lsf.VarKey(string(docid)))
-	panics.OnFalse(found, "BUG", "logStream not bound", docid)
+	docId := docIdForStream(id)
+	v, found := env.Get(lsf.VarKey(docId))
+	panics.OnFalse(found, "BUG", "logStream not bound", docId)
 	logStream := v.(*schema.LogStream)
 
 	maxSize := uint16(*trackCmdOptions.maxSize.value)
@@ -143,7 +143,7 @@ func runTrack(env *lsf.Environment, args ...string) (err error) {
 func endTrack(env *lsf.Environment, args ...string) (err error) {
 	defer panics.Recover(&err)
 
-	id := schema.StreamId(*trackCmdOptions.id.value)
+	id := *trackCmdOptions.id.value
 
 	// - unlock track action for stream
 	lockid := trackResourceId(env, id, "track")
@@ -153,10 +153,10 @@ func endTrack(env *lsf.Environment, args ...string) (err error) {
 	return v.(system.Lock).Unlock()
 }
 
-func docIdForStream(id schema.StreamId) system.DocId {
-	return system.DocId(fmt.Sprintf("stream.%s.stream", id))
+func docIdForStream(id string) string {
+	return fmt.Sprintf("stream.%s.stream", id)
 }
-func trackResourceId(env *lsf.Environment, stream schema.StreamId, restype string) string {
-	resource := fmt.Sprintf("stream.%s.%s", stream, restype)
+func trackResourceId(env *lsf.Environment, streamId string, restype string) string {
+	resource := fmt.Sprintf("stream.%s.%s", streamId, restype)
 	return env.ResourceId(resource)
 }

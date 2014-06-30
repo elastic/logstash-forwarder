@@ -20,11 +20,9 @@ type LogAccessMode string
 
 var logAccess = struct{ Reader, Writer LogAccessMode }{"sys-log-reader", "sys-log-writer"}
 
-type LogId string
-
 // ~analogous to system.Document
 type Log interface {
-	Id() LogId
+	Id() string
 	Writer() LogWriter
 	Reader() LogReader
 }
@@ -38,13 +36,13 @@ type LogReader interface {
 type LogWriter io.Writer // entertained
 
 type syslog struct {
-	id      LogId
+	id      string
 	info    *os.FileInfo
 	entries []string
 	lock    Lock
 }
 
-func (sl *syslog) Id() LogId {
+func (sl *syslog) Id() string {
 	panic("not impelmented")
 }
 
@@ -53,7 +51,7 @@ func (sl *syslog) Tail() string {
 }
 
 // this is NOT creating a log file. It is entirely analogous to document's newDocument.
-func newLog(id LogId, fpath, fname string, data []string) (l *syslog, err error) {
+func newLog(id string, fpath, fname string, data []string) (l *syslog, err error) {
 	defer panics.Recover(&err)
 
 	assertSystemObjectPath(fpath, fname) // panics
