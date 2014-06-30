@@ -74,9 +74,9 @@ func (r *registrar) String() string {
 	return s
 }
 
-func (r *registrar) DeleteDocument(key DocId) (bool, error) {
+func (r *registrar) DeleteDocument(id string) (bool, error) {
 	fn := func() interface{} {
-		ok, e := r.reg.deleteDocument(key)
+		ok, e := r.reg.deleteDocument(id)
 		if e != nil {
 			return e
 		}
@@ -95,9 +95,9 @@ func (r *registrar) UpdateDocument(doc Document) (bool, error) {
 	}
 	return r.dispatch1(fn)
 }
-func (r *registrar) ReadDocument(key DocId) (Document, error) {
+func (r *registrar) ReadDocument(id string) (Document, error) {
 	fn := func() interface{} {
-		doc, e := r.reg.readDocument(key)
+		doc, e := r.reg.readDocument(id)
 		if e != nil {
 			return e
 		}
@@ -106,9 +106,9 @@ func (r *registrar) ReadDocument(key DocId) (Document, error) {
 	return r.dispatch0(fn)
 }
 
-func (r *registrar) CreateDocument(key DocId, data map[string][]byte) (Document, error) {
+func (r *registrar) CreateDocument(id string, data map[string][]byte) (Document, error) {
 	fn := func() interface{} {
-		doc, e := r.reg.createDocument(key, data)
+		doc, e := r.reg.createDocument(id, data)
 		if e != nil {
 			return e
 		}

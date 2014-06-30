@@ -11,17 +11,17 @@ type Registrar interface {
 	String() string
 	// Reads the document and returns snapshot value.
 	// No locks held. No files open
-	ReadDocument(DocId) (Document, error)
+	ReadDocument(id string) (Document, error)
 	// Creates new document with given map (of record data).
 	// Returns the document snapshot (per ReadDocument)
 	// No locks head. No files open
-	CreateDocument(DocId, map[string][]byte) (Document, error)
+	CreateDocument(id string, content map[string][]byte) (Document, error)
 	// Saves document (if dirty) - dirty flag cleared; otherwise NOP.
 	// Write Lock acquired for duration (attempted)
 	// New document file is atomically swapped.
-	UpdateDocument(Document) (bool, error)
+	UpdateDocument(document Document) (bool, error)
 	//
-	DeleteDocument(DocId) (bool, error)
+	DeleteDocument(id string) (bool, error)
 
 	// Registrar is a controlled process. See system.Process.
 	Process

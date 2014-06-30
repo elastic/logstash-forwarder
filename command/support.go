@@ -20,16 +20,16 @@ func _lockResource(env *lsf.Environment, resource string, reason string) system.
 }
 
 // assert resource does not exist
-func _assertNotExists(env *lsf.Environment, docid system.DocId) {
-	doc, e := env.LoadDocument(docid)
+func _assertNotExists(env *lsf.Environment, docId string) {
+	doc, e := env.LoadDocument(docId)
 	if e == nil && doc != nil {
 		panic(lsf.E_EXISTING)
 	}
 }
 
 // assert resource does not exist
-func _assertExists(env *lsf.Environment, docid system.DocId) {
-	doc, e := env.LoadDocument(docid)
+func _assertExists(env *lsf.Environment, docId string) {
+	doc, e := env.LoadDocument(docId)
 	if e != nil || doc == nil {
 		panic(lsf.E_NOTEXISTING)
 	}

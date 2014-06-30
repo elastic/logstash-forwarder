@@ -55,7 +55,7 @@ func openRegistry(dir string) (reg *registry, err error) {
 
 // REVU: these should formalize the XXX_LOG/XXX pattern for docs/logs.
 // Panics on zero-value/nil 'key' arg.
-func DocpathForKey(lsfpath string, key DocId) (filepath, filename string) {
+func DocpathForKey(lsfpath string, key string) (filepath, filename string) {
 	id := string(key)
 	filepath, filename, e := objectPathForId(lsfpath, string(id))
 	panics.OnError(e, "BUG")
@@ -71,19 +71,19 @@ func (r *registry) updateDocument(doc *document) (bool, error) {
 	return updateDocument(doc, path.Join(docpath, docname))
 }
 
-func (r *registry) readDocument(key DocId) (*document, error) {
-	docpath, docname := DocpathForKey(r.path, key)
-	return loadDocument(key, path.Join(docpath, docname))
+func (r *registry) readDocument(id string) (*document, error) {
+	docpath, docname := DocpathForKey(r.path, id)
+	return loadDocument(id, path.Join(docpath, docname))
 }
 
-func (r *registry) createDocument(key DocId, data map[string][]byte) (*document, error) {
-	docpath, docname := DocpathForKey(r.path, key)
-	return newDocument(key, docpath, docname, data)
+func (r *registry) createDocument(id string, data map[string][]byte) (*document, error) {
+	docpath, docname := DocpathForKey(r.path, id)
+	return newDocument(id, docpath, docname, data)
 }
 
-func (r *registry) deleteDocument(key DocId) (bool, error) {
-	docpath, docname := DocpathForKey(r.path, key)
-	return deleteDocument(key, path.Join(docpath, docname))
+func (r *registry) deleteDocument(id string) (bool, error) {
+	docpath, docname := DocpathForKey(r.path, id)
+	return deleteDocument(id, path.Join(docpath, docname))
 }
 
 // ----------------------------------------------------------------------------

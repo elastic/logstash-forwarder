@@ -45,10 +45,10 @@ func runUpdateStream(env *lsf.Environment, args ...string) (err error) {
 	defer oplock.Unlock()
 
 	// verify it exists
-	docid := system.DocId(fmt.Sprintf("stream.%s.stream", id))
-	doc, e := env.LoadDocument(docid)
-	panics.OnError(e, "BUG command.runUpdateStream:", "LoadDocument:", string(docid))
-	panics.OnTrue(doc == nil, "BUG command.runUpdateStream:", "LoadDocument:", string(docid))
+	docId := fmt.Sprintf("stream.%s.stream", id)
+	doc, e := env.LoadDocument(docId)
+	panics.OnError(e, "BUG command.runUpdateStream:", "LoadDocument:", docId)
+	panics.OnTrue(doc == nil, "BUG command.runUpdateStream:", "LoadDocument:", docId)
 
 	// update stream config document
 	var option interface{}

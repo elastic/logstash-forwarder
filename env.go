@@ -65,7 +65,7 @@ type Environment struct {
 	vars     map[varKey]interface{} // runtime vars only
 
 	registrar system.Registrar
-	docs      map[system.DocId]system.Document
+	docs      map[string]system.Document
 	docslock  sync.RWMutex
 	remotes   map[string]*schema.Port
 	streams   map[string]*schema.LogStream
@@ -77,7 +77,7 @@ func NewEnvironment() *Environment {
 	env := &Environment{
 		bound:    false,
 		vars:     make(map[varKey]interface{}),
-		docs:     make(map[system.DocId]system.Document),
+		docs:     make(map[string]system.Document),
 		streams:  make(map[string]*schema.LogStream),
 		remotes:  make(map[string]*schema.Port),
 		journals: make(map[string]*schema.LogJournal),
@@ -113,12 +113,12 @@ func (env *Environment) ResourceId(name string) string {
 }
 
 // Creates a document in the bound LSF Port.
-func (env *Environment) CreateDocument(docid system.DocId, datamap system.DataMap) error {
+func (env *Environment) CreateDocument(docId string, datamap system.DataMap) error {
 	if !env.bound {
 		return E_ILLEGALSTATE
 	}
 	mappings := datamap.Mappings()
-	_, e := env.registrar.CreateDocument(docid, mappings)
+	_, e := env.registrar.CreateDocument(docId, mappings)
 	if e != nil {
 		return e
 	}
@@ -162,7 +162,7 @@ func (env *Environment) GetRecord(record string) (value []byte, err error) {
 // The set of documents sorted from global to local scope.
 // Resolution of the record is to match the value from the most proximate
 // (i.e. local) document provided.
-func (env *Environment) resolveRecord(documents []system.DocId, key string) []byte {
+func (env *Environment) resolveRecord(documents []string, key string) []byte {
 	env.docslock.RLock()
 	defer env.docslock.RUnlock()
 
@@ -180,15 +180,15 @@ func (env *Environment) resolveRecord(documents []system.DocId, key string) []by
 
 // Deletes the document from the environemnt and the bound LSF Port.
 // REVU TODO clarify ok/error - do we need both?
-func (env *Environment) DeleteDocument(docid system.DocId) (ok bool, err error) {
+func (env *Environment) DeleteDocument(docId string) (ok bool, err error) {
 	defer panics.Recover(&err)
 
-	ok, e := env.registrar.DeleteDocument(docid)
-	panics.OnError(e, "Environment.DeleteDocument", "docid:", docid)
-	panics.OnFalse(ok, "Environment.DeleteDocument", "docid:", docid)
+	ok, e := env.registrar.DeleteDocument(docId)
+	panics.OnError(e, "Environment.DeleteDocument", "docId:", docId)
+	panics.OnFalse(ok, "Environment.DeleteDocument", "docId:", docId)
 
 	env.docslock.Lock()
-	delete(env.docs, docid)
+	delete(env.docs, docId)
 	env.docslock.Unlock()
 
 	return ok, e
@@ -200,8 +200,8 @@ func (env *Environment) UpdateDocument(doc system.Document) (ok bool, err error)
 	defer panics.Recover(&err)
 
 	ok, e := env.registrar.UpdateDocument(doc)
-	panics.OnError(e, "Environment.UpdateDocument", "docid:", doc.Id())
-	panics.OnFalse(ok, "Environment.UpdateDocument", "docid:", doc.Id())
+	panics.OnError(e, "Environment.UpdateDocument", "docId:", doc.Id())
+	panics.OnFalse(ok, "Environment.UpdateDocument", "docId:", doc.Id())
 
 	env.docslock.Lock()
 	env.docs[doc.Id()] = doc
@@ -211,27 +211,27 @@ func (env *Environment) UpdateDocument(doc system.Document) (ok bool, err error)
 }
 
 // Load fully reads the identified document from the bound LSF Port.
-func (env *Environment) LoadDocument(docid system.DocId) (doc system.Document, err error) {
+func (env *Environment) LoadDocument(docId string) (doc system.Document, err error) {
 	defer panics.Recover(&err)
 
-	doc, e := env.registrar.ReadDocument(docid)
-	panics.OnError(e, "Environment.LoadDocument", "docid:", docid)
+	doc, e := env.registrar.ReadDocument(docId)
+	panics.OnError(e, "Environment.LoadDocument", "docId:", docId)
 
 	env.docslock.Lock()
-	env.docs[docid] = doc
+	env.docs[docId] = doc
 	env.docslock.Unlock()
 
 	return doc, e
 }
 
 // Get document by id. Loads the document if not already loaded.
-func (env *Environment) GetDocument(docid system.DocId) (doc system.Document, err error) {
+func (env *Environment) GetDocument(docId string) (doc system.Document, err error) {
 	env.docslock.Lock()
-	doc = env.docs[docid]
+	doc = env.docs[docId]
 	env.docslock.Unlock()
 
 	if doc == nil {
-		return env.LoadDocument(docid)
+		return env.LoadDocument(docId)
 	}
 
 	return doc, nil
@@ -239,25 +239,25 @@ func (env *Environment) GetDocument(docid system.DocId) (doc system.Document, er
 
 // All documents (ids) are presumed to be valid in context of the bound LSF Port.
 // Returns error (and stops loading) on missing doc(s).
-func (env *Environment) loadDocuments(docIds []system.DocId) (err error) {
+func (env *Environment) loadDocuments(docIds []string) (err error) {
 
 	defer panics.Recover(&err)
 
 	env.docslock.Lock()
 	defer env.docslock.Unlock()
 
-	for _, docid := range docIds {
-		_, found := env.docs[docid]
+	for _, docId := range docIds {
+		_, found := env.docs[docId]
 		if !found {
-			doc, e := env.registrar.ReadDocument(docid)
-			panics.OnError(e, "Environment.loadDocuments", "docid:", docid)
-			env.docs[docid] = doc
+			doc, e := env.registrar.ReadDocument(docId)
+			panics.OnError(e, "Environment.loadDocuments", "docId:", docId)
+			env.docs[docId] = doc
 		}
 	}
 	return nil
 }
 
-func getRecordHierarchy(record string) (documents []system.DocId, key string, err error) {
+func getRecordHierarchy(record string) (documents []string, key string, err error) {
 	terms := strings.Split(record, ".")
 	n := len(terms)
 	if n < 2 {
@@ -267,10 +267,10 @@ func getRecordHierarchy(record string) (documents []system.DocId, key string, er
 	docname := terms[n-2]
 	key = terms[n-1]
 
-	docs := make([]system.DocId, n-1)
-	docs[0] = system.DocId(docname)
+	docs := make([]string, n-1)
+	docs[0] = string(docname)
 	for i := 1; i < n-1; i++ {
-		docs[i] = system.DocId(strings.Join(terms[0:i], ".") + "." + docname)
+		docs[i] = string(strings.Join(terms[0:i], ".") + "." + docname)
 	}
 	return docs, key, nil
 }
@@ -384,12 +384,12 @@ func CreateEnvironment(dir string, force bool) (rootpath string, err error) {
 	//	log.Printf("DEBUG using registrar %s", registrar)
 	defer func() { registrar.Signal() <- struct{}{} }()
 
-	docid := system.DocId("system")
+	docId := string("system")
 	data := map[string][]byte{
 		"create-time": []byte(time.Now().String()),
 	}
-	_, e = registrar.CreateDocument(docid, data)
-	panics.OnError(e, "Environment.CreateEnvironment", "registrar.CreateDocument", "docid:", docid)
+	_, e = registrar.CreateDocument(docId, data)
+	panics.OnError(e, "Environment.CreateEnvironment", "registrar.CreateDocument", "docId:", docId)
 
 	return root, nil
 }
@@ -450,8 +450,8 @@ func (env *Environment) Initialize(dir string) (err error) {
 	e = env.startRegistrar()
 	panics.OnError(e, "Environment.Initialize:", "env.startRegistrar")
 
-	sysdoc := system.DocId("system")
-	env.loadDocuments([]system.DocId{sysdoc})
+	sysdoc := string("system")
+	env.loadDocuments([]string{sysdoc})
 
 	_, e = env.registrar.ReadDocument(sysdoc)
 	panics.OnError(e, "Environment.Initialize:", "env.ReadDocument")
@@ -527,9 +527,9 @@ func justResourceId(env *Environment, restype string, resid string, encode syste
 
 // See GetResourceDigests()
 func digestForResourceId(env *Environment, restype string, resid string, encode system.DocumentDigestFn) string {
-	docid := system.DocId(fmt.Sprintf("%s.%s.%s", restype, resid, restype))
-	doc, e := env.LoadDocument(docid)
-	panics.OnError(e, "BUG", "getResourceDigests:", "loadDocument", docid)
-	panics.OnTrue(doc == nil, "BUG", "getResourceDigests:", "loadDocument", docid)
+	docId := string(fmt.Sprintf("%s.%s.%s", restype, resid, restype))
+	doc, e := env.LoadDocument(docId)
+	panics.OnError(e, "BUG", "getResourceDigests:", "loadDocument", docId)
+	panics.OnTrue(doc == nil, "BUG", "getResourceDigests:", "loadDocument", docId)
 	return encode(doc)
 }
