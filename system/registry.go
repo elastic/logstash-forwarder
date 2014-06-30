@@ -92,7 +92,7 @@ func (r *registry) deleteDocument(id string) (bool, error) {
 
 // REVU: this can either do the cast to string as of now or actually implement
 //       the log naming schema.
-func LogPathForKey(lsfpath string, key LogId) (filepath, filename string) {
+func LogPathForKey(lsfpath string, key string) (filepath, filename string) {
 	id := string(key)
 
 	filepath, filename, e := objectPathForId(lsfpath, id)
@@ -104,14 +104,14 @@ func LogPathForKey(lsfpath string, key LogId) (filepath, filename string) {
 // TODO REVU if returning interface (and not support type) makes sense.
 // see ~ note for System Documents (above)
 
-func (r *registry) accessLog(id LogId, mode LogAccessMode) (*syslog, error) {
+func (r *registry) accessLog(id string, mode LogAccessMode) (*syslog, error) {
 	panic("not implemented")
 }
 
-func (r *registry) createLog(id LogId) (*syslog, error) {
+func (r *registry) createLog(id string) (*syslog, error) {
 	panic("not implemented")
 }
 
-func (r *registry) deleteLog(id LogId) (bool, error) {
+func (r *registry) deleteLog(id string) (bool, error) {
 	panic("not implemented")
 }

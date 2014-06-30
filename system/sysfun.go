@@ -18,7 +18,7 @@ func UserHome() string {
 // Return the canonical file basepath and basename for the identified
 // system (FS) object. Nil/ZV input arg(s) results in error.
 //
-// Note: Don't confuse oid with fs.Object.Id(). oid is generalizing DocId/LogId
+// Note: Don't confuse oid with fs.Object.Id(). oid is generalizing DocIds/LogIds
 // which is merely a semantic identifier exclusive to the system.
 func objectPathForId(lsfpath string, oid string) (basepath, basename string, err error) {
 	if lsfpath == "" || oid == "" {
