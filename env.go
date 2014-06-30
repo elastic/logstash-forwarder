@@ -343,8 +343,12 @@ func CreateEnvironment(dir string, force bool) (rootpath string, err error) {
 
 	defer panics.Recover(&err)
 
+	// is the working dir the same as user home?
 	userHome := system.UserHome()
 	isUserHome := userHome == dir
+
+	// onetime setup user account global SLF port
+	// if not existing
 	if !isUserHome {
 		// create user level .lsf environment if not existing
 		if _, e := CreateEnvironment(userHome, false); e != nil && e != E_EXISTING_LSF {
@@ -352,44 +356,52 @@ func CreateEnvironment(dir string, force bool) (rootpath string, err error) {
 		}
 	}
 
+	// determine LSF environment root path.
+	// overwrite of existing LSF environment must be forced.
 	root := rootAt(dir)
 	exists := exists(root)
 	if exists && !force {
 		return "", E_EXISTING_LSF
 	}
 
-	uid := HexShaDigest(dir) // unique id for this absolute path
-	var resource string      // unique resource identifier is a path
+	// lock out all other for this op
+	uid := HexShaDigest(dir) // unique id for the environment based on its absolute path
+	var portPath string
 	switch isUserHome {
 	case true:
-		resource = path.Join(userHome, ".lsf-init")
+		portPath = path.Join(userHome)
 	default:
-		resource = path.Join(userHome, RootDir, uid+".lsf-init")
+		portPath = path.Join(userHome, RootDir)
 	}
 
-	lock, ok, e := system.LockResource(resource, "create new lsf port")
-	panics.OnError(e, "Environment.CreateEnvironment", "system.LockResource", "resource:", resource)
-	panics.OnFalse(ok, "Environment.CreateEnvironment", "system.LockResource", "resource:", resource, "concurrency violation")
-	defer lock.Unlock()
+	opLock, _, e := system.ExclusiveResourceOp(portPath, system.Op.LsfNew, uid, "new environment")
+	panics.OnError(e, "CreateEnvironment")
+	defer opLock.Unlock()
 
+	// clean start
+	// nop for new - meaningful only if existing
 	e = os.RemoveAll(root)
 	panics.OnError(e, "Environment.CreateEnvironment", "os.RemoveAll", "root:", root)
 
+	// create the minimal structure
 	e = os.Mkdir(root, os.ModeDir|defaultDirMode)
 	panics.OnError(e, "Environment.CreateEnvironment", "os.Mkdir", "root:", root)
 
-	registrar, e := system.StartRegistry(root)
-	panics.OnError(e, "Environment.CreateEnvironment", "system.StartRegistry", "root:", root)
-
-	//	log.Printf("DEBUG using registrar %s", registrar)
-	defer func() { registrar.Signal() <- struct{}{} }()
-
+	// and system meta data
 	docId := string("system")
 	data := map[string][]byte{
 		"create-time": []byte(time.Now().String()),
 	}
+
+	registrar, e := system.StartRegistry(root)
+	panics.OnError(e, "Environment.CreateEnvironment", "system.StartRegistry", "root:", root)
+	//	defer func() { registrar.Signal() <- struct{}{} }() // stop the registrar on return
+
 	_, e = registrar.CreateDocument(docId, data)
 	panics.OnError(e, "Environment.CreateEnvironment", "registrar.CreateDocument", "docId:", docId)
+
+	// stop the registrar
+	registrar.Signal() <- struct{}{}
 
 	return root, nil
 }

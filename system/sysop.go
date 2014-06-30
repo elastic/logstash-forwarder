@@ -29,7 +29,7 @@ var Op = struct {
 
 	_stub OpCode
 }{
-	StreamAdd: OpCode("lsf-new"),
+	LsfNew: OpCode("lsf-new"),
 
 	StreamAdd:    OpCode("stream-add"),
 	StreamUpdate: OpCode("stream-update"),
