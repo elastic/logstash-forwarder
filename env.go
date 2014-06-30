@@ -39,6 +39,10 @@ var E_CONCURRENT = errors.New("concurrent operation error")
 
 type varKey string
 
+func VarKey(v string) varKey {
+	return varKey(v)
+}
+
 const (
 	VarHomePath     varKey = "lsf.home.path"
 	VarHomePort            = "lsf.home.port"

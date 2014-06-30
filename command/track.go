@@ -60,6 +60,29 @@ func initTrack(env *lsf.Environment, args ...string) (err error) {
 		panic("one of age or size limits must be specified for the cache. run with -h flag for details.")
 	}
 
+	id := schema.StreamId(*trackCmdOptions.id.value)
+
+	// Load stream doc and get LogStream instance
+	docid := docIdForStream(id)
+	doc, e := env.LoadDocument(docid)
+	panics.OnError(e, "no such stream:", id)
+	panics.OnNil(doc, "BUG - doc is nil")
+
+	logStream := schema.DecodeLogStream(doc)
+	_, e = env.Set(lsf.VarKey(string(docid)), logStream)
+	panics.OnError(e, "env.Set(lockid)")
+
+	// Run in exclusive mode - lock stream's op
+	lockid := trackResourceId(env, id, "track")
+	oplock, ok, e := system.LockResource(lockid, "track stream cmd lock")
+	panics.OnError(e, "command.runTrack:", "lockResource:", lockid)
+	if !ok {
+		return fmt.Errorf("tracking for stream %s is already in progress.", id)
+	}
+
+	_, e = env.Set(lsf.VarKey(lockid), oplock)
+	panics.OnError(e, "env.Set(lockid)")
+
 	return
 }
 
@@ -67,25 +90,13 @@ func runTrack(env *lsf.Environment, args ...string) (err error) {
 	defer panics.Recover(&err)
 	log.Printf("command/track.runTrack")
 
+	id := schema.StreamId(*trackCmdOptions.id.value)
 	supervisor := getSupervisor(env) // panics // REVU: generic to all active cmds
 
-	// Load stream doc and get LogStream instance
-	id := schema.StreamId(*trackCmdOptions.id.value)
-	docid := system.DocId(fmt.Sprintf("stream.%s.stream", id))
-	doc, e := env.LoadDocument(docid)
-	panics.OnError(e, "BUG command.initTrack:", "LoadDocument:", string(docid))
-	panics.OnTrue(doc == nil, "BUG command.initTrack:", "LoadDocument:", string(docid))
-
-	logStream := schema.DecodeLogStream(doc)
-	log.Println(logStream.String())
-
-	// Run in exclusive mode
-	resource := fmt.Sprintf("stream.%s.track", id)
-	lockid := env.ResourceId(resource)
-	oplock, ok, e := system.LockResource(lockid, "track stream - resource "+resource)
-	panics.OnError(e, "command.runUpdateStream:", "lockResource:", resource)
-	panics.OnFalse(ok, "command.runUpdateStream:", "lockResource:", resource)
-	defer oplock.Unlock()
+	docid := docIdForStream(id)
+	v, found := env.Get(lsf.VarKey(string(docid)))
+	panics.OnFalse(found, "BUG", "logStream not bound", docid)
+	logStream := v.(*schema.LogStream)
 
 	maxSize := uint16(*trackCmdOptions.maxSize.value)
 	maxAge := time.Duration(*trackCmdOptions.maxAge.value)
@@ -103,7 +114,7 @@ func runTrack(env *lsf.Environment, args ...string) (err error) {
 				everUntilInterrupted = false
 			default:
 				report, e := scout.Report()
-				panics.OnError(e, "main", "scout.Report")
+				panics.OnError(e, "main", "scout.Report") // REVU: wrong. send error via channel and close
 
 				for _, event := range report.Events {
 					if event.Code != lsfun.TrackEvent.KnownFile { // printing NOP events gets noisy
@@ -119,7 +130,24 @@ func runTrack(env *lsf.Environment, args ...string) (err error) {
 	return
 }
 
+// cleanup:
 func endTrack(env *lsf.Environment, args ...string) (err error) {
-	log.Printf("command/track.endTrack END")
-	return
+	defer panics.Recover(&err)
+
+	id := schema.StreamId(*trackCmdOptions.id.value)
+
+	// - unlock track action for stream
+	lockid := trackResourceId(env, id, "track")
+	v, found := env.Get(lsf.VarKey(lockid))
+	panics.OnFalse(found, "BUG", "lock not bound", lockid)
+
+	return v.(system.Lock).Unlock()
+}
+
+func docIdForStream(id schema.StreamId) system.DocId {
+	return system.DocId(fmt.Sprintf("stream.%s.stream", id))
+}
+func trackResourceId(env *lsf.Environment, stream schema.StreamId, restype string) string {
+	resource := fmt.Sprintf("stream.%s.%s", stream, restype)
+	return env.ResourceId(resource)
 }

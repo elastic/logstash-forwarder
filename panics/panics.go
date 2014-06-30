@@ -33,7 +33,7 @@ func OnFalse(flag bool, info ...interface{}) {
 	if flag {
 		return
 	}
-	err := fmt.Errorf("%s - assert-fail: FALSE", fmtInfo(info...))
+	err := fmt.Errorf("%s - assert-fail:", fmtInfo(info...))
 	panic(&Error{Cause: err, err: err})
 }
 
@@ -41,8 +41,29 @@ func OnTrue(flag bool, info ...interface{}) {
 	if !flag {
 		return
 	}
-	err := fmt.Errorf("%s - assert-fail: TRUE", fmtInfo(info...))
+	err := fmt.Errorf("%s - assert-fail:", fmtInfo(info...))
 	panic(&Error{Cause: err, err: err})
+}
+
+func OnNil(v interface{}, info ...interface{}) {
+	if v != nil {
+		return
+	}
+	err := fmt.Errorf("%s - value is nil:", fmtInfo(info...))
+	panic(&Error{Cause: err, err: err})
+}
+
+func OnError(e error, info ...interface{}) {
+	if e == nil {
+		return
+	}
+	var err error = e
+	if len(info) > 0 {
+		err = fmt.Errorf("error: %s - cause: %s", fmtInfo(info...), e)
+	} else if !strings.HasPrefix(e.Error(), "error:") {
+		err = fmt.Errorf("error: %s%s", fmtInfo(info...), e)
+	}
+	panic(&Error{Cause: e, err: err})
 }
 
 func fmtInfo(info ...interface{}) string {
@@ -70,19 +91,6 @@ func fmtInfo(info ...interface{}) string {
 		msg = strings.Trim(msg, " ")
 	}
 	return msg
-}
-
-func OnError(e error, info ...interface{}) {
-	if e == nil {
-		return
-	}
-	var err error = e
-	if len(info) > 0 {
-		err = fmt.Errorf("error: %s - cause: %s", fmtInfo(info...), e)
-	} else if !strings.HasPrefix(e.Error(), "error:") {
-		err = fmt.Errorf("error: %s%s", fmtInfo(info...), e)
-	}
-	panic(&Error{Cause: e, err: err})
 }
 
 func Recover(err *error) error {
@@ -131,6 +139,7 @@ type fnpanics struct {
 type Panics interface {
 	Recover(err *error) error
 	OnError(e error, info ...interface{})
+	OnNil(v interface{}, info ...interface{})
 	OnFalse(flag bool, info ...interface{})
 	OnTrue(flag bool, info ...interface{})
 }
@@ -146,6 +155,10 @@ func (t *fnpanics) infoFixup(info ...interface{}) []interface{} {
 func (t *fnpanics) OnError(e error, info ...interface{}) {
 	infofn := t.infoFixup(info...)
 	OnError(e, infofn...)
+}
+func (t *fnpanics) OnNil(v interface{}, info ...interface{}) {
+	infofn := t.infoFixup(info...)
+	OnNil(v, infofn...)
 }
 func (t *fnpanics) OnFalse(flag bool, info ...interface{}) {
 	infofn := t.infoFixup(info...)
