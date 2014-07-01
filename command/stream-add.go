@@ -31,10 +31,5 @@ func runAddStream(env *lsf.Environment, args ...string) (err error) {
 	basepath := *addStreamOptions.path.value
 	fields := make(map[string]string) // TODO: fields needs a solution
 
-	e := env.AddLogStream(id, basepath, pattern, journalMode, fields)
-	if e != nil {
-		return e
-	}
-
-	return nil
+	return env.AddLogStream(id, basepath, pattern, journalMode, fields)
 }

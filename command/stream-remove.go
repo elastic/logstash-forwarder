@@ -1,11 +1,8 @@
 package command
 
 import (
-	"fmt"
 	"lsf"
 	"lsf/panics"
-	"lsf/system"
-	"os"
 )
 
 const removeStreamCmdCode lsf.CommandCode = "stream-remove"
@@ -39,40 +36,9 @@ func verifyRemoveStreamRequiredOpts(env *lsf.Environment, args ...string) error 
 	return nil
 }
 
-// REVU: TODO definitively require a stream 'x' lock for use by
-// processes that expect the stream (info) to remain in place.
-// For now, assuming this is the same "stream.<name>.stream.lock"
-// lock file.
 func runRemoveStream(env *lsf.Environment, args ...string) (err error) {
 	panics.Recover(&err)
 
 	id := *removeStreamOptions.id.value
-
-	// check existing
-	docId := fmt.Sprintf("stream.%s.stream", id)
-	doc, e := env.LoadDocument(docId)
-	if e != nil || doc == nil {
-		return lsf.E_NOTEXISTING
-	}
-
-	// lock lsf port's "streams" resource
-	opLock, _, e := system.ExclusiveResourceOp(env.Port(), system.Op.StreamRemove, id, "stream-remove command")
-	panics.OnError(e, "system.Op.StreamRemove")
-	defer opLock.Unlock()
-
-	// remove doc
-	ok, e := env.DeleteDocument(docId)
-	panics.OnError(e, "command.runRemoveStream:", "DeleteDocument:", id)
-	panics.OnFalse(ok, "command.runRemoveStream:", "DeleteDocument:", id)
-
-	// remove the stream's directory
-	// REVU: this command needs a check to see if any procs
-	// related to this stream are running . OK for initial.
-	dir, fname := system.DocpathForKey(env.Port(), docId)
-	fmt.Printf("DEBUG: runRemoveStream: %s %s\n", dir, fname)
-
-	e = os.RemoveAll(dir)
-	panics.OnError(e, "command.runRemoveStream:", "os.RemoveAll:", dir)
-
-	return nil
+	return env.RemoveLogStream(id)
 }

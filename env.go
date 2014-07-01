@@ -406,6 +406,40 @@ func CreateEnvironment(dir string, force bool) (rootpath string, err error) {
 	return root, nil
 }
 
+func (env *Environment) RemoveLogStream(id string) error {
+	// NOTE: ops that require stream to exist can also lock this op
+	opLock, _, e := system.ExclusiveResourceOp(env.Port(), system.Op.StreamRemove, id, "stream-remove")
+	if e != nil {
+		return e
+	}
+	defer opLock.Unlock()
+
+	// check existing
+	docId := fmt.Sprintf("stream.%s.stream", id)
+	doc, e := env.LoadDocument(docId)
+	if e != nil || doc == nil {
+		return E_NOTEXISTING
+	}
+
+	// remove doc
+	ok, e := env.DeleteDocument(docId)
+	if e != nil {
+		return e
+	}
+	if !ok {
+		return fmt.Errorf("failed to delete document: %s", docId)
+	}
+
+	// remove the stream directory from the lsf environment
+	docpath, _ := system.DocpathForKey(env.Port(), docId)
+	e = os.RemoveAll(docpath)
+	if e != nil {
+		return e
+	}
+
+	return nil
+}
+
 func (env *Environment) AddLogStream(id, basepath, pattern, journalModel string, fields map[string]string) error {
 	opLock, _, e := system.ExclusiveResourceOp(env.Port(), system.Op.StreamAdd, id, "stream-add")
 	if e != nil {
@@ -417,7 +451,7 @@ func (env *Environment) AddLogStream(id, basepath, pattern, journalModel string,
 	docId := fmt.Sprintf("stream.%s.stream", id)
 	doc, e := env.LoadDocument(docId)
 	if e == nil && doc != nil {
-		panic(E_EXISTING)
+		return E_EXISTING
 	}
 
 	// create the stream-conf file.
@@ -444,7 +478,7 @@ func (env *Environment) AddRemotePort(id, host string, port int) error {
 	docId := fmt.Sprintf("remote.%s.remote", id)
 	doc, e := env.LoadDocument(docId)
 	if e == nil && doc != nil {
-		panic(E_EXISTING)
+		return E_EXISTING
 	}
 
 	lsfport, e := schema.NewRemotePort(id, host, port)
