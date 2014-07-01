@@ -21,13 +21,12 @@ func init() {
 
 	addRemote = &lsf.Command{
 		Name:  addRemoteCmdCode,
-		About: "Add a new log remote",
+		About: "Add a new remote port",
 		Init:  _verifyAddRemoteRequiredOpts,
 		Run:   runAddRemote,
 		Flag:  FlagSet(addRemoteCmdCode),
 	}
 	addRemoteOptions = &addRemoteOptionsSpec{
-		//		global: NewBoolFlag(addRemote.Flag, "G", "global", false, "global scope flag for command", false),
 		id:   NewStringFlag(addRemote.Flag, "r", "remote-id", "", "unique identifier for remote port", true),
 		host: NewStringFlag(addRemote.Flag, "h", "remote-host", "", "URL of the remote port", true),
 		port: NewInt64Flag(addRemote.Flag, "p", "remote-port", 0, "IP port number of remote port", true),
@@ -56,10 +55,5 @@ func runAddRemote(env *lsf.Environment, args ...string) (err error) {
 	host := *addRemoteOptions.host.value
 	port := int(*addRemoteOptions.port.value)
 
-	e := env.AddRemotePort(id, host, port)
-	if e != nil {
-		return e
-	}
-
-	return nil
+	return env.AddRemotePort(id, host, port)
 }
