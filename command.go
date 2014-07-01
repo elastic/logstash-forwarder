@@ -2,6 +2,7 @@ package lsf
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"lsf/panics"
 	"lsf/system"
@@ -11,6 +12,13 @@ import (
 )
 
 // REVU: no errors? TODO: consolidate all errors under lsf/errors
+var Status = struct {
+	Ok, Interrupted_Ok /*, Faulted*/ string
+}{
+	Ok:             "ok",
+	Interrupted_Ok: "Interrupted_Ok",
+	//	Faulted:        "Faulted",
+}
 
 // lsf Command function
 //type CommandFn func(context map[string]interface{}, args ...string)
@@ -139,12 +147,18 @@ func RunActive(env *Environment, cmd0 *Command, args ...string) (err error) {
 	case usersig := <-user:
 		// stop the command process on user signal
 		cmd.proc.Signal() <- usersig
-		<-cmd.proc.Status()
+		stat = <-cmd.proc.Status()
 		break
 	}
 
 	// TODO: act on 'stat'
-	log.Printf("TODO: use stat: %s", stat)
+	switch stat {
+	case Status.Ok, Status.Interrupted_Ok:
+		log.Printf("\nstream-track: %v", stat)
+	default:
+		err = fmt.Errorf("track fault on exit: %v", stat)
+		log.Printf("\n%s", err.Error())
+	}
 
 	// run cmd finalizer func (if any)
 	if cmd.cmd.End != nil {
@@ -152,5 +166,5 @@ func RunActive(env *Environment, cmd0 *Command, args ...string) (err error) {
 		panics.OnError(e2)
 	}
 
-	return nil
+	return
 }

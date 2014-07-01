@@ -132,7 +132,7 @@ func runTrack(env *lsf.Environment, args ...string) (err error) {
 				time.Sleep(time.Duration(delay))
 			}
 		}
-		supervisor.Report() <- "done"
+		supervisor.Report() <- lsf.Status.Interrupted_Ok
 	}()
 
 	return
