@@ -54,6 +54,7 @@ func LockResource(resource string, info string) (l Lock, ok bool, err error) {
 
 	//	log.Printf("DEBUG LockResource: %s", resource)
 	// try creating lock file
+	// REVU: this can be reenterant TODO check the pid in lock file.
 	file, e := createLockFile(resource)
 	if os.IsExist(e) {
 		return nil, false, nil
