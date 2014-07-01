@@ -1,14 +1,15 @@
 package command
 
 import (
-	"log"
 	"lsf"
+	"lsf/panics"
 )
 
 const removeRemoteCmdCode lsf.CommandCode = "remote-remove"
 
 type removeRemoteOptionsSpec struct {
 	global BoolOptionSpec
+	id     StringOptionSpec
 }
 
 var removeRemote *lsf.Command
@@ -24,12 +25,13 @@ func init() {
 	}
 	removeRemoteOptions = &removeRemoteOptionsSpec{
 		global: NewBoolFlag(removeRemote.Flag, "g", "gg", false, "ggg", false),
+		id:     NewStringFlag(removeRemote.Flag, "r", "remote-id", "", "unique identifier for remote port", true),
 	}
 }
 
-func runRemoveRemote(env *lsf.Environment, args ...string) error {
-	for _, arg := range args {
-		log.Printf("arg: %s\n", arg)
-	}
-	panic("command.runRemoveRemote() not impelemented!")
+func runRemoveRemote(env *lsf.Environment, args ...string) (err error) {
+	panics.Recover(&err)
+
+	id := *removeRemoteOptions.id.value
+	return env.RemoveRemotePort(id)
 }
