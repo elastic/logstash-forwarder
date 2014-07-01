@@ -29,6 +29,7 @@ func init() {
 		id:     NewStringFlag(removeStream.Flag, "s", "stream-id", "", "unique identifier for stream", true),
 	}
 }
+
 func verifyRemoveStreamRequiredOpts(env *lsf.Environment, args ...string) error {
 	if e := verifyRequiredOption(removeStreamOptions.id); e != nil {
 		return e

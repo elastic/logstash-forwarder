@@ -15,7 +15,7 @@ type addRemoteOptionsSpec struct {
 }
 
 var addRemote *lsf.Command
-var addRemoteOptions *addRemoteOptionsSpec
+var addRemoteOptions *editRemoteOptionsSpec
 
 func init() {
 
@@ -26,11 +26,7 @@ func init() {
 		Run:   runAddRemote,
 		Flag:  FlagSet(addRemoteCmdCode),
 	}
-	addRemoteOptions = &addRemoteOptionsSpec{
-		id:   NewStringFlag(addRemote.Flag, "r", "remote-id", "", "unique identifier for remote port", true),
-		host: NewStringFlag(addRemote.Flag, "h", "remote-host", "", "URL of the remote port", true),
-		port: NewInt64Flag(addRemote.Flag, "p", "remote-port", 0, "IP port number of remote port", true),
-	}
+	addRemoteOptions = initEditRemoteOptionsSpec(addRemote.Flag)
 }
 
 func _verifyAddRemoteRequiredOpts(env *lsf.Environment, args ...string) (err error) {

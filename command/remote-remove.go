@@ -20,11 +20,12 @@ func init() {
 	removeRemote = &lsf.Command{
 		Name:  removeRemoteCmdCode,
 		About: "Remove a new log remote",
+		Init:  verifyMinimalRemoteRequiredOpts,
 		Run:   runRemoveRemote,
 		Flag:  FlagSet(removeRemoteCmdCode),
 	}
 	removeRemoteOptions = &removeRemoteOptionsSpec{
-		global: NewBoolFlag(removeRemote.Flag, "g", "gg", false, "ggg", false),
+		global: NewBoolFlag(removeRemote.Flag, "G", "global", false, "global scope operation", false),
 		id:     NewStringFlag(removeRemote.Flag, "r", "remote-id", "", "unique identifier for remote port", true),
 	}
 }

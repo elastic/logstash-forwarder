@@ -32,7 +32,7 @@ type Port struct {
 func (p Port) Path() string { return p.Address.Path }
 
 // recorded elements of LogStream object
-var portElem = struct {
+var PortElem = struct {
 	is_local, id, address string
 }{
 	is_local: "local",
@@ -43,8 +43,8 @@ var portElem = struct {
 // REVU: TODO sort mappings at sysrec..
 func (t *Port) Mappings() map[string][]byte {
 	m := make(map[string][]byte)
-	m[portElem.id] = []byte(t.Id)
-	m[portElem.address] = []byte(t.Address.String())
+	m[PortElem.id] = []byte(t.Id)
+	m[PortElem.address] = []byte(t.Address.String())
 	return m
 }
 
@@ -63,10 +63,10 @@ func PortDigest(doc system.Document) string {
 
 func DecodePort(data system.DataMap) *Port {
 	m := data.Mappings()
-	addr, e := url.Parse(string(m[portElem.address]))
+	addr, e := url.Parse(string(m[PortElem.address]))
 	panics.OnError(e, "BUG", "schema.DecodePort")
 	return &Port{
-		Id:      PortId(string(m[portElem.id])),
+		Id:      PortId(string(m[PortElem.id])),
 		Address: addr,
 	}
 }

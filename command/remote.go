@@ -1,7 +1,9 @@
 package command
 
 import (
+	"flag"
 	"lsf"
+	//	"lsf/panics"
 )
 
 const remoteCmdCode lsf.CommandCode = "remote"
@@ -63,4 +65,29 @@ func runRemote(env *lsf.Environment, args ...string) error {
 	}
 
 	return lsf.Run(env, subcmd, args[xoff:]...)
+}
+
+func verifyMinimalRemoteRequiredOpts(env *lsf.Environment, args ...string) error {
+	if e := verifyRequiredOption(removeRemoteOptions.id); e != nil {
+		return e
+	}
+	return nil
+}
+
+type editRemoteOptionsSpec struct {
+	verbose BoolOptionSpec
+	global  BoolOptionSpec
+	id      StringOptionSpec
+	host    StringOptionSpec
+	port    Int64OptionSpec
+}
+
+func initEditRemoteOptionsSpec(flagset *flag.FlagSet) *editRemoteOptionsSpec {
+	return &editRemoteOptionsSpec{
+		verbose: NewBoolFlag(flagset, "v", "verbose", false, "be verbose", false),
+		global:  NewBoolFlag(flagset, "G", "global", false, "global scope flag for command", false),
+		id:      NewStringFlag(flagset, "r", "remote-id", "", "unique identifier for remote port", true),
+		host:    NewStringFlag(flagset, "h", "remote-host", "", "URL of the remote port", true),
+		port:    NewInt64Flag(flagset, "p", "remote-port", 0, "IP port number of remote port", true),
+	}
 }
