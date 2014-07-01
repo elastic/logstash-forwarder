@@ -85,252 +85,9 @@ func NewEnvironment() *Environment {
 	return env
 }
 
-// Returns the path of the LSF Port to which the environment
-// is bound.
-func (env *Environment) Port() string {
-	if !env.bound {
-		panic("BUG - env not bound")
-	}
-	v, found := env.Get(VarHomePort)
-	if !found {
-		return ""
-	}
-	return v.(*schema.Port).Path()
-}
-
-// Returns the absolute id of a resource in context
-// of this environment. The argument 'name' is a
-// relative identifier.
-// This routine will panic if called from an unbound Environment.
-func (env *Environment) ResourceId(name string) string {
-	if !env.bound {
-		panic("BUG - env not bound")
-	}
-	v, found := env.Get(VarHomePort)
-	panics.OnFalse(found, "BUG", "Environment.ResourceId", "VarHomePort not bound!")
-
-	return path.Join(v.(*schema.Port).Path(), name)
-}
-
-// Creates a document in the bound LSF Port.
-func (env *Environment) CreateDocument(docId string, datamap system.DataMap) error {
-	if !env.bound {
-		return E_ILLEGALSTATE
-	}
-	mappings := datamap.Mappings()
-	_, e := env.registrar.CreateDocument(docId, mappings)
-	if e != nil {
-		return e
-	}
-	return nil
-}
-
-// record is interpreted as a dot notation path. final term
-// is record key in the document in the path. The simplest
-// record spec is "docname.recname". A record arg that does
-// not have at least 2 parts is rejected as E_INVALID.
-//
-// GetRecord side-effects:
-// A call to this method will load the entire doc that contains
-// the record. Additionally, the port directory is walked up
-// from the found document and each matching doc is loaded.
-//
-// The final value for key in record reflects the hierarchical
-// scoping of the matching documents.
-//
-// if not found, will return nil, nil.
-func (env *Environment) GetRecord(record string) (value []byte, err error) {
-
-	defer panics.Recover(&err)
-
-	if !env.bound {
-		return nil, E_ILLEGALSTATE
-	}
-
-	documents, key, e := getRecordHierarchy(record)
-	panics.OnError(e, "Environment.GetRecord:", "record:", record)
-
-	e = env.loadDocuments(documents)
-	panics.OnError(e, "Environment.GetRecord:")
-
-	value = env.resolveRecord(documents, key)
-	return value, nil
-}
-
-// A document Record is resolved in context of the resource hierarchy.
-// The record is logically identified by the key parameter.
-// The set of documents sorted from global to local scope.
-// Resolution of the record is to match the value from the most proximate
-// (i.e. local) document provided.
-func (env *Environment) resolveRecord(documents []string, key string) []byte {
-	env.docslock.RLock()
-	defer env.docslock.RUnlock()
-
-	var value []byte
-	for _, docId := range documents {
-		doc, found := env.docs[docId]
-		if found {
-			if v := doc.Get(key); v != nil {
-				value = v
-			}
-		}
-	}
-	return value
-}
-
-// Deletes the document from the environemnt and the bound LSF Port.
-// REVU TODO clarify ok/error - do we need both?
-func (env *Environment) DeleteDocument(docId string) (ok bool, err error) {
-	defer panics.Recover(&err)
-
-	ok, e := env.registrar.DeleteDocument(docId)
-	panics.OnError(e, "Environment.DeleteDocument", "docId:", docId)
-	panics.OnFalse(ok, "Environment.DeleteDocument", "docId:", docId)
-
-	env.docslock.Lock()
-	delete(env.docs, docId)
-	env.docslock.Unlock()
-
-	return ok, e
-}
-
-// Update fully flushes the document back to the bound LSF Port.
-// REVU TODO clarify ok/error - do we need both?
-func (env *Environment) UpdateDocument(doc system.Document) (ok bool, err error) {
-	defer panics.Recover(&err)
-
-	ok, e := env.registrar.UpdateDocument(doc)
-	panics.OnError(e, "Environment.UpdateDocument", "docId:", doc.Id())
-	panics.OnFalse(ok, "Environment.UpdateDocument", "docId:", doc.Id())
-
-	env.docslock.Lock()
-	env.docs[doc.Id()] = doc
-	env.docslock.Unlock()
-
-	return ok, e
-}
-
-// Load fully reads the identified document from the bound LSF Port.
-func (env *Environment) LoadDocument(docId string) (doc system.Document, err error) {
-	defer panics.Recover(&err)
-
-	doc, e := env.registrar.ReadDocument(docId)
-	panics.OnError(e, "Environment.LoadDocument", "docId:", docId)
-
-	env.docslock.Lock()
-	env.docs[docId] = doc
-	env.docslock.Unlock()
-
-	return doc, e
-}
-
-// Get document by id. Loads the document if not already loaded.
-func (env *Environment) GetDocument(docId string) (doc system.Document, err error) {
-	env.docslock.Lock()
-	doc = env.docs[docId]
-	env.docslock.Unlock()
-
-	if doc == nil {
-		return env.LoadDocument(docId)
-	}
-
-	return doc, nil
-}
-
-// All documents (ids) are presumed to be valid in context of the bound LSF Port.
-// Returns error (and stops loading) on missing doc(s).
-func (env *Environment) loadDocuments(docIds []string) (err error) {
-
-	defer panics.Recover(&err)
-
-	env.docslock.Lock()
-	defer env.docslock.Unlock()
-
-	for _, docId := range docIds {
-		_, found := env.docs[docId]
-		if !found {
-			doc, e := env.registrar.ReadDocument(docId)
-			panics.OnError(e, "Environment.loadDocuments", "docId:", docId)
-			env.docs[docId] = doc
-		}
-	}
-	return nil
-}
-
-func getRecordHierarchy(record string) (documents []string, key string, err error) {
-	terms := strings.Split(record, ".")
-	n := len(terms)
-	if n < 2 {
-		return nil, "", E_INVALID
-	}
-
-	docname := terms[n-2]
-	key = terms[n-1]
-
-	docs := make([]string, n-1)
-	docs[0] = string(docname)
-	for i := 1; i < n-1; i++ {
-		docs[i] = string(strings.Join(terms[0:i], ".") + "." + docname)
-	}
-	return docs, key, nil
-}
-
-func (env *Environment) IsBound() bool {
-	env.lock.Lock()
-	defer env.lock.Unlock()
-
-	return env.bound
-}
-
-// TEMP TODO REMOVE
-func (env *Environment) Debug() {
-	log.Printf("debug- in env.go\n")
-	log.Printf("bound:   %t\n", env.bound)
-	//	log.Printf("created: %s\n", env.created)
-	//	log.Printf("updated: %s\n", env.updated)
-	log.Printf("vars: %s\n", env.vars)
-}
-
-func (env *Environment) Get(key varKey) (v interface{}, found bool) {
-	env.varslock.RLock()
-	defer env.varslock.RUnlock()
-
-	v, found = env.vars[key]
-	return
-}
-
-// nil value not accepted.
-func (env *Environment) Set(key varKey, v interface{}) (prev interface{}, e error) {
-	if v == nil {
-		return nil, E_INVALID
-	}
-
-	env.varslock.Lock()
-	defer env.varslock.Unlock()
-
-	prev, _ = env.vars[key]
-	env.vars[key] = v
-	return prev, nil
-}
-
-// Returns true if an LSF environemnt exists in the given path
-func (env *Environment) Exists(path string) bool {
-	return exists(rootAt(path))
-}
-
-func exists(path string) bool {
-	_, e := os.Stat(path)
-	if e != nil {
-		return false
-	}
-	return true
-}
-
-func rootAt(dir string) string {
-	return path.Join(dir, RootDir)
-}
-
-var defaultDirMode = os.FileMode(0755)
+// --------------------------------------------------------------
+// Environment: Life Cycle
+// --------------------------------------------------------------
 
 // Creates a new LSF environment in directory path.
 // Path must be an absolute path.
@@ -406,159 +163,6 @@ func CreateEnvironment(dir string, force bool) (rootpath string, err error) {
 	return root, nil
 }
 
-func (env *Environment) UpdateLogStream(id string, updates map[string][]byte) error {
-	// do not permit concurrent updates to this stream
-	opLock, _, e := system.ExclusiveResourceOp(env.Port(), system.Op.StreamUpdate, id, "stream-update")
-	if e != nil {
-		return e
-	}
-	defer opLock.Unlock()
-
-	// verify it exists
-	docId := fmt.Sprintf("stream.%s.stream", id)
-	doc, e := env.LoadDocument(docId)
-	if e != nil || doc == nil {
-		return E_NOTEXISTING
-	}
-
-	previous := doc.SetAll(updates)
-	if len(previous) == 0 {
-		return fmt.Errorf("warning: no changes were made to document %s", docId)
-	}
-
-	ok, e := env.UpdateDocument(doc)
-	if e != nil {
-		return e
-	}
-	if !ok {
-		return fmt.Errorf("failed to update document: %s", docId)
-	}
-
-	return nil
-}
-
-func (env *Environment) RemoveLogStream(id string) error {
-	// NOTE: ops that require stream to exist can also lock this op
-	opLock, _, e := system.ExclusiveResourceOp(env.Port(), system.Op.StreamRemove, id, "stream-remove")
-	if e != nil {
-		return e
-	}
-	defer opLock.Unlock()
-
-	// check existing
-	docId := fmt.Sprintf("stream.%s.stream", id)
-	doc, e := env.LoadDocument(docId)
-	if e != nil || doc == nil {
-		return E_NOTEXISTING
-	}
-
-	// remove doc
-	ok, e := env.DeleteDocument(docId)
-	if e != nil {
-		return e
-	}
-	if !ok {
-		return fmt.Errorf("failed to delete document: %s", docId)
-	}
-
-	// remove the stream directory from the lsf environment
-	docpath, _ := system.DocpathForKey(env.Port(), docId)
-	e = os.RemoveAll(docpath)
-	if e != nil {
-		return e
-	}
-
-	return nil
-}
-
-func (env *Environment) AddLogStream(id, basepath, pattern, journalModel string, fields map[string]string) error {
-	opLock, _, e := system.ExclusiveResourceOp(env.Port(), system.Op.StreamAdd, id, "stream-add")
-	if e != nil {
-		return e
-	}
-	defer opLock.Unlock()
-
-	// check if exists
-	docId := fmt.Sprintf("stream.%s.stream", id)
-	doc, e := env.LoadDocument(docId)
-	if e == nil && doc != nil {
-		return E_EXISTING
-	}
-
-	// create the stream-conf file.
-	mode := schema.ToJournalModel(journalModel)
-	logstream := schema.NewLogStream(id, basepath, mode, pattern, fields)
-
-	e = env.CreateDocument(docId, logstream)
-	if e != nil {
-		return e
-	}
-
-	return nil
-}
-
-func (env *Environment) RemoveRemotePort(id string) error {
-	// NOTE: ops that require stream to exist can also lock this op
-	opLock, _, e := system.ExclusiveResourceOp(env.Port(), system.Op.RemoteRemove, id, "remote-remove")
-	if e != nil {
-		return e
-	}
-	defer opLock.Unlock()
-
-	// check existing
-	docId := fmt.Sprintf("remote.%s.remote", id)
-	doc, e := env.LoadDocument(docId)
-	if e != nil || doc == nil {
-		return E_NOTEXISTING
-	}
-
-	// remove doc
-	ok, e := env.DeleteDocument(docId)
-	if e != nil {
-		return e
-	}
-	if !ok {
-		return fmt.Errorf("failed to delete document: %s", docId)
-	}
-
-	// remove the remote port's directory from the lsf environment
-	docpath, _ := system.DocpathForKey(env.Port(), docId)
-	e = os.RemoveAll(docpath)
-	if e != nil {
-		return e
-	}
-
-	return nil
-}
-
-func (env *Environment) AddRemotePort(id, host string, port int) error {
-	// lock lsf port's "remotes" resource to prevent race condition
-	opLock, _, e := system.ExclusiveResourceOp(env.Port(), system.Op.RemoteAdd, id, "remote-add")
-	if e != nil {
-		return e
-	}
-	defer opLock.Unlock()
-
-	// check if exists
-	docId := fmt.Sprintf("remote.%s.remote", id)
-	doc, e := env.LoadDocument(docId)
-	if e == nil && doc != nil {
-		return E_EXISTING
-	}
-
-	lsfport, e := schema.NewRemotePort(id, host, port)
-	if e != nil {
-		return e
-	}
-
-	e = env.CreateDocument(docId, lsfport)
-	if e != nil {
-		return e
-	}
-
-	return nil
-}
-
 func (env *Environment) Shutdown() error {
 
 	if env == nil {
@@ -582,6 +186,7 @@ func (env *Environment) Shutdown() error {
 
 	return nil
 }
+
 func (env *Environment) Initialize(dir string) (err error) {
 
 	defer panics.Recover(&err)
@@ -644,6 +249,70 @@ func (env *Environment) startRegistrar() (err error) {
 	return nil
 }
 
+// --------------------------------------------------------------
+// Environment: Properties & what not
+// --------------------------------------------------------------
+
+// Returns the path of the LSF Port to which the environment
+// is bound.
+func (env *Environment) Port() string {
+	if !env.bound {
+		panic("BUG - env not bound")
+	}
+	v, found := env.Get(VarHomePort)
+	if !found {
+		return ""
+	}
+	return v.(*schema.Port).Path()
+}
+
+func (env *Environment) IsBound() bool {
+	env.lock.Lock()
+	defer env.lock.Unlock()
+
+	return env.bound
+}
+
+// TEMP TODO REMOVE
+func (env *Environment) Debug() {
+	log.Printf("debug- in env.go\n")
+	log.Printf("bound:   %t\n", env.bound)
+	//	log.Printf("created: %s\n", env.created)
+	//	log.Printf("updated: %s\n", env.updated)
+	log.Printf("vars: %s\n", env.vars)
+}
+
+// Returns the absolute id of a resource in context
+// of this environment. The argument 'name' is a
+// relative identifier.
+// This routine will panic if called from an unbound Environment.
+func (env *Environment) ResourceId(name string) string {
+	if !env.bound {
+		panic("BUG - env not bound")
+	}
+	v, found := env.Get(VarHomePort)
+	panics.OnFalse(found, "BUG", "Environment.ResourceId", "VarHomePort not bound!")
+
+	return path.Join(v.(*schema.Port).Path(), name)
+}
+
+// Returns true if an LSF environemnt exists in the given path
+func (env *Environment) Exists(path string) bool {
+	return exists(rootAt(path))
+}
+
+func exists(path string) bool {
+	_, e := os.Stat(path)
+	if e != nil {
+		return false
+	}
+	return true
+}
+
+func rootAt(dir string) string {
+	return path.Join(dir, RootDir)
+}
+
 // panics
 func (env *Environment) GetResourceIds(restype string) []string {
 	root := env.Port()
@@ -701,4 +370,370 @@ func digestForResourceId(env *Environment, restype string, resid string, encode 
 	panics.OnError(e, "BUG", "getResourceDigests:", "loadDocument", docId)
 	panics.OnTrue(doc == nil, "BUG", "getResourceDigests:", "loadDocument", docId)
 	return encode(doc)
+}
+
+// --------------------------------------------------------------
+// Environment: Variables
+// --------------------------------------------------------------
+
+func (env *Environment) Get(key varKey) (v interface{}, found bool) {
+	env.varslock.RLock()
+	defer env.varslock.RUnlock()
+
+	v, found = env.vars[key]
+	return
+}
+
+// nil value not accepted.
+func (env *Environment) Set(key varKey, v interface{}) (prev interface{}, e error) {
+	if v == nil {
+		return nil, E_INVALID
+	}
+
+	env.varslock.Lock()
+	defer env.varslock.Unlock()
+
+	prev, _ = env.vars[key]
+	env.vars[key] = v
+	return prev, nil
+}
+
+// --------------------------------------------------------------
+// Environment: System Documents
+// --------------------------------------------------------------
+
+// REVU: foolishness
+var defaultDirMode = os.FileMode(0755)
+
+// Creates a document in the bound LSF Port.
+func (env *Environment) CreateDocument(docId string, datamap system.DataMap) error {
+	if !env.bound {
+		return E_ILLEGALSTATE
+	}
+	mappings := datamap.Mappings()
+	_, e := env.registrar.CreateDocument(docId, mappings)
+	if e != nil {
+		return e
+	}
+	return nil
+}
+
+// Update fully flushes the document back to the bound LSF Port.
+// REVU TODO clarify ok/error - do we need both?
+func (env *Environment) UpdateDocument(doc system.Document) (ok bool, err error) {
+	defer panics.Recover(&err)
+
+	ok, e := env.registrar.UpdateDocument(doc)
+	panics.OnError(e, "Environment.UpdateDocument", "docId:", doc.Id())
+	panics.OnFalse(ok, "Environment.UpdateDocument", "docId:", doc.Id())
+
+	env.docslock.Lock()
+	env.docs[doc.Id()] = doc
+	env.docslock.Unlock()
+
+	return ok, e
+}
+
+// Load fully reads the identified document from the bound LSF Port.
+func (env *Environment) LoadDocument(docId string) (doc system.Document, err error) {
+	defer panics.Recover(&err)
+
+	doc, e := env.registrar.ReadDocument(docId)
+	panics.OnError(e, "Environment.LoadDocument", "docId:", docId)
+
+	env.docslock.Lock()
+	env.docs[docId] = doc
+	env.docslock.Unlock()
+
+	return doc, e
+}
+
+// Get document by id. Loads the document if not already loaded.
+func (env *Environment) GetDocument(docId string) (doc system.Document, err error) {
+	env.docslock.Lock()
+	doc = env.docs[docId]
+	env.docslock.Unlock()
+
+	if doc == nil {
+		return env.LoadDocument(docId)
+	}
+
+	return doc, nil
+}
+
+func (env *Environment) UpdateSystemDocument(opcode system.OpCode, id, docId, meta string, updates map[string][]byte) error {
+	// do not permit concurrent updates to this stream
+	opLock, _, e := system.ExclusiveResourceOp(env.Port(), opcode, id, meta)
+	if e != nil {
+		return e
+	}
+	defer opLock.Unlock()
+
+	// verify it exists
+	doc, e := env.LoadDocument(docId)
+	if e != nil || doc == nil {
+		return E_NOTEXISTING
+	}
+
+	previous := doc.SetAll(updates)
+	if len(previous) == 0 {
+		return fmt.Errorf("warning: no changes were made to document %s", docId)
+	}
+
+	ok, e := env.UpdateDocument(doc)
+	if e != nil {
+		return e
+	}
+	if !ok {
+		return fmt.Errorf("failed to update document: %s", docId)
+	}
+
+	return nil
+}
+
+// Deletes the document from the environemnt and the bound LSF Port.
+// REVU TODO clarify ok/error - do we need both?
+func (env *Environment) DeleteDocument(docId string) (ok bool, err error) {
+	defer panics.Recover(&err)
+
+	ok, e := env.registrar.DeleteDocument(docId)
+	panics.OnError(e, "Environment.DeleteDocument", "docId:", docId)
+	panics.OnFalse(ok, "Environment.DeleteDocument", "docId:", docId)
+
+	env.docslock.Lock()
+	delete(env.docs, docId)
+	env.docslock.Unlock()
+
+	return ok, e
+}
+
+// All documents (ids) are presumed to be valid in context of the bound LSF Port.
+// Returns error (and stops loading) on missing doc(s).
+func (env *Environment) loadDocuments(docIds []string) (err error) {
+
+	defer panics.Recover(&err)
+
+	env.docslock.Lock()
+	defer env.docslock.Unlock()
+
+	for _, docId := range docIds {
+		_, found := env.docs[docId]
+		if !found {
+			doc, e := env.registrar.ReadDocument(docId)
+			panics.OnError(e, "Environment.loadDocuments", "docId:", docId)
+			env.docs[docId] = doc
+		}
+	}
+	return nil
+}
+
+func getRecordHierarchy(record string) (documents []string, key string, err error) {
+	terms := strings.Split(record, ".")
+	n := len(terms)
+	if n < 2 {
+		return nil, "", E_INVALID
+	}
+
+	docname := terms[n-2]
+	key = terms[n-1]
+
+	docs := make([]string, n-1)
+	docs[0] = string(docname)
+	for i := 1; i < n-1; i++ {
+		docs[i] = string(strings.Join(terms[0:i], ".") + "." + docname)
+	}
+	return docs, key, nil
+}
+
+// record is interpreted as a dot notation path. final term
+// is record key in the document in the path. The simplest
+// record spec is "docname.recname". A record arg that does
+// not have at least 2 parts is rejected as E_INVALID.
+//
+// GetRecord side-effects:
+// A call to this method will load the entire doc that contains
+// the record. Additionally, the port directory is walked up
+// from the found document and each matching doc is loaded.
+//
+// The final value for key in record reflects the hierarchical
+// scoping of the matching documents.
+//
+// if not found, will return nil, nil.
+func (env *Environment) GetRecord(record string) (value []byte, err error) {
+
+	defer panics.Recover(&err)
+
+	if !env.bound {
+		return nil, E_ILLEGALSTATE
+	}
+
+	documents, key, e := getRecordHierarchy(record)
+	panics.OnError(e, "Environment.GetRecord:", "record:", record)
+
+	e = env.loadDocuments(documents)
+	panics.OnError(e, "Environment.GetRecord:")
+
+	value = env.resolveRecord(documents, key)
+	return value, nil
+}
+
+// A document Record is resolved in context of the resource hierarchy.
+// The record is logically identified by the key parameter.
+// The set of documents sorted from global to local scope.
+// Resolution of the record is to match the value from the most proximate
+// (i.e. local) document provided.
+func (env *Environment) resolveRecord(documents []string, key string) []byte {
+	env.docslock.RLock()
+	defer env.docslock.RUnlock()
+
+	var value []byte
+	for _, docId := range documents {
+		doc, found := env.docs[docId]
+		if found {
+			if v := doc.Get(key); v != nil {
+				value = v
+			}
+		}
+	}
+	return value
+}
+
+// --------------------------------------------------------------
+// Log Streams
+// --------------------------------------------------------------
+
+func (env *Environment) UpdateLogStream(id string, updates map[string][]byte) error {
+	docId := fmt.Sprintf("stream.%s.stream", id)
+	return env.UpdateSystemDocument(system.Op.StreamUpdate, id, docId, "stream-update", updates)
+}
+
+func (env *Environment) RemoveLogStream(id string) error {
+	// NOTE: ops that require stream to exist can also lock this op
+	opLock, _, e := system.ExclusiveResourceOp(env.Port(), system.Op.StreamRemove, id, "stream-remove")
+	if e != nil {
+		return e
+	}
+	defer opLock.Unlock()
+
+	// check existing
+	docId := fmt.Sprintf("stream.%s.stream", id)
+	doc, e := env.LoadDocument(docId)
+	if e != nil || doc == nil {
+		return E_NOTEXISTING
+	}
+
+	// remove doc
+	ok, e := env.DeleteDocument(docId)
+	if e != nil {
+		return e
+	}
+	if !ok {
+		return fmt.Errorf("failed to delete document: %s", docId)
+	}
+
+	// remove the stream directory from the lsf environment
+	docpath, _ := system.DocpathForKey(env.Port(), docId)
+	e = os.RemoveAll(docpath)
+	if e != nil {
+		return e
+	}
+
+	return nil
+}
+
+func (env *Environment) AddLogStream(id, basepath, pattern, journalModel string, fields map[string]string) error {
+	opLock, _, e := system.ExclusiveResourceOp(env.Port(), system.Op.StreamAdd, id, "stream-add")
+	if e != nil {
+		return e
+	}
+	defer opLock.Unlock()
+
+	// check if exists
+	docId := fmt.Sprintf("stream.%s.stream", id)
+	doc, e := env.LoadDocument(docId)
+	if e == nil && doc != nil {
+		return E_EXISTING
+	}
+
+	// create the stream-conf file.
+	mode := schema.ToJournalModel(journalModel)
+	logstream := schema.NewLogStream(id, basepath, mode, pattern, fields)
+
+	e = env.CreateDocument(docId, logstream)
+	if e != nil {
+		return e
+	}
+
+	return nil
+}
+
+// --------------------------------------------------------------
+// Remote Ports
+// --------------------------------------------------------------
+
+func (env *Environment) RemoveRemotePort(id string) error {
+	// NOTE: ops that require stream to exist can also lock this op
+	opLock, _, e := system.ExclusiveResourceOp(env.Port(), system.Op.RemoteRemove, id, "remote-remove")
+	if e != nil {
+		return e
+	}
+	defer opLock.Unlock()
+
+	// check existing
+	docId := fmt.Sprintf("remote.%s.remote", id)
+	doc, e := env.LoadDocument(docId)
+	if e != nil || doc == nil {
+		return E_NOTEXISTING
+	}
+
+	// remove doc
+	ok, e := env.DeleteDocument(docId)
+	if e != nil {
+		return e
+	}
+	if !ok {
+		return fmt.Errorf("failed to delete document: %s", docId)
+	}
+
+	// remove the remote port's directory from the lsf environment
+	docpath, _ := system.DocpathForKey(env.Port(), docId)
+	e = os.RemoveAll(docpath)
+	if e != nil {
+		return e
+	}
+
+	return nil
+}
+
+func (env *Environment) UpdateRemotePort(id string, updates map[string][]byte) error {
+	docId := fmt.Sprintf("remote.%s.remote", id)
+	return env.UpdateSystemDocument(system.Op.RemoteUpdate, id, docId, "remote-update", updates)
+}
+
+func (env *Environment) AddRemotePort(id, host string, port int) error {
+	// lock lsf port's "remotes" resource to prevent race condition
+	opLock, _, e := system.ExclusiveResourceOp(env.Port(), system.Op.RemoteAdd, id, "remote-add")
+	if e != nil {
+		return e
+	}
+	defer opLock.Unlock()
+
+	// check if exists
+	docId := fmt.Sprintf("remote.%s.remote", id)
+	doc, e := env.LoadDocument(docId)
+	if e == nil && doc != nil {
+		return E_EXISTING
+	}
+
+	lsfport, e := schema.NewRemotePort(id, host, port)
+	if e != nil {
+		return e
+	}
+
+	e = env.CreateDocument(docId, lsfport)
+	if e != nil {
+		return e
+	}
+
+	return nil
 }
