@@ -406,6 +406,36 @@ func CreateEnvironment(dir string, force bool) (rootpath string, err error) {
 	return root, nil
 }
 
+func (env *Environment) UpdateLogStream(id string, updates map[string][]byte) error {
+	// do not premit concurrent updates to this stream
+	opLock, _, e := system.ExclusiveResourceOp(env.Port(), system.Op.StreamUpdate, id, "stream-update")
+	if e != nil {
+		return e
+	}
+	defer opLock.Unlock()
+
+	// verify it exists
+	docId := fmt.Sprintf("stream.%s.stream", id)
+	doc, e := env.LoadDocument(docId)
+	if e != nil || doc == nil {
+		return E_NOTEXISTING
+	}
+
+	for k, v := range updates {
+		doc.Set(k, v)
+	}
+
+	ok, e := env.UpdateDocument(doc)
+	if e != nil {
+		return e
+	}
+	if !ok {
+		return fmt.Errorf("failed to update document: %s", docId)
+	}
+
+	return nil
+}
+
 func (env *Environment) RemoveLogStream(id string) error {
 	// NOTE: ops that require stream to exist can also lock this op
 	opLock, _, e := system.ExclusiveResourceOp(env.Port(), system.Op.StreamRemove, id, "stream-remove")
