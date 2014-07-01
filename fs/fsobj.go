@@ -15,7 +15,8 @@ type Object interface {
 	Info() os.FileInfo
 	// String rep of Object
 	String() string
-	// REVU: todo rename this or just do ModTime() time.Time
+	// String rep of Object
+	Debug() string
 	// returns 'age' since last mod time.
 	Age() time.Duration
 	// returns time Object info was recorded
@@ -126,10 +127,16 @@ func (obj *object) Flags() uint8 {
 	return obj.flags
 }
 
-// Pretty Print
-func (obj *object) String() string {
+// pretty print with field labels.
+func (obj *object) Debug() string {
 	return fmt.Sprintf(
 		"fsobject %s:id %12d:info-age (nsec) %12d:size (b) %12d:age (nsec) %20q:name flags:%b",
+		obj.Id(), obj.InfoAge(), obj.Info().Size(), obj.Age(), obj.Info().Name(), obj.Flags())
+}
+
+func (obj *object) String() string {
+	return fmt.Sprintf(
+		"fsobject %s %12d %12d %12d %20q %b",
 		obj.Id(), obj.InfoAge(), obj.Info().Size(), obj.Age(), obj.Info().Name(), obj.Flags())
 }
 
