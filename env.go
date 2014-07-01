@@ -376,6 +376,8 @@ func digestForResourceId(env *Environment, restype string, resid string, encode 
 // Environment: Variables
 // --------------------------------------------------------------
 
+// REVU: the found retval is buggin me..
+// TODO: remove it and guard in Set against nils. nil v => not found
 func (env *Environment) Get(key varKey) (v interface{}, found bool) {
 	env.varslock.RLock()
 	defer env.varslock.RUnlock()
