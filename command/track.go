@@ -35,7 +35,6 @@ func init() {
 		Flag:     FlagSet(trackCmdCode),
 		IsActive: true,
 	}
-	// TODO: just get the stream id. optional flag for persistence of state and events
 	trackCmdOptions = &trackOptionSpec{
 		global:  NewBoolFlag(Track.Flag, "G", "global", false, "command applies globally", false),
 		id:      NewStringFlag(Track.Flag, "s", "stream-id", "", "unique identifier for stream", true),
