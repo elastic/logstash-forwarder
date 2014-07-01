@@ -6,6 +6,7 @@ import (
 	"log"
 	"lsf"
 	"lsf/command"
+	"lsf/panics"
 	"os"
 )
 
@@ -28,6 +29,9 @@ var commands = []*lsf.Command{
 	command.Track,
 }
 
+var debugFlag bool
+var aboutDebug = "for development - disables panic recovery - use in case of ambiguous errors."
+
 var aboutFlag bool
 var aboutAbout = "provides conceptual background about LS/F."
 
@@ -36,13 +40,15 @@ var aboutHome = "path to the lsf port"
 
 // initialize command runner flag options
 func init() {
+	flag.BoolVar(&debugFlag, "debug", false, aboutDebug)
 	flag.BoolVar(&aboutFlag, "about", false, aboutAbout)
 	flag.StringVar(&homeOption, "home", getWd(), aboutHome)
 }
 
 // Command runner tool.
 func main() {
-
+	//	var err = fmt.Errorf("")
+	//	defer panics.Recover(&err)
 	log.SetFlags(0)
 
 	// parse command runner flags
@@ -50,6 +56,10 @@ func main() {
 	flag.Parse()
 	if aboutFlag {
 		aboutLsfThenExit()
+	}
+
+	if debugFlag {
+		panics.DEBUG = true
 	}
 
 	// first arg after runner's options must

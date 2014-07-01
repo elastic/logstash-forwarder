@@ -94,6 +94,9 @@ func fmtInfo(info ...interface{}) string {
 }
 
 func Recover(err *error) error {
+	if DEBUG {
+		return nil
+	}
 	p := recover()
 	if p == nil {
 		return nil
@@ -115,6 +118,9 @@ func Recover(err *error) error {
 
 // TODO: no rush but refactor this ..
 func AsyncRecover(stat chan<- interface{}, okstat interface{}) {
+	if DEBUG {
+		return
+	}
 	p := recover()
 	if p == nil {
 		stat <- okstat
@@ -174,6 +180,9 @@ func (t *fnpanics) OnTrue(flag bool, info ...interface{}) {
 //}
 
 func ExitHandler() {
+	if DEBUG {
+		return
+	}
 	p := recover()
 	if p == nil {
 		os.Exit(0)
@@ -195,3 +204,17 @@ func ExitHandler() {
 	log.Printf("panics.ExitHandler: exit-stat:%d cause: %s", stat, e)
 	os.Exit(stat)
 }
+
+// set to true to short circut the panic recovery mechanism
+// and get the full stack dump per canonical panic().
+var DEBUG = false
+
+// returns the result of recover().
+// NOP if DEBUG is true.
+//func recover() interface{} {
+//	if DEBUG {
+//		println("DEBUG IS TRUE")
+//		return nil
+//	}
+//	return recover()
+//}
