@@ -421,12 +421,10 @@ func (env *Environment) UpdateLogStream(id string, updates map[string][]byte) er
 		return E_NOTEXISTING
 	}
 
-	previous := doc.Update(updates)
-	// TEMP DEBUG
-	for k, v := range previous {
-		fmt.Printf("DEBUG: previous: %q => %q\n", k, string(v))
+	previous := doc.SetAll(updates)
+	if len(previous) == 0 {
+		return fmt.Errorf("warning: no changes were made to document %s", docId)
 	}
-	// TEMP DEBUG
 
 	ok, e := env.UpdateDocument(doc)
 	if e != nil {

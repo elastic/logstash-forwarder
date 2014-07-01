@@ -1,9 +1,9 @@
 package system
 
 import (
+	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"lsf/panics"
 	"os"
 	"strings"
@@ -25,10 +25,9 @@ type DataMap interface {
 type Document interface {
 	// Return the document id
 	Id() string
-	// Return the document records' keys
+	// Return the document key set
 	Keys() []string
 	// Return the document data
-	// TODO: rename to Data() or Records()
 	Mappings() map[string][]byte
 	// Get a specific record by key
 	Get(key string) []byte
@@ -36,13 +35,14 @@ type Document interface {
 	// Returns previous record value (if any)
 	Set(key string, value []byte) []byte
 	// Updates the document records.
-	// Returns the previous mappings, which may be an empty map.
-	Update(data map[string][]byte) map[string][]byte
-	// Just updates the records.
-	JustUpdate(data map[string][]byte)
+	// Returns the previous mappings, which may be an empty map
+	// if documentn is not changed.
+	SetAll(data map[string][]byte) map[string][]byte
 	// Deletes a record.
 	// Returns true if record existed.
 	Delete(key string) bool
+	// Returns true if document has been modified after load
+	IsDirty() bool
 }
 
 type document struct {
@@ -51,7 +51,13 @@ type document struct {
 	readtime time.Time
 	records  map[string][]byte
 	lock     Lock
-//	dirty    bool
+	dirty    bool
+}
+
+func (d *document) IsDirty() bool {
+	// impl. note:
+	// dirty flag to be set *only* in Set() and SetAll()
+	return d.dirty
 }
 
 func (d *document) Mappings() map[string][]byte {
@@ -83,32 +89,29 @@ func (d *document) Id() string {
 }
 
 func (d *document) Get(k string) []byte {
-	prev := d.records[k]
-	if prev != nil {
-		return prev
-	}
-	return nil
+	return d.records[k]
 }
 
 func (d *document) Set(k string, v []byte) []byte {
-	prev := d.Get(k)
-	d.records[k] = v
+	prev := d.records[k]
+	if bytes.Compare(prev, v) != 0 {
+		d.dirty = true
+		d.records[k] = v
+	}
 	return prev
 }
 
-func (d *document) JustUpdate(data map[string][]byte) {
-	for k, v := range data {
-		d.records[k] = v
-	}
-}
-
-func (d *document) Update(data map[string][]byte) (previous map[string][]byte) {
+func (d *document) SetAll(data map[string][]byte) (previous map[string][]byte) {
 	previous = make(map[string][]byte, len(data))
-	for k, _ := range data {
-		previous[k] = d.records[k]
+	for k, v := range data {
+		prev := d.records[k]
+		// yes, we repeat ourself here (c.f. doc.Set) but it is more efficient
+		if bytes.Compare(prev, v) != 0 {
+			d.dirty = true
+			d.records[k] = v
+			previous[k] = prev
+		}
 	}
-
-	d.JustUpdate(data)
 	return
 }
 
@@ -188,12 +191,16 @@ func (d *document) Write(w io.Writer) error {
 	return nil
 }
 
-// Saves document.
+// Saves document, if dirty.
 // Write Lock acquired for duration (attempted)
 // New document file is atomically swapped.
-// REVU: possible TODO is to only write if document had actually changed.
 func updateDocument(doc *document, filename string) (ok bool, err error) {
 	defer panics.Recover(&err)
+
+	// nop if doc hasn't changed.
+	if !doc.IsDirty() {
+		return true, nil
+	}
 
 	// create temp file
 	swapfile := filename + ".new"
@@ -216,14 +223,12 @@ func updateDocument(doc *document, filename string) (ok bool, err error) {
 	e = os.Rename(swapfile, filename)
 	panics.OnError(e, "os.Rename:", swapfile, filename)
 
-	log.Println("updated file %q", filename)
-
 	return true, nil
 }
 
 // load for read.
 // read file and closes it.
-// REVU TODO what if locked?
+// REVU TODO insure that this method can only be invoked inside an exlusive section
 func loadDocument(dockey string, filename string) (doc *document, err error) {
 	defer panics.Recover(&err)
 
