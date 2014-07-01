@@ -31,6 +31,8 @@ func init() {
 func main() {
 	log.SetFlags(0)
 
+	flag.Parse()
+
 	stream := "foo.bar"
 	reportsChan := make(chan []*TrackReport, 2)
 	requestChan := make(chan string, 2)
