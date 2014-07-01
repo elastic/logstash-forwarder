@@ -463,6 +463,28 @@ func (env *Environment) GetDocument(docId string) (doc system.Document, err erro
 	return doc, nil
 }
 
+func (env *Environment) AddSystemDocument(opcode system.OpCode, id, docId, meta string, datamap system.DataMap) error {
+	opLock, _, e := system.ExclusiveResourceOp(env.Port(), opcode, id, meta)
+	if e != nil {
+		return e
+	}
+	defer opLock.Unlock()
+
+	// check if exists
+	doc, e := env.LoadDocument(docId)
+	if e == nil && doc != nil {
+		return E_EXISTING
+	}
+
+	// create it
+	e = env.CreateDocument(docId, datamap)
+	if e != nil {
+		return e
+	}
+
+	return nil
+}
+
 func (env *Environment) UpdateSystemDocument(opcode system.OpCode, id, docId, meta string, updates map[string][]byte) error {
 	// do not permit concurrent updates to this stream
 	opLock, _, e := system.ExclusiveResourceOp(env.Port(), opcode, id, meta)
@@ -488,6 +510,39 @@ func (env *Environment) UpdateSystemDocument(opcode system.OpCode, id, docId, me
 	}
 	if !ok {
 		return fmt.Errorf("failed to update document: %s", docId)
+	}
+
+	return nil
+}
+
+func (env *Environment) RemoveSystemDocument(opcode system.OpCode, id, docId, meta string) error {
+	// NOTE: ops that require stream to exist can also lock this op
+	opLock, _, e := system.ExclusiveResourceOp(env.Port(), opcode, id, meta)
+	if e != nil {
+		return e
+	}
+	defer opLock.Unlock()
+
+	// check existing
+	doc, e := env.LoadDocument(docId)
+	if e != nil || doc == nil {
+		return E_NOTEXISTING
+	}
+
+	// remove doc
+	ok, e := env.DeleteDocument(docId)
+	if e != nil {
+		return e
+	}
+	if !ok {
+		return fmt.Errorf("failed to delete document: %s", docId)
+	}
+
+	// remove the stream directory from the lsf environment
+	docpath, _ := system.DocpathForKey(env.Port(), docId)
+	e = os.RemoveAll(docpath)
+	if e != nil {
+		return e
 	}
 
 	return nil
@@ -605,68 +660,44 @@ func (env *Environment) resolveRecord(documents []string, key string) []byte {
 // --------------------------------------------------------------
 
 func (env *Environment) UpdateLogStream(id string, updates map[string][]byte) error {
+	if id == "" {
+		return fmt.Errorf("id is empty")
+	}
+
 	docId := fmt.Sprintf("stream.%s.stream", id)
 	return env.UpdateSystemDocument(system.Op.StreamUpdate, id, docId, "stream-update", updates)
 }
 
 func (env *Environment) RemoveLogStream(id string) error {
-	// NOTE: ops that require stream to exist can also lock this op
-	opLock, _, e := system.ExclusiveResourceOp(env.Port(), system.Op.StreamRemove, id, "stream-remove")
-	if e != nil {
-		return e
+	if id == "" {
+		return fmt.Errorf("id is empty")
 	}
-	defer opLock.Unlock()
 
-	// check existing
 	docId := fmt.Sprintf("stream.%s.stream", id)
-	doc, e := env.LoadDocument(docId)
-	if e != nil || doc == nil {
-		return E_NOTEXISTING
-	}
-
-	// remove doc
-	ok, e := env.DeleteDocument(docId)
-	if e != nil {
-		return e
-	}
-	if !ok {
-		return fmt.Errorf("failed to delete document: %s", docId)
-	}
-
-	// remove the stream directory from the lsf environment
-	docpath, _ := system.DocpathForKey(env.Port(), docId)
-	e = os.RemoveAll(docpath)
-	if e != nil {
-		return e
-	}
-
-	return nil
+	return env.RemoveSystemDocument(system.Op.StreamRemove, id, docId, "stream-remove")
 }
 
 func (env *Environment) AddLogStream(id, basepath, pattern, journalModel string, fields map[string]string) error {
-	opLock, _, e := system.ExclusiveResourceOp(env.Port(), system.Op.StreamAdd, id, "stream-add")
-	if e != nil {
-		return e
+	if id == "" {
+		return fmt.Errorf("id is empty")
 	}
-	defer opLock.Unlock()
+	if basepath == "" {
+		return fmt.Errorf("basepath is empty")
+	}
+	if pattern == "" {
+		return fmt.Errorf("pattern is empty")
+	}
+	if journalModel == "" {
+		return fmt.Errorf("journalModel is empty")
+	}
 
-	// check if exists
 	docId := fmt.Sprintf("stream.%s.stream", id)
-	doc, e := env.LoadDocument(docId)
-	if e == nil && doc != nil {
-		return E_EXISTING
-	}
 
-	// create the stream-conf file.
+	// TODO: this needs to be checked - valid journal mode value?
 	mode := schema.ToJournalModel(journalModel)
-	logstream := schema.NewLogStream(id, basepath, mode, pattern, fields)
+	logStream := schema.NewLogStream(id, basepath, mode, pattern, fields)
 
-	e = env.CreateDocument(docId, logstream)
-	if e != nil {
-		return e
-	}
-
-	return nil
+	return env.AddSystemDocument(system.Op.StreamAdd, id, docId, "stream-add", logStream)
 }
 
 // --------------------------------------------------------------
@@ -674,68 +705,39 @@ func (env *Environment) AddLogStream(id, basepath, pattern, journalModel string,
 // --------------------------------------------------------------
 
 func (env *Environment) RemoveRemotePort(id string) error {
-	// NOTE: ops that require stream to exist can also lock this op
-	opLock, _, e := system.ExclusiveResourceOp(env.Port(), system.Op.RemoteRemove, id, "remote-remove")
-	if e != nil {
-		return e
+	if id == "" {
+		return fmt.Errorf("id is empty")
 	}
-	defer opLock.Unlock()
 
-	// check existing
 	docId := fmt.Sprintf("remote.%s.remote", id)
-	doc, e := env.LoadDocument(docId)
-	if e != nil || doc == nil {
-		return E_NOTEXISTING
-	}
-
-	// remove doc
-	ok, e := env.DeleteDocument(docId)
-	if e != nil {
-		return e
-	}
-	if !ok {
-		return fmt.Errorf("failed to delete document: %s", docId)
-	}
-
-	// remove the remote port's directory from the lsf environment
-	docpath, _ := system.DocpathForKey(env.Port(), docId)
-	e = os.RemoveAll(docpath)
-	if e != nil {
-		return e
-	}
-
-	return nil
+	return env.RemoveSystemDocument(system.Op.RemoteRemove, id, docId, "remote-remove")
 }
 
 func (env *Environment) UpdateRemotePort(id string, updates map[string][]byte) error {
+	if id == "" {
+		return fmt.Errorf("id is empty")
+	}
+
 	docId := fmt.Sprintf("remote.%s.remote", id)
 	return env.UpdateSystemDocument(system.Op.RemoteUpdate, id, docId, "remote-update", updates)
 }
 
 func (env *Environment) AddRemotePort(id, host string, port int) error {
-	// lock lsf port's "remotes" resource to prevent race condition
-	opLock, _, e := system.ExclusiveResourceOp(env.Port(), system.Op.RemoteAdd, id, "remote-add")
-	if e != nil {
-		return e
+	if id == "" {
+		return fmt.Errorf("id is empty")
 	}
-	defer opLock.Unlock()
+	if host == "" {
+		return fmt.Errorf("host is empty")
+	}
+	if port <= 0 {
+		return fmt.Errorf("invalid port number") // TODO: test for the actual non-reserved range
+	}
 
-	// check if exists
 	docId := fmt.Sprintf("remote.%s.remote", id)
-	doc, e := env.LoadDocument(docId)
-	if e == nil && doc != nil {
-		return E_EXISTING
-	}
-
-	lsfport, e := schema.NewRemotePort(id, host, port)
+	remotePort, e := schema.NewRemotePort(id, host, port)
 	if e != nil {
 		return e
 	}
 
-	e = env.CreateDocument(docId, lsfport)
-	if e != nil {
-		return e
-	}
-
-	return nil
+	return env.AddSystemDocument(system.Op.RemoteAdd, id, docId, "remote-add", remotePort)
 }
