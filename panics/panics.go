@@ -175,6 +175,7 @@ func (t *fnpanics) OnTrue(flag bool, info ...interface{}) {
 	OnTrue(flag, infofn...)
 }
 
+// TODO: figure out why this is not working
 //func ForFunc(fname string) Panics {
 //	return &fnpanics{fname}
 //}
@@ -208,13 +209,3 @@ func ExitHandler() {
 // set to true to short circut the panic recovery mechanism
 // and get the full stack dump per canonical panic().
 var DEBUG = false
-
-// returns the result of recover().
-// NOP if DEBUG is true.
-//func recover() interface{} {
-//	if DEBUG {
-//		println("DEBUG IS TRUE")
-//		return nil
-//	}
-//	return recover()
-//}
