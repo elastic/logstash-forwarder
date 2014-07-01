@@ -20,12 +20,28 @@ type DataMap interface {
 	Mappings() map[string][]byte
 }
 
+// Document represents a flat document model of a set of named records,
+// i.e. a basic k/v container.
 type Document interface {
+	// Return the document id
 	Id() string
+	// Return the document records' keys
 	Keys() []string
+	// Return the document data
+	// TODO: rename to Data() or Records()
 	Mappings() map[string][]byte
+	// Get a specific record by key
 	Get(key string) []byte
+	// Set a specific record by key.
+	// Returns previous record value (if any)
 	Set(key string, value []byte) []byte
+	// Updates the document records.
+	// Returns the previous mappings, which may be an empty map.
+	Update(data map[string][]byte) map[string][]byte
+	// Just updates the records.
+	JustUpdate(data map[string][]byte)
+	// Deletes a record.
+	// Returns true if record existed.
 	Delete(key string) bool
 }
 
@@ -35,7 +51,7 @@ type document struct {
 	readtime time.Time
 	records  map[string][]byte
 	lock     Lock
-	dirty    bool
+//	dirty    bool
 }
 
 func (d *document) Mappings() map[string][]byte {
@@ -78,6 +94,22 @@ func (d *document) Set(k string, v []byte) []byte {
 	prev := d.Get(k)
 	d.records[k] = v
 	return prev
+}
+
+func (d *document) JustUpdate(data map[string][]byte) {
+	for k, v := range data {
+		d.records[k] = v
+	}
+}
+
+func (d *document) Update(data map[string][]byte) (previous map[string][]byte) {
+	previous = make(map[string][]byte, len(data))
+	for k, _ := range data {
+		previous[k] = d.records[k]
+	}
+
+	d.JustUpdate(data)
+	return
 }
 
 func (d *document) Delete(k string) bool {
@@ -156,9 +188,10 @@ func (d *document) Write(w io.Writer) error {
 	return nil
 }
 
-// Saves document: if dirty, dirty flag cleared; otherwise returns false, nil.
+// Saves document.
 // Write Lock acquired for duration (attempted)
 // New document file is atomically swapped.
+// REVU: possible TODO is to only write if document had actually changed.
 func updateDocument(doc *document, filename string) (ok bool, err error) {
 	defer panics.Recover(&err)
 
