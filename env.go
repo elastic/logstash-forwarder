@@ -407,7 +407,7 @@ func CreateEnvironment(dir string, force bool) (rootpath string, err error) {
 }
 
 func (env *Environment) UpdateLogStream(id string, updates map[string][]byte) error {
-	// do not premit concurrent updates to this stream
+	// do not permit concurrent updates to this stream
 	opLock, _, e := system.ExclusiveResourceOp(env.Port(), system.Op.StreamUpdate, id, "stream-update")
 	if e != nil {
 		return e
