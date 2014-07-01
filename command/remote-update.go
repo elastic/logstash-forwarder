@@ -1,9 +1,10 @@
 package command
 
 import (
+	"fmt"
 	"lsf"
 	"lsf/panics"
-	//	"lsf/schema"
+	"lsf/schema"
 )
 
 const updateRemoteCmdCode lsf.CommandCode = "remote-update"
@@ -32,26 +33,26 @@ func verifyUpdateRemoteRequiredOpts(env *lsf.Environment, args ...string) error 
 func runUpdateRemote(env *lsf.Environment, args ...string) (err error) {
 	panics.Recover(&err)
 
-	//	id := *removeRemoteOptions.id.value
-	//	updates := make(map[string][]byte)
-	//
-	//	// update remote config document
-	//	var option interface{}
-	//	option = updateRemoteOptions.id
-	//	if OptionProvided(option) {
-	//		v := []byte(string(*updateRemoteOptions.id.value))
-	//		updates[schema.PortElem.Id] = v
-	//	}
-	//	option = updateRemoteOptions.host
-	//	if OptionProvided(option) {
-	//		v := []byte(string(*updateRemoteOptions.path.value))
-	//		updates[schema.LogStreamElem.BasePath] = v
-	//	}
-	//	option = updateRemoteOptions.port
-	//	if OptionProvided(option) {
-	//		v := []byte(schema.ToJournalModel(*updateRemoteOptions.mode.value))
-	//		updates[schema.LogStreamElem.JournalModel] = v
-	//	}
+	id := *updateRemoteOptions.id.value
+	updates := make(map[string][]byte)
 
-	panic("command.runUpdateRemote() not impelemented!")
+	// update remote config document
+	var option interface{}
+	option = updateRemoteOptions.id
+	if OptionProvided(option) {
+		v := []byte(string(*updateRemoteOptions.id.value))
+		updates[schema.PortElem.Id] = v
+	}
+	option = updateRemoteOptions.host
+	if OptionProvided(option) {
+		v := []byte(string(*updateRemoteOptions.host.value))
+		updates[schema.PortElem.Host] = v
+	}
+	option = updateRemoteOptions.port
+	if OptionProvided(option) {
+		v := []byte(fmt.Sprintf("%d", (*updateRemoteOptions.port.value)))
+		updates[schema.PortElem.PortNum] = v
+	}
+
+	return env.UpdateRemotePort(id, updates)
 }

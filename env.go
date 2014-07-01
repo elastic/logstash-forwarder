@@ -240,7 +240,7 @@ func (env *Environment) startRegistrar() (err error) {
 	port, found := env.Get(VarHomePort)
 	panics.OnFalse(found, "BUG", VarHomePort, "not set")
 
-	home := port.(*schema.Port).Path()
+	home := port.(*schema.Port).Address()
 	registrar, e := system.StartRegistry(home)
 	panics.OnError(e)
 
@@ -263,7 +263,7 @@ func (env *Environment) Port() string {
 	if !found {
 		return ""
 	}
-	return v.(*schema.Port).Path()
+	return v.(*schema.Port).Address()
 }
 
 func (env *Environment) IsBound() bool {
@@ -293,7 +293,7 @@ func (env *Environment) ResourceId(name string) string {
 	v, found := env.Get(VarHomePort)
 	panics.OnFalse(found, "BUG", "Environment.ResourceId", "VarHomePort not bound!")
 
-	return path.Join(v.(*schema.Port).Path(), name)
+	return path.Join(v.(*schema.Port).Address(), name)
 }
 
 // Returns true if an LSF environemnt exists in the given path

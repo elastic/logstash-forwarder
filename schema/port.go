@@ -10,11 +10,13 @@ import (
 type PortId string
 type portType int
 
-const (
-	localPort  portType = 0
-	remotePort          = 1
-)
+// REVU: keep it as a memento .. who knows?
+//const (
+//	localPort  portType = 0
+//	remotePort          = 1
+//)
 
+// REVU: do we still need this?
 const AnonPortId PortId = ""
 
 // ----------------------------------------------------------------------
@@ -24,27 +26,35 @@ const AnonPortId PortId = ""
 // lsf.RemotePort describes a remote LSF port.
 type Port struct {
 	local   bool
-	Id      PortId // TODO REVU first ..
-	Address *url.URL
+	Id      PortId // REVU: this needs a decision
+	Host    string // double duty as local path
+	PortNum string
+	address *url.URL
+
 	// todo certs ..
 }
 
-func (p Port) Path() string { return p.Address.Path }
+func (p Port) Address() string {
+	return p.address.Path
+}
 
 // recorded elements of LogStream object
 var PortElem = struct {
-	is_local, id, address string
+	Local, Id, Host, PortNum string
 }{
-	is_local: "local",
-	id:       "id",
-	address:  "address",
+	Local:   "local",
+	Id:      "id",
+	Host:    "host",
+	PortNum: "port",
 }
 
 // REVU: TODO sort mappings at sysrec..
+// NOTE: port-num image is expected to be a string
 func (t *Port) Mappings() map[string][]byte {
 	m := make(map[string][]byte)
-	m[PortElem.id] = []byte(t.Id)
-	m[PortElem.address] = []byte(t.Address.String())
+	m[PortElem.Id] = []byte(t.Id)
+	m[PortElem.Host] = []byte(t.Host)
+	m[PortElem.PortNum] = []byte(t.PortNum)
 	return m
 }
 
@@ -53,26 +63,44 @@ func (t *Port) String() string {
 	if !t.local {
 		locality = "remote"
 	}
-	return fmt.Sprintf("port %s %s %s", t.Id, locality, t.Path())
+	return fmt.Sprintf("port %s %s %s", t.Id, locality, t.Address())
 }
 
 func PortDigest(doc system.Document) string {
-	port := DecodePort(doc)
-	return port.String()
+	return DecodePort(doc).String()
 }
 
 func DecodePort(data system.DataMap) *Port {
 	m := data.Mappings()
-	addr, e := url.Parse(string(m[PortElem.address]))
-	panics.OnError(e, "BUG", "schema.DecodePort")
-	return &Port{
-		Id:      PortId(string(m[PortElem.id])),
-		Address: addr,
+
+	host := string(m[PortElem.Host])
+	portnumStr := string(m[PortElem.PortNum])
+
+	var isLocal bool
+	var canonicalPath string
+	if len(portnumStr) > 0 {
+		canonicalPath = fmt.Sprintf("%s:%s", host, portnumStr)
+	} else {
+		canonicalPath = host
+		isLocal = true
 	}
+	addr, e := url.Parse(canonicalPath)
+	panics.OnError(e, "BUG", "schema.DecodePort")
+
+	id := string(m[PortElem.Id])
+	port := &Port{
+		local:   isLocal,
+		Id:      PortId(id),
+		Host:    host,
+		PortNum: portnumStr,
+		address: addr,
+	}
+
+	return port
 }
 
 // returns nil, nil on "" path input
-// REVU: needs ID
+// REVU: needs ID (REVU:/later: why? instead of portnum?)
 func NewLocalPort(path string) (*Port, error) {
 	if path == "" {
 		return nil, nil
@@ -85,14 +113,15 @@ func NewLocalPort(path string) (*Port, error) {
 
 	port := &Port{
 		local:   true,
-		Address: address,
+		Host:    path,
+		address: address,
 	}
 	return port, nil
 }
 
 func NewRemotePort(id, host string, portno int) (*Port, error) {
-
-	path := fmt.Sprintf("%s:%d", host, portno)
+	portnumStr := fmt.Sprintf("%d", portno)
+	path := fmt.Sprintf("%s:%s", host, portnumStr)
 	address, e := url.Parse(path)
 	if e != nil {
 		return nil, e
@@ -100,7 +129,9 @@ func NewRemotePort(id, host string, portno int) (*Port, error) {
 	port := &Port{
 		local:   false,
 		Id:      PortId(id),
-		Address: address,
+		Host:    host,
+		PortNum: portnumStr,
+		address: address,
 	}
 	return port, nil
 }
