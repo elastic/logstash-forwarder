@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"time"
 )
 
@@ -199,28 +200,32 @@ func (obj *object) String() string {
 // ----------------------------------------------------------------------
 
 type objectIterationOrder string
+
 var ObjectIterationOrder = struct {
-		ById, ByModTime objectIterationOrder } {
-	ById: 		objectIterationOrder("order-by-id"),
-	ByModTime: 	objectIterationOrder("order-by-modtime"),
+	ById, ByAge objectIterationOrder
+}{
+	ById:  objectIterationOrder("order-by-id"),
+	ByAge: objectIterationOrder("order-by-age"),
 }
 
 // REVU: this is fairly generic. Move to lsf/misc.go
 type iterationDirection byte
+
 var IterationDirection = struct {
-		Ascending, Descending iterationDirection } {
-	Ascending: 		iterationDirection(0),
-	Descending: 	iterationDirection(1),
+	Ascending, Descending iterationDirection
+}{
+	Ascending:  iterationDirection(0),
+	Descending: iterationDirection(1),
 }
 
 // ObjectMap provides methods for ordered iteration over
 // maps of FS Objects.
 type ObjectMap interface {
-	// Returns the map's key set sorted per input args.
-	Keys(order objectIterationOrder, direction iterationDirection ) []string
+	//	// Returns the map's key set sorted per input args.
+	//	Keys(order objectIterationOrder, direction iterationDirection ) []string
 	// Returns the map's value set sorted per input args.
 	// Equiv to iterating over the underlying map via ranging over ObjectMap.Keys()
-	Objects(order objectIterationOrder, direction iterationDirection ) []Object
+	Objects(order objectIterationOrder, direction iterationDirection) []Object
 	// The actual map.
 	RawMap() map[string]Object
 }
@@ -229,6 +234,38 @@ type ObjectMap interface {
 // FileSystem ObjectMap: Ref. Impl.
 // ----------------------------------------------------------------------
 
+type ByAgeAscending []Object
+
+func (a ByAgeAscending) Len() int      { return len(a) }
+func (a ByAgeAscending) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a ByAgeAscending) Less(i, j int) bool {
+	return a[i].Age() < a[j].Age()
+}
+
+type ByAgeDescending []Object
+
+func (a ByAgeDescending) Len() int      { return len(a) }
+func (a ByAgeDescending) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a ByAgeDescending) Less(i, j int) bool {
+	return a[i].Age() > a[j].Age()
+}
+
+type ByIdAscending []Object
+
+func (a ByIdAscending) Len() int      { return len(a) }
+func (a ByIdAscending) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a ByIdAscending) Less(i, j int) bool {
+	return a[i].Id() < a[j].Id()
+}
+
+type ByIdDescending []Object
+
+func (a ByIdDescending) Len() int      { return len(a) }
+func (a ByIdDescending) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a ByIdDescending) Less(i, j int) bool {
+	return a[i].Id() > a[j].Id()
+}
+
 type objectMap map[string]Object
 
 func AsObjectMap(m map[string]Object) ObjectMap {
@@ -236,13 +273,33 @@ func AsObjectMap(m map[string]Object) ObjectMap {
 }
 
 func (m objectMap) RawMap() map[string]Object {
-	return m.(map[string]Object)
+	return map[string]Object(m)
 }
 
-func (m objectMap) Keys(order iterationOrder, direction iterationDirection ) []string {
-	panic("implement me!")
+func (m objectMap) Objects(order objectIterationOrder, direction iterationDirection) []Object {
+	var objects []Object
+	for _, object := range m {
+		objects = append(objects, object)
+	}
+	switch {
+	case order == ObjectIterationOrder.ByAge && direction == IterationDirection.Ascending:
+		sort.Sort(ByAgeAscending(objects))
+
+	case order == ObjectIterationOrder.ByAge && direction == IterationDirection.Descending:
+		sort.Sort(ByAgeDescending(objects))
+
+	case order == ObjectIterationOrder.ById && direction == IterationDirection.Ascending:
+		sort.Sort(ByIdAscending(objects))
+
+	case order == ObjectIterationOrder.ById && direction == IterationDirection.Descending:
+		sort.Sort(ByIdDescending(objects))
+
+	default:
+		panic("BUG - unknown sort order")
+	}
+	return objects
 }
 
-func (m objectMap) Objects(order iterationOrder, direction iterationDirection ) []Object {
-	panic("implement me!")
-}
+//func (m objectMap) Keys(order objectIterationOrder, direction iterationDirection ) []string {
+//	panic("implement me!")
+//}
