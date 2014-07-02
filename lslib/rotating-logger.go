@@ -21,7 +21,9 @@ type RotatingFileWriter interface {
 	// If already closed, it is a nop.
 	// Calls to Write() after close() will panic.
 	Close()
-	CloseOnSignal(sig ...os.Signal)
+	// Calls Close() if notified of any of the
+	// following os.Signals. Should be invoked only once.
+	CloseOnSignal(signals ...os.Signal)
 }
 
 // ----------------------------------------------------------------------
