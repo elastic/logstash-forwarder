@@ -20,7 +20,7 @@ import (
 const MAX_FNAME_LEN = 255
 
 // (for now) using *nix oids as maximal. So,
-// the max length for OID is dev (32bits) + ino (64b)
+// the max length for OID is dev (4b) + ino (8b)
 const OID_LEN = 12
 
 // --- os specific ----------------------------------------- END
