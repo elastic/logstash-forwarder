@@ -62,9 +62,9 @@ func NewRotatingFileWriter(basepath, basename string, maxseq uint, maxFileSize i
 		panics.OnError(e, "os.OpenFile", "CREATE|TRUNC", fname)
 	}
 
-//	filepath := path.Join(basepath, file.Name())
+	//	filepath := path.Join(basepath, file.Name())
 	offset, _ := file.Seek(0, os.SEEK_END)
-//	rotator = &rotatingFileWriter{basepath, filepath, file, 0, maxseq, maxFileSize, offset, false}
+	//	rotator = &rotatingFileWriter{basepath, filepath, file, 0, maxseq, maxFileSize, offset, false}
 	rotator = &rotatingFileWriter{basepath, basename, file, 0, maxseq, maxFileSize, offset, false}
 
 	e = rotator.rotateOnLimit()

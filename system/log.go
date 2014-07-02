@@ -4,6 +4,7 @@ import (
 	"io"
 	"lsf/panics"
 	"os"
+	//	"lsf/lslib"
 )
 
 /*
@@ -18,15 +19,16 @@ import (
 
 type LogAccessMode string
 
-var logAccess = struct{ Reader, Writer LogAccessMode }{"sys-log-reader", "sys-log-writer"}
+var LogAccess = struct{ Reader, Writer LogAccessMode }{"sys-log-reader", "sys-log-writer"}
 
-// ~analogous to system.Document
+// ~analogous to system.Document, Log is a system FS object
 type Log interface {
 	Id() string
 	Writer() LogWriter
 	Reader() LogReader
 }
 
+// REVU: .. ? .. TODO: REVU:
 type LogReader interface {
 	// Read semantics for logs?
 	ReadLine(n int64) (string, error)
@@ -51,6 +53,7 @@ func (sl *syslog) Tail() string {
 }
 
 // this is NOT creating a log file. It is entirely analogous to document's newDocument.
+// REVU: TODO: change both to newTTTObject
 func newLog(id string, fpath, fname string, data []string) (l *syslog, err error) {
 	defer panics.Recover(&err)
 

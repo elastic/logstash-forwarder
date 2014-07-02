@@ -6,10 +6,10 @@ import (
 	"lsf"
 	"lsf/fs"
 	"lsf/lsfun"
+	"lsf/lslib"
 	"lsf/panics"
 	"lsf/schema"
 	"lsf/system"
-	"lsf/lslib"
 	"time"
 )
 
@@ -107,10 +107,10 @@ func runTrack(env *lsf.Environment, args ...string) (err error) {
 	log.Printf("delay is %d", delay)
 
 	// --- cleanup --- formalize -- BEING
-	// REVU: TODO: this beongs to the lsfun.TrackScout object, not here
-	eventlogBasepath := env.Port()						 // TODO: this
-	eventlogBasename := id + ".trackscout.event.log"	 // TODO: this
-	rotator, e := lslib.NewRotatingFileWriter(eventlogBasepath, eventlogBasename, 2, 1024 * 128)
+	// REVU: TODO: this belongs to the lsfun.TrackScout object, not here
+	eventlogBasepath := env.Port()                   // TODO: this
+	eventlogBasename := id + ".trackscout.event.log" // TODO: this
+	rotator, e := lslib.NewRotatingFileWriter(eventlogBasepath, eventlogBasename, 2, 1024*128)
 	panics.OnError(e, "NewFileRotator")
 	// --- cleanup --- formalize -- END
 
@@ -128,7 +128,7 @@ func runTrack(env *lsf.Environment, args ...string) (err error) {
 				for _, event := range report.Events {
 					if event.Code != lsfun.TrackEvent.KnownFile { // printing NOP events gets noisy
 						log.Println(event)
-						rotator.Write([]byte(event.String()+"\n"))
+						rotator.Write([]byte(event.String() + "\n"))
 					}
 				}
 
