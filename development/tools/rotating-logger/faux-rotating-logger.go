@@ -83,6 +83,7 @@ func writeLog(dir, basename string, maxsize int64, maxfiles uint, delay_msec tim
 		default:
 			line := simulateLogInput()
 
+			// REVU: all this needs to be extracted as an io.Writer. BEGIN
 			_, e := file.Write(line)
 			panics.OnError(e, "file.Write", file)
 
@@ -92,6 +93,8 @@ func writeLog(dir, basename string, maxsize int64, maxfiles uint, delay_msec tim
 				panics.OnError(e, "rotate", "on-rotate")
 				n = 0
 			}
+			// REVU: all this needs to be extracted as an io.Writer. END
+
 			time.Sleep(delay_msec)
 		}
 	}
@@ -104,6 +107,8 @@ func newProcess() (stop <-chan interface{}, wdone chan interface{}) {
 // ----------------------------------------------------------------------
 // File Rotator
 // ----------------------------------------------------------------------
+
+// REVU: all this needs to be extracted as an io.Writer. BEGIN
 
 type fileRotator struct {
 	basepath, filepath string
@@ -176,6 +181,7 @@ func rotate(file *os.File, seq uint, seqmax uint) (newfile *os.File, newseq uint
 
 	return newfile, seq, nil
 }
+// REVU: all this needs to be extracted as an io.Writer. END
 
 var sequence uint64
 
