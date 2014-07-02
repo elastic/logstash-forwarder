@@ -106,6 +106,8 @@ func (t *trackScout) trackScoutInit() (err error) {
 	return nil
 }
 
+// REVU: don't return bare map.
+// TODO: Enforce key order with a wrapper type. (in lsf/fs/fsobj.go
 func (t *trackScout) ObjectMap() map[string]fs.Object {
 	copy := make(map[string]fs.Object)
 	for k, v := range t.objects.Cache {
