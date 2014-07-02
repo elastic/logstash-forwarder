@@ -130,14 +130,14 @@ func (obj *object) Flags() uint8 {
 // pretty print with field labels.
 func (obj *object) Debug() string {
 	return fmt.Sprintf(
-		"fsobject %s:id %12d:info-age (nsec) %12d:size (b) %12d:age (nsec) %20q:name flags:%b",
-		obj.Id(), obj.InfoAge(), obj.Info().Size(), obj.Age(), obj.Info().Name(), obj.Flags())
+		"fsobject %s:id  flags:%b %12d:info-age (nsec) %12d:size (b) %12d:age (nsec) %20q:name",
+		obj.Id(), obj.Flags(), obj.InfoAge(), obj.Info().Size(), obj.Age(), obj.Info().Name())
 }
 
 func (obj *object) String() string {
 	return fmt.Sprintf(
-		"fsobject %s %12d %12d %12d %20q %b",
-		obj.Id(), obj.InfoAge(), obj.Info().Size(), obj.Age(), obj.Info().Name(), obj.Flags())
+		"fsobject %s %b %12d %12d %12d %20q",
+		obj.Id(), obj.Flags(), obj.InfoAge(), obj.Info().Size(), obj.Age(), obj.Info().Name())
 }
 
 // (for now) using *nix oids as maximal. So,

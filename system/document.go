@@ -61,7 +61,7 @@ func (d *document) IsDirty() bool {
 }
 
 func (d *document) Mappings() map[string][]byte {
-	var mappings map[string][]byte
+	mappings := make(map[string][]byte)
 	for k, v := range d.records {
 		mappings[k] = v
 	}

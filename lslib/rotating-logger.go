@@ -54,27 +54,18 @@ func NewRotatingFileWriter(basepath, basename string, maxseq uint, maxFileSize i
 	defer panics.Recover(&err)
 
 	fileperm := os.FileMode(0644)
-
 	fname := path.Join(basepath, basename)
+
 	file, e := os.OpenFile(fname, os.O_WRONLY|os.O_CREATE, fileperm)
 	if e != nil {
 		file, e = os.OpenFile(fname, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, fileperm)
 		panics.OnError(e, "os.OpenFile", "CREATE|TRUNC", fname)
 	}
 
-	_, e = os.Open(basepath) // check basepath exists
-	panics.OnError(e, "NewFileRotator")
-
-	info, e := file.Stat()
-	panics.OnError(e, "NewFileRotator")
-
-	filepath := path.Join(basepath, file.Name())
-	xinfo, e := os.Stat(filepath)
-	panics.OnError(e, "NewFileRotator")
-	os.SameFile(info, xinfo)
-
+//	filepath := path.Join(basepath, file.Name())
 	offset, _ := file.Seek(0, os.SEEK_END)
-	rotator = &rotatingFileWriter{basepath, filepath, file, 0, maxseq, maxFileSize, offset, false}
+//	rotator = &rotatingFileWriter{basepath, filepath, file, 0, maxseq, maxFileSize, offset, false}
+	rotator = &rotatingFileWriter{basepath, basename, file, 0, maxseq, maxFileSize, offset, false}
 
 	e = rotator.rotateOnLimit()
 	panics.OnError(e, "NewFileRotator", "rotateOnLimit:")
