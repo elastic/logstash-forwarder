@@ -61,10 +61,7 @@ func (d *document) IsDirty() bool {
 }
 
 func (d *document) Mappings() map[string][]byte {
-	if d == nil {
-		return map[string][]byte{}
-	}
-	mappings := make(map[string][]byte, len(d.records))
+	var mappings map[string][]byte
 	for k, v := range d.records {
 		mappings[k] = v
 	}
@@ -72,14 +69,9 @@ func (d *document) Mappings() map[string][]byte {
 }
 
 func (d *document) Keys() []string {
-	if d == nil {
-		return []string{}
-	}
-	keys := make([]string, len(d.records))
-	n := 0
-	for k, _ := range d.records {
-		keys[n] = k
-		n++
+	var keys []string = []string{}
+	for k := range d.records {
+		keys = append(keys, k)
 	}
 	return keys
 }
@@ -123,11 +115,10 @@ func (d *document) Delete(k string) bool {
 
 type DocumentDigestFn func(Document) string
 
-// acquire resource lock
-// create file if not existing.
-// write data
-// close file
-// release lock
+// acquires resource lock
+// creates file if not existing; writes data; closes file
+// releases lock.
+// Returns document instance.
 func newDocument(dockey string, fpath, fname string, data map[string][]byte) (doc *document, err error) {
 	defer panics.Recover(&err)
 
@@ -193,7 +184,7 @@ func (d *document) Write(w io.Writer) error {
 
 // Saves document, if dirty.
 // Write Lock acquired for duration (attempted)
-// New document file is atomically swapped.
+// New document file is atomically swapped. File is closed.
 func updateDocument(doc *document, filename string) (ok bool, err error) {
 	defer panics.Recover(&err)
 
