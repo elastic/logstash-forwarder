@@ -117,7 +117,7 @@ type Object interface {
 	Info() os.FileInfo
 	// String rep of Object
 	String() string
-	// String rep of Object
+	// String rep of Object with labels.
 	Debug() string
 	// returns 'age' since last mod time.
 	Age() time.Duration
@@ -192,4 +192,57 @@ func (obj *object) String() string {
 	return fmt.Sprintf(
 		normalFmt,
 		obj.Id(), obj.Flags(), obj.InfoAge(), obj.Info().Size(), obj.Age(), obj.Info().Name())
+}
+
+// ----------------------------------------------------------------------
+// FileSystem ObjectMap
+// ----------------------------------------------------------------------
+
+type objectIterationOrder string
+var ObjectIterationOrder = struct {
+		ById, ByModTime objectIterationOrder } {
+	ById: 		objectIterationOrder("order-by-id"),
+	ByModTime: 	objectIterationOrder("order-by-modtime"),
+}
+
+// REVU: this is fairly generic. Move to lsf/misc.go
+type iterationDirection byte
+var IterationDirection = struct {
+		Ascending, Descending iterationDirection } {
+	Ascending: 		iterationDirection(0),
+	Descending: 	iterationDirection(1),
+}
+
+// ObjectMap provides methods for ordered iteration over
+// maps of FS Objects.
+type ObjectMap interface {
+	// Returns the map's key set sorted per input args.
+	Keys(order objectIterationOrder, direction iterationDirection ) []string
+	// Returns the map's value set sorted per input args.
+	// Equiv to iterating over the underlying map via ranging over ObjectMap.Keys()
+	Objects(order objectIterationOrder, direction iterationDirection ) []Object
+	// The actual map.
+	RawMap() map[string]Object
+}
+
+// ----------------------------------------------------------------------
+// FileSystem ObjectMap: Ref. Impl.
+// ----------------------------------------------------------------------
+
+type objectMap map[string]Object
+
+func AsObjectMap(m map[string]Object) ObjectMap {
+	return objectMap(m)
+}
+
+func (m objectMap) RawMap() map[string]Object {
+	return m.(map[string]Object)
+}
+
+func (m objectMap) Keys(order iterationOrder, direction iterationDirection ) []string {
+	panic("implement me!")
+}
+
+func (m objectMap) Objects(order iterationOrder, direction iterationDirection ) []Object {
+	panic("implement me!")
 }
