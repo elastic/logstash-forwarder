@@ -177,10 +177,48 @@ Alright then, let's ***define a remote*** port:
  
     # 'ls-cluster' is just a logical name. ops on this remote use this logical name.
     
-    ± lsf remote add -r ls-cluster -h 127.0.0.1 -p 6333 
+    ± lsf remote add -r ls-cluster -h 122.140.201.1 -p 6333 
     
     # let's confirm:
     ± ls remote -v
-    port ls-cluster remote 127.0.0.1:6333
+    port ls-cluster remote 122.140.201.1:6333
+
+[TODO: remote update ; remote remove]
+
+##`track`
+The most basic capability of `LS/F` is the tracking of filesystem objects that match the specification of a `stream`. The `lsf track` command provides the command line interface to this capability. `track` generates an event log and a filesystem snapshot of the relavant filesystem objects. 
+
+Invoking `lsf track` with the help option will display the gory details:
+
+    ± lsf track -h
+    Usage of track:
+    -G=false: command applies globally
+    -N=0: max size of fs object cache
+    -T=0: max age of objects in fs object cache
+    -f=1: report frequency - n / sec (e.g. 1000 1/ms)
+    -frequency=1: report frequency - n / sec (e.g. 1000 1/ms)
+    -global=false: command applies globally
+    -max-age=0: max age of objects in fs object cache
+    -max-size=0: max size of fs object cache
+    -s="": unique identifier for stream
+    -stream-id="": unique identifier for stream
+    
+Try defining a stream that matches your current `logstash-forwarder` settings and try the minimal form of this command.
+
+    # assuming that we have (per above) defined a stream
+    # with id 'clickevents'
+    
+    # we minimally need to identify the logstream to track
+    # The '-N' option caps the numbers of FS objects tracked.
+    # For logstreams that are rotated (such as apache2.log.n)
+    # pick a value that is an integral multiple of the max extension
+    # value. For example, here we use 16 as our hypothetical logger
+    # rotates files up to *.log.15.
+    # For loggers that truncate in place, you will want to use
+    # the T | max-age option.
+    
+    lsf track -s clickevents -N 16
+    
+The above will [as of 08/02/2] emit to std. out, a set of FS events observed by the tracker, and, the updated snapshot of objects that map to the stream's spec. Give it a try.
 
 [tbc]
