@@ -6,8 +6,6 @@ import (
 	"path"
 )
 
-// TODO: REVU if distinction between Registrar & Registry still makes sense.
-// TODO: REVU if inclusion of System log api makes sense. (Why not in system?)
 // ----------------------------------------------------------------------------
 // Registry
 // ----------------------------------------------------------------------------

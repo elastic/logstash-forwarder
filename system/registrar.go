@@ -18,9 +18,8 @@ func StartRegistry(basepath string) (Registrar, error) {
 	return registrar, nil
 }
 
-// Launches a goroutine to process user requests from a request queue.
-// This mechanism provides the in-memory linearlization of access to the
-// shared system resources managed by system, per semantics of system.Registrar
+// Launches a goroutine to process user requests affecting
+// shared system resources managed by system, per semantics of system.Registrar.
 func (r *registrar) run() {
 	defer func() {
 		// REVU: request.execute() returns errors via channels

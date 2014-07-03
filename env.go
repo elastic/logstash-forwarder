@@ -104,7 +104,7 @@ func CreateEnvironment(dir string, force bool) (rootpath string, err error) {
 	userHome := system.UserHome()
 	isUserHome := userHome == dir
 
-	// onetime setup user account global SLF port
+	// onetime setup user account global LS/F port
 	// if not existing
 	if !isUserHome {
 		// create user level .lsf environment if not existing
@@ -121,7 +121,7 @@ func CreateEnvironment(dir string, force bool) (rootpath string, err error) {
 		return "", E_EXISTING_LSF
 	}
 
-	// lock out all other for this op
+	// lock out all others for this op
 	uid := HexShaDigest(dir) // unique id for the environment based on its absolute path
 	var portPath string
 	switch isUserHome {

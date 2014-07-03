@@ -70,4 +70,5 @@ type LogJournal struct {
 // An entry in the LogJournal
 type LogJournalEntry struct {
 	Timestamp time.Time
+	Data      []byte // REVU: TODO: consider the string..
 }

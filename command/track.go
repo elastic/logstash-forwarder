@@ -163,9 +163,14 @@ func endTrack(env *lsf.Environment, args ...string) (err error) {
 	return v.(system.Lock).Unlock()
 }
 
+// REVU: haven't we seen this before?
+// TODO: consolidate this (type of func) once and for all.
 func docIdForStream(id string) string {
 	return fmt.Sprintf("stream.%s.stream", id)
 }
+
+// REVU: won't we see this again?
+// TODO: consolidate this (type of func) once and for all.
 func trackResourceId(env *lsf.Environment, streamId string, restype string) string {
 	resource := fmt.Sprintf("stream.%s.%s", streamId, restype)
 	return env.ResourceId(resource)

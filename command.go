@@ -132,6 +132,8 @@ func RunActive(env *Environment, cmd0 *Command, args ...string) (err error) {
 
 	// expected to run a go routine
 	// this call should NOT block
+	// REVU: and why shouldn't it block?
+	// TODO: REVU alt approach.
 	e1 := cmd.cmd.Run(env, args...)
 	panics.OnError(e1)
 
