@@ -221,11 +221,9 @@ var IterationDirection = struct {
 // ObjectMap provides methods for ordered iteration over
 // maps of FS Objects.
 type ObjectMap interface {
-	//	// Returns the map's key set sorted per input args.
-	//	Keys(order objectIterationOrder, direction iterationDirection ) []string
 	// Returns the map's value set sorted per input args.
 	// Equiv to iterating over the underlying map via ranging over ObjectMap.Keys()
-	Objects(order objectIterationOrder, direction iterationDirection) []Object
+	Sort(order objectIterationOrder, direction iterationDirection) []Object
 	// The actual map.
 	RawMap() map[string]Object
 }
@@ -276,7 +274,7 @@ func (m objectMap) RawMap() map[string]Object {
 	return map[string]Object(m)
 }
 
-func (m objectMap) Objects(order objectIterationOrder, direction iterationDirection) []Object {
+func (m objectMap) Sort(order objectIterationOrder, direction iterationDirection) []Object {
 	var objects []Object
 	for _, object := range m {
 		objects = append(objects, object)
@@ -299,7 +297,3 @@ func (m objectMap) Objects(order objectIterationOrder, direction iterationDirect
 	}
 	return objects
 }
-
-//func (m objectMap) Keys(order objectIterationOrder, direction iterationDirection ) []string {
-//	panic("implement me!")
-//}
