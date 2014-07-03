@@ -135,7 +135,8 @@ func runTrack(env *lsf.Environment, args ...string) (err error) {
 				objects := scout.ObjectMap()
 
 				log.Println("--- objects ------------------------------------------")
-				for _, fsobj := range objects {
+				objectsByAge := fs.AsObjectMap(objects).Sort(fs.ObjectIterationOrder.ByAge, fs.IterationDirection.Ascending)
+				for _, fsobj := range objectsByAge {
 					log.Println(fsobj.String())
 				}
 				log.Println()
