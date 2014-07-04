@@ -184,7 +184,14 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
     }
 
     address := addresses[rand.Int()%len(addresses)]
-    addressport := fmt.Sprintf("%s:%s", address, port)
+    var addressport string
+
+    ip := net.ParseIP(address)
+    if len(ip) == net.IPv4len {
+        addressport = fmt.Sprintf("%s:%s", address, port)
+    } else if len(ip) == net.IPv6len {
+        addressport = fmt.Sprintf("[%s]:%s", address, port)
+    }
 
     log.Printf("Connecting to %s (%s) \n", addressport, host)
 
