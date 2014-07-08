@@ -1,8 +1,8 @@
 package system
 
 import (
-	"errors" // REVU: TODO use kriterium
 	"fmt"
+	"github.com/elasticsearch/kriterium/errors"
 	"os"
 	"path"
 	"strings"
@@ -21,8 +21,12 @@ func UserHome() string {
 // Note: Don't confuse oid with fs.Object.Id(). oid is generalizing DocIds/LogIds
 // which is merely a semantic identifier exclusive to the system.
 func objectPathForId(lsfpath string, oid string) (basepath, basename string, err error) {
-	if lsfpath == "" || oid == "" {
-		err = errors.New("zero-value arg")
+	if lsfpath == "" {
+		err = errors.ILLEGAL_ARGUEMENT("lsfpath:", "can not be zerovalue")
+		return
+	}
+	if oid == "" {
+		err = errors.ILLEGAL_ARGUEMENT("oid:", "can not be zerovalue")
 		return
 	}
 

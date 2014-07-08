@@ -15,38 +15,18 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package lsf
+package fs
 
 import (
 	"github.com/elasticsearch/kriterium/errors"
 )
 
 // ----------------------------------------------------------------------------
-// error codes
+// lsf/fs error codes
 // ----------------------------------------------------------------------------
 
 var ERR = struct {
-	USAGE,
-	ILLEGAL_STATE,
-	ILLEGAL_ARGUMENT,
-	RELATIVE_PATH,
-	EXISTING_LSF,
-	NOT_EXISTING_LSF,
-	EXISTING,
-	NOT_EXISTING,
-	ILLEGAL_STATE_REGISTRAR_RUNNING,
-	EXISTING_STREAM,
-	CONCURRENT errors.TypedError
+	NOT_SAME_OBJECT errors.TypedError
 }{
-	USAGE:                           errors.USAGE,
-	ILLEGAL_ARGUMENT:                errors.ILLEGAL_ARGUEMENT,
-	ILLEGAL_STATE:                   errors.ILLEGAL_STATE,
-	ILLEGAL_STATE_REGISTRAR_RUNNING: errors.New("Registrar already running"),
-	RELATIVE_PATH:                   errors.New("path is not absolute"),
-	EXISTING_LSF:                    errors.New("lsf environment already exists"),
-	NOT_EXISTING_LSF:                errors.New("lsf environment does not exists at location"),
-	EXISTING:                        errors.New("lsf resource already exists"),
-	NOT_EXISTING:                    errors.New("lsf resource does not exist"),
-	EXISTING_STREAM:                 errors.New("stream already exists"),
-	CONCURRENT:                      errors.New("concurrent operation error"),
+	NOT_SAME_OBJECT: errors.New("not the same object"),
 }
