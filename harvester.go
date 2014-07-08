@@ -49,8 +49,10 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
         // timed out waiting for data, got eof.
         // Check to see if the file was truncated
         info, _ := h.file.Stat()
-        if info.Size() < offset {
-          log.Printf("File truncated, seeking to beginning: %s\n", h.Path)
+		cursize := info.Size() + 1
+        if cursize < offset {
+          log.Printf("File truncated, seeking to beginning: %s (size: %s, offset: %s)\n",
+                     h.Path, cursize, offset)
           h.file.Seek(0, os.SEEK_SET)
           offset = 0
         } else if age := time.Since(last_read_time); age > (24 * time.Hour) {
