@@ -1,13 +1,13 @@
 package lsfun
 
 import (
-	"fmt"
-	"lsf"
-	"lsf/fs"
-	"lsf/panics"
 	"os"
 	"path"
 	"time"
+	"fmt"
+	"github.com/elasticsearch/kriterium/panics"
+	"lsf"
+	"lsf/fs"
 )
 
 // ----------------------------------------------------------------------

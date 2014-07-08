@@ -1,9 +1,9 @@
 package system
 
 import (
-	"lsf/panics"
 	"os"
 	"path"
+	"github.com/elasticsearch/kriterium/panics"
 )
 
 // ----------------------------------------------------------------------------

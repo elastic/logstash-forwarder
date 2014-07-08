@@ -3,7 +3,6 @@ package command
 import (
 	"flag"
 	"lsf"
-	//	"lsf/panics"
 )
 
 const remoteCmdCode lsf.CommandCode = "remote"

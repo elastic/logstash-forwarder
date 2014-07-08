@@ -2,8 +2,8 @@ package command
 
 import (
 	"flag"
+	"github.com/elasticsearch/kriterium/panics"
 	"lsf"
-	"lsf/panics"
 	"lsf/schema"
 )
 

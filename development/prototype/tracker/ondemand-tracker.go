@@ -5,9 +5,9 @@ package main
 import (
 	"flag"
 	"log"
+	"github.com/elasticsearch/kriterium/panics"
 	"lsf/fs"
 	. "lsf/lsfun"
-	"lsf/panics"
 	"os"
 	"os/signal"
 	"time"

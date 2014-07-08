@@ -3,10 +3,10 @@ package lslib
 import (
 	"fmt"
 	"io"
-	"lsf/panics"
+	"path"
 	"os"
 	"os/signal"
-	"path"
+	"github.com/elasticsearch/kriterium/panics"
 )
 
 // ----------------------------------------------------------------------

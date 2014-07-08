@@ -1,9 +1,9 @@
 package system
 
 import (
+	"testing"
 	"lsf/system/process"
 	"lsf/test"
-	"testing"
 )
 
 /* blackbox test of system.Process/system.Supervisor impls. */

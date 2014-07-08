@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"lsf/panics"
+	"github.com/elasticsearch/kriterium/panics"
 	"lsf/schema"
 	"lsf/system"
 	"os"

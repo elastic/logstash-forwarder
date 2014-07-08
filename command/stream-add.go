@@ -1,8 +1,8 @@
 package command
 
 import (
+	"github.com/elasticsearch/kriterium/panics"
 	"lsf"
-	"lsf/panics"
 )
 
 const addStreamCmdCode lsf.CommandCode = "stream-add"

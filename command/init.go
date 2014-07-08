@@ -2,8 +2,8 @@ package command
 
 import (
 	"log"
+	"github.com/elasticsearch/kriterium/panics"
 	"lsf"
-	"lsf/panics"
 )
 
 const cmd_init lsf.CommandCode = "init"

@@ -2,9 +2,8 @@ package system
 
 import (
 	"io"
-	"lsf/panics"
 	"os"
-	//	"lsf/lslib"
+	"github.com/elasticsearch/kriterium/panics"
 )
 
 /*

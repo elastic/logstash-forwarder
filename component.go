@@ -4,6 +4,7 @@ import "log"
 
 func NilInitializer() error { return nil }
 
+// REVU: TODO move to kriterium
 type Component struct {
 	Initialize func() error
 }

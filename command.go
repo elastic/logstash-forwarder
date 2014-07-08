@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"lsf/panics"
+	"github.com/elasticsearch/kriterium/panics"
 	"lsf/system"
 	"lsf/system/process"
 	"os"

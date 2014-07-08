@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"lsf"
-	"lsf/panics"
+	"github.com/elasticsearch/kriterium/panics"
 	"lsf/system"
 )
 

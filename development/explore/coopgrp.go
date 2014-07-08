@@ -4,9 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"github.com/elasticsearch/kriterium/panics"
 	"lsf/fs"
 	"lsf/lsfun"
-	"lsf/panics"
 	"time"
 )
 

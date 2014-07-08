@@ -3,9 +3,9 @@ package fs
 import (
 	"fmt"
 	"log"
-	"lsf/panics"
-	"strconv"
 	"time"
+	"strconv"
+	"github.com/elasticsearch/kriterium/panics"
 )
 
 type InfoAge time.Duration

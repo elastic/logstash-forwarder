@@ -4,8 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"github.com/elasticsearch/kriterium/panics"
 	"lsf/lslib"
-	"lsf/panics"
 	"os"
 	"time"
 )
