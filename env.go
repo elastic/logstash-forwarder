@@ -1,7 +1,6 @@
 package lsf
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"github.com/elasticsearch/kriterium/panics"
@@ -16,22 +15,6 @@ import (
 
 // Base directory of an LSF base
 const RootDir = ".lsf"
-
-// ----------------------------------------------------------------------------
-// error codes
-// ----------------------------------------------------------------------------
-
-var E_USAGE = errors.New("invalid command usage")
-var E_INVALID = errors.New("invalid argument")
-var E_RELATIVE_PATH = errors.New("path is not absolute")
-var E_EXISTING_LSF = errors.New("lsf environment already exists")
-var E_NOTEXISTING_LSF = errors.New("lsf environment does not exists at location")
-var E_EXISTING = errors.New("lsf resource already exists")
-var E_NOTEXISTING = errors.New("lsf resource does not exist")
-var E_ILLEGALSTATE = errors.New("illegal state")
-var E_ILLEGALSTATE_REGISTRAR_RUNNING = errors.New("Registrar already running")
-var E_EXISTING_STREAM = errors.New("stream already exists")
-var E_CONCURRENT = errors.New("concurrent operation error")
 
 // ----------------------------------------------------------------------------
 // Environment Types
@@ -95,7 +78,7 @@ func NewEnvironment() *Environment {
 // Returns error if called on existing environemnt at path.
 func CreateEnvironment(dir string, force bool) (rootpath string, err error) {
 	if !IsAbsPath(dir) {
-		return "", E_RELATIVE_PATH
+		return "", ERR.RELATIVE_PATH("CreateEnvironment:")
 	}
 
 	defer panics.Recover(&err)
@@ -108,7 +91,8 @@ func CreateEnvironment(dir string, force bool) (rootpath string, err error) {
 	// if not existing
 	if !isUserHome {
 		// create user level .lsf environment if not existing
-		if _, e := CreateEnvironment(userHome, false); e != nil && e != E_EXISTING_LSF {
+//		if _, e := CreateEnvironment(userHome, false); e != nil && e != E_EXISTING_LSF {
+		if _, e := CreateEnvironment(userHome, false); e != nil && !ERR.EXISTING_LSF.Matches(e) {
 			return "", e
 		}
 	}
@@ -118,7 +102,7 @@ func CreateEnvironment(dir string, force bool) (rootpath string, err error) {
 	root := rootAt(dir)
 	exists := exists(root)
 	if exists && !force {
-		return "", E_EXISTING_LSF
+		return "", ERR.EXISTING_LSF()
 	}
 
 	// lock out all others for this op
@@ -173,7 +157,7 @@ func (env *Environment) Shutdown() error {
 	defer env.lock.Unlock()
 
 	if !env.bound {
-		return E_ILLEGALSTATE
+		return ERR.ILLEGAL_STATE()
 	}
 
 	if registrar := env.registrar; registrar != nil {
@@ -198,7 +182,7 @@ func (env *Environment) Initialize(dir string) (err error) {
 		return nil
 	}
 	if dir == "" {
-		return E_INVALID
+		return ERR.INVALID("dir:", "zerovalue")
 	}
 
 	if !IsAbsPath(dir) {
@@ -208,7 +192,7 @@ func (env *Environment) Initialize(dir string) (err error) {
 
 	// check if exists
 	if !exists(root) {
-		return E_NOTEXISTING_LSF
+		return ERR.NOT_EXISTING_LSF()
 	}
 
 	env.bound = true
@@ -234,7 +218,7 @@ func (env *Environment) startRegistrar() (err error) {
 
 	// REVU: what's the issue? why not just ignore it?
 	if env.registrar != nil {
-		return E_ILLEGALSTATE_REGISTRAR_RUNNING
+		return ERR.ILLEGAL_STATE_REGISTRAR_RUNNING()
 	}
 
 	port, found := env.Get(VarHomePort)
@@ -389,7 +373,7 @@ func (env *Environment) Get(key varKey) (v interface{}, found bool) {
 // nil value not accepted.
 func (env *Environment) Set(key varKey, v interface{}) (prev interface{}, e error) {
 	if v == nil {
-		return nil, E_INVALID
+		return nil, ERR.INVALID()
 	}
 
 	env.varslock.Lock()
@@ -410,7 +394,7 @@ var defaultDirMode = os.FileMode(0755)
 // Creates a document in the bound LSF Port.
 func (env *Environment) CreateDocument(docId string, datamap system.DataMap) error {
 	if !env.bound {
-		return E_ILLEGALSTATE
+		return ERR.ILLEGAL_STATE()
 	}
 	mappings := datamap.Mappings()
 	_, e := env.registrar.CreateDocument(docId, mappings)
@@ -473,7 +457,7 @@ func (env *Environment) AddSystemDocument(opcode system.OpCode, id, docId, meta 
 	// check if exists
 	doc, e := env.LoadDocument(docId)
 	if e == nil && doc != nil {
-		return E_EXISTING
+		return ERR.EXISTING("AddSystemDocument:")
 	}
 
 	// create it
@@ -496,7 +480,7 @@ func (env *Environment) UpdateSystemDocument(opcode system.OpCode, id, docId, me
 	// verify it exists
 	doc, e := env.LoadDocument(docId)
 	if e != nil || doc == nil {
-		return E_NOTEXISTING
+		return ERR.NOT_EXISTING()
 	}
 
 	previous := doc.SetAll(updates)
@@ -526,7 +510,7 @@ func (env *Environment) RemoveSystemDocument(opcode system.OpCode, id, docId, me
 	// check existing
 	doc, e := env.LoadDocument(docId)
 	if e != nil || doc == nil {
-		return E_NOTEXISTING
+		return ERR.NOT_EXISTING()
 	}
 
 	// remove doc
@@ -588,7 +572,7 @@ func getRecordHierarchy(record string) (documents []string, key string, err erro
 	terms := strings.Split(record, ".")
 	n := len(terms)
 	if n < 2 {
-		return nil, "", E_INVALID
+		return nil, "", ERR.INVALID()
 	}
 
 	docname := terms[n-2]
@@ -605,7 +589,7 @@ func getRecordHierarchy(record string) (documents []string, key string, err erro
 // record is interpreted as a dot notation path. final term
 // is record key in the document in the path. The simplest
 // record spec is "docname.recname". A record arg that does
-// not have at least 2 parts is rejected as E_INVALID.
+// not have at least 2 parts is rejected as ERR.INVALID().
 //
 // GetRecord side-effects:
 // A call to this method will load the entire doc that contains
@@ -621,7 +605,7 @@ func (env *Environment) GetRecord(record string) (value []byte, err error) {
 	defer panics.Recover(&err)
 
 	if !env.bound {
-		return nil, E_ILLEGALSTATE
+		return nil, ERR.ILLEGAL_STATE()
 	}
 
 	documents, key, e := getRecordHierarchy(record)

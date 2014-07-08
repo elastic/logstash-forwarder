@@ -10,7 +10,7 @@ import (
 func _assertNotExists(env *lsf.Environment, docId string) {
 	doc, e := env.LoadDocument(docId)
 	if e == nil && doc != nil {
-		panic(lsf.E_EXISTING)
+		panic(lsf.ERR.EXISTING())
 	}
 }
 
@@ -18,6 +18,6 @@ func _assertNotExists(env *lsf.Environment, docId string) {
 func _assertExists(env *lsf.Environment, docId string) {
 	doc, e := env.LoadDocument(docId)
 	if e != nil || doc == nil {
-		panic(lsf.E_NOTEXISTING)
+		panic(lsf.ERR.NOT_EXISTING())
 	}
 }
