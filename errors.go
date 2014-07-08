@@ -29,6 +29,7 @@ var ERR = struct {
 	USAGE,
 	ILLEGAL_STATE,
 	ILLEGAL_ARGUMENT,
+	OP_FAILURE,
 	RELATIVE_PATH,
 	EXISTING_LSF,
 	NOT_EXISTING_LSF,
@@ -41,12 +42,19 @@ var ERR = struct {
 	USAGE:                           errors.USAGE,
 	ILLEGAL_ARGUMENT:                errors.ILLEGAL_ARGUEMENT,
 	ILLEGAL_STATE:                   errors.ILLEGAL_STATE,
-	ILLEGAL_STATE_REGISTRAR_RUNNING: errors.New("Registrar already running"),
-	RELATIVE_PATH:                   errors.New("path is not absolute"),
-	EXISTING_LSF:                    errors.New("lsf environment already exists"),
-	NOT_EXISTING_LSF:                errors.New("lsf environment does not exists at location"),
-	EXISTING:                        errors.New("lsf resource already exists"),
-	NOT_EXISTING:                    errors.New("lsf resource does not exist"),
-	EXISTING_STREAM:                 errors.New("stream already exists"),
-	CONCURRENT:                      errors.New("concurrent operation error"),
+	OP_FAILURE:                      errors.New("operation failed"),
+	ILLEGAL_STATE_REGISTRAR_RUNNING: errors.New("registrar already running"),                   // REVU: illegal state..
+	RELATIVE_PATH:                   errors.New("path is not absolute"),                        // REVU: isn't this just an illegal arg error?
+	EXISTING_LSF:                    errors.New("lsf environment already exists"),              // REVU: illegal state..
+	NOT_EXISTING_LSF:                errors.New("lsf environment does not exists at location"), // REVU: illegal state..
+	EXISTING:                        errors.New("lsf resource already exists"),                 // REVU: illegal state..
+	NOT_EXISTING:                    errors.New("lsf resource does not exist"),                 // REVU: illegal state..
+	EXISTING_STREAM:                 errors.New("stream already exists"),                       // REVU: illegal state..
+	CONCURRENT:                      errors.New("concurrent operation error"),                  // REVU: illegal state..
+}
+
+var WARN = struct {
+	NO_OP errors.TypedError
+}{
+	NO_OP: errors.New("warning: nop"),
 }

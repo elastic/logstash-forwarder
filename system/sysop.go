@@ -1,7 +1,6 @@
 package system
 
 import (
-	"fmt"
 	"path"
 	"strings"
 )
@@ -71,9 +70,8 @@ func ExclusiveResourceOp(portPath string, opcode OpCode, resId string, meta stri
 		panic(e)
 	}
 	if !ok {
-		err = fmt.Errorf("%s already in progress", resourceOp)
+		err = ERR.SYSTEM_OP_FAILURE("ExclusiveResourceOp:", resourceOp, "already in progress")
 		return
 	}
-
 	return
 }

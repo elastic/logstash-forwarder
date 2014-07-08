@@ -2,15 +2,12 @@ package system
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/elasticsearch/kriterium/panics"
 	"io"
 	"os"
 	"strings"
 	"time"
 )
-
-var E_EXISTING_DOC = fmt.Errorf("document exists")
 
 // ----------------------------------------------------------------------------
 // Document (k/v)
@@ -177,7 +174,7 @@ func (d *document) Write(w io.Writer) error {
 		return e
 	}
 	if n < len(data) {
-		return fmt.Errorf("error updateDocument: only wrote %d of %d", n, len(data))
+		return ERR.SYSTEM_OP_FAILURE("document.Write:", "id:", d.Id(), "n:", n, "data-len:", len(data))
 	}
 	return nil
 }

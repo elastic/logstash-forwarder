@@ -2,7 +2,6 @@ package lsf
 
 import (
 	"flag"
-	"fmt"
 	"github.com/elasticsearch/kriterium/panics"
 	"log"
 	"lsf/system"
@@ -158,7 +157,7 @@ func RunActive(env *Environment, cmd0 *Command, args ...string) (err error) {
 	case Status.Ok, Status.Interrupted_Ok:
 		log.Printf("\nstream-track: %v", stat)
 	default:
-		err = fmt.Errorf("track fault on exit: %v", stat)
+		err = ERR.OP_FAILURE("track fault on exit", stat)
 		log.Printf("\n%s", err.Error())
 	}
 

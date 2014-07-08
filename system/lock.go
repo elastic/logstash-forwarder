@@ -19,23 +19,20 @@ type Lock interface {
 	Unlock() error
 }
 
-var E_WAIT_EXPIRE = fmt.Errorf("wait deadline expired")
-var E_INVALID_LOCK_STATE = fmt.Errorf("lock state not as expected")
-
 func (l *lock) Unlock() error {
 	if l == nil {
 		panic("BUG lock.Unlock: nil receiver")
 	}
 	if l.fileinfo == nil {
-		return E_INVALID_LOCK_STATE
+		return ERR.INVALID_LOCK_STATE("resource:", l.resource, "fileinfo is nil")
 	}
 	if l.resource == "" {
-		panic("BUG lock.Unlock: nil resource")
+		panic(ERR.INVALID_LOCK_STATE("BUG lock.Unlock: nil resource", "resource:", l.resource))
 	}
 
 	e := removeLockFile(l.resource)
 	if e != nil {
-		return fmt.Errorf("error lock.Unlock: removeLockFile: %q - %s", l.resource, e.Error())
+		return ERR.SYSTEM_OP_FAILURE("removeLockFile:")
 	}
 
 	l.fileinfo = nil
@@ -77,10 +74,12 @@ func LockResource(resource string, info string) (l Lock, ok bool, err error) {
 		return nil, false, e
 	}
 	if e == nil && n < len(data) {
-		return nil, false, fmt.Errorf("error - system.writeFile: short write %d of %d", n, len(data))
+		err = ERR.SYSTEM_OP_FAILURE("LockResource:", "file.Write", "n:", n, "data-len:", len(data))
+		return nil, false, err
 	}
 	if e != nil {
-		return nil, false, fmt.Errorf("error system.LockResource: writeLockInfo: %q - %s", resource, e.Error())
+		err = ERR.SYSTEM_OP_FAILURE("LockResource:", "file.Write", "resource:", resource, "cause:", e.Error())
+		return nil, false, err
 	}
 
 	defer file.Close()

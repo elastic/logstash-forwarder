@@ -26,7 +26,13 @@ import (
 // ----------------------------------------------------------------------------
 
 var ERR = struct {
+	SYSTEM_OP_FAILURE,
+	DEADLINE_EXPIRE,
+	INVALID_LOCK_STATE,
 	NOT_SAME_OBJECT errors.TypedError
 }{
-	NOT_SAME_OBJECT: errors.New("not the same object"),
+	SYSTEM_OP_FAILURE:  errors.New("system op failure"),
+	DEADLINE_EXPIRE:    errors.New("wait deadline expired"),
+	INVALID_LOCK_STATE: errors.New("lock state not as expected"),
+	NOT_SAME_OBJECT:    errors.New("not the same object"),
 }

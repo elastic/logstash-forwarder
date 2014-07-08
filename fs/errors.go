@@ -26,7 +26,9 @@ import (
 // ----------------------------------------------------------------------------
 
 var ERR = struct {
+	OBJECT_NOT_FOUND,
 	NOT_SAME_OBJECT errors.TypedError
 }{
-	NOT_SAME_OBJECT: errors.New("not the same object"),
+	OBJECT_NOT_FOUND: errors.New("not found"),
+	NOT_SAME_OBJECT:  errors.New("not the same object"),
 }

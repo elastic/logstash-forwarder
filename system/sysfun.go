@@ -1,7 +1,6 @@
 package system
 
 import (
-	"fmt"
 	"github.com/elasticsearch/kriterium/errors"
 	"os"
 	"path"
@@ -49,10 +48,12 @@ func assertSystemObjectPath(fpath, fname string) (filename string, err error) {
 		// REVU: ok to create the directory
 		e := os.MkdirAll(fpath, os.ModePerm)
 		if e != nil {
-			return "", fmt.Errorf("system: error creating dir %q - %s", fpath, e.Error())
+			err = ERR.SYSTEM_OP_FAILURE("create sysobj path", fpath, "cause:", e.Error())
+			return
 		}
 	} else if !dstat.IsDir() {
-		return "", fmt.Errorf("BUG - %s expected to be a directory", fpath)
+		err = errors.ILLEGAL_STATE("BUG", "not a directory:", fpath)
+		return
 	}
 	filename = path.Join(fpath, fname)
 	return filename, nil

@@ -2,7 +2,7 @@ package command
 
 import (
 	"flag"
-	"fmt"
+	"github.com/elasticsearch/kriterium/errors"
 	"github.com/elasticsearch/kriterium/panics"
 	"log"
 	"lsf"
@@ -95,13 +95,13 @@ func verifyRequiredOption(option interface{}) error {
 	if !option.(RequiredOption).Provided() {
 		switch t := option.(type) {
 		case StringOptionSpec:
-			return fmt.Errorf("option '%s'|'%s' must be provided", t.long, t.short)
+			return errors.REQUIRED_FLAG(t.long, "must be provided")
 		case BoolOptionSpec:
-			return fmt.Errorf("option '%s'|'%s' must be provided", t.long, t.short)
+			return errors.REQUIRED_FLAG(t.long, "must be provided")
 		case Int64OptionSpec:
-			return fmt.Errorf("option '%s'|'%s' must be provided", t.long, t.short)
+			return errors.REQUIRED_FLAG(t.long, "must be provided")
 		case UintOptionSpec:
-			return fmt.Errorf("option '%s'|'%s' must be provided", t.long, t.short)
+			return errors.REQUIRED_FLAG(t.long, "must be provided")
 		}
 	}
 	return nil

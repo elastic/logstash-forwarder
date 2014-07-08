@@ -2,6 +2,7 @@ package lslib
 
 import (
 	"fmt"
+	"github.com/elasticsearch/kriterium/errors"
 	"github.com/elasticsearch/kriterium/panics"
 	"io"
 	"os"
@@ -80,7 +81,7 @@ func (r *rotatingFileWriter) Write(p []byte) (n int, err error) {
 	defer panics.Recover(&err)
 
 	if r.closed {
-		err = fmt.Errorf("rotatingFIleWriter: Write: illegal state: closed")
+		err = errors.ILLEGAL_STATE("rotatingFIleWriter:Write:", "closed")
 		return
 	}
 	n, err = r.file.Write(p)
@@ -136,7 +137,7 @@ func (r *rotatingFileWriter) rotate() (newfile *os.File, err error) {
 
 	newfile, newseq, e := rotate(r.file, r.sequence, r.limit)
 	if err != nil {
-		return nil, fmt.Errorf("rotating file %s - cause: %s", r.filepath, e.Error())
+		return nil, errors.ERROR("rotatingFileWriter.rotate", r.filepath, e.Error())
 	}
 	r.file = newfile
 	r.sequence = newseq

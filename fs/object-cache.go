@@ -69,7 +69,7 @@ func (oc *ObjectCache) MarkDeleted(id string) bool {
 func (oc *ObjectCache) IsDeleted(id string) (bool, error) {
 	obj, found := oc.Cache[id]
 	if !found {
-		return false, fmt.Errorf("no such object")
+		return false, ERR.OBJECT_NOT_FOUND(id)
 	}
 
 	return IsDeleted0(obj.Flags()), nil

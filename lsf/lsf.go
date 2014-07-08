@@ -47,8 +47,6 @@ func init() {
 
 // Command runner tool.
 func main() {
-	//	var err = fmt.Errorf("")
-	//	defer panics.Recover(&err)
 	log.SetFlags(0)
 
 	// parse command runner flags

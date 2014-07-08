@@ -502,7 +502,7 @@ func (env *Environment) UpdateSystemDocument(opcode system.OpCode, id, docId, me
 
 	previous := doc.SetAll(updates)
 	if len(previous) == 0 {
-		return fmt.Errorf("warning: no changes were made to document %s", docId)
+		return WARN.NO_OP("no changes were made to document:", docId)
 	}
 
 	ok, e := env.UpdateDocument(doc)
@@ -510,7 +510,7 @@ func (env *Environment) UpdateSystemDocument(opcode system.OpCode, id, docId, me
 		return e
 	}
 	if !ok {
-		return fmt.Errorf("failed to update document: %s", docId)
+		return ERR.OP_FAILURE("updated failed:", docId)
 	}
 
 	return nil
@@ -536,7 +536,7 @@ func (env *Environment) RemoveSystemDocument(opcode system.OpCode, id, docId, me
 		return e
 	}
 	if !ok {
-		return fmt.Errorf("failed to delete document: %s", docId)
+		return ERR.OP_FAILURE("updated failed:", docId)
 	}
 
 	// remove the stream directory from the lsf environment
@@ -662,7 +662,7 @@ func (env *Environment) resolveRecord(documents []string, key string) []byte {
 
 func (env *Environment) UpdateLogStream(id string, updates map[string][]byte) error {
 	if id == "" {
-		return fmt.Errorf("id is empty")
+		return ERR.ILLEGAL_ARGUMENT("id", "zerovalue")
 	}
 
 	docId := fmt.Sprintf("stream.%s.stream", id)
@@ -671,7 +671,7 @@ func (env *Environment) UpdateLogStream(id string, updates map[string][]byte) er
 
 func (env *Environment) RemoveLogStream(id string) error {
 	if id == "" {
-		return fmt.Errorf("id is empty")
+		return ERR.ILLEGAL_ARGUMENT("id", "zerovalue")
 	}
 
 	docId := fmt.Sprintf("stream.%s.stream", id)
@@ -680,16 +680,16 @@ func (env *Environment) RemoveLogStream(id string) error {
 
 func (env *Environment) AddLogStream(id, basepath, pattern, journalModel string, fields map[string]string) error {
 	if id == "" {
-		return fmt.Errorf("id is empty")
+		return ERR.ILLEGAL_ARGUMENT("id", "zerovalue")
 	}
 	if basepath == "" {
-		return fmt.Errorf("basepath is empty")
+		return ERR.ILLEGAL_ARGUMENT("basepath", "zerovalue")
 	}
 	if pattern == "" {
-		return fmt.Errorf("pattern is empty")
+		return ERR.ILLEGAL_ARGUMENT("pattern", "zerovalue")
 	}
 	if journalModel == "" {
-		return fmt.Errorf("journalModel is empty")
+		return ERR.ILLEGAL_ARGUMENT("journalModel", "zerovalue")
 	}
 
 	docId := fmt.Sprintf("stream.%s.stream", id)
@@ -707,7 +707,7 @@ func (env *Environment) AddLogStream(id, basepath, pattern, journalModel string,
 
 func (env *Environment) RemoveRemotePort(id string) error {
 	if id == "" {
-		return fmt.Errorf("id is empty")
+		return ERR.ILLEGAL_ARGUMENT("id", "zerovalue")
 	}
 
 	docId := fmt.Sprintf("remote.%s.remote", id)
@@ -716,7 +716,7 @@ func (env *Environment) RemoveRemotePort(id string) error {
 
 func (env *Environment) UpdateRemotePort(id string, updates map[string][]byte) error {
 	if id == "" {
-		return fmt.Errorf("id is empty")
+		return ERR.ILLEGAL_ARGUMENT("id", "zerovalue")
 	}
 
 	docId := fmt.Sprintf("remote.%s.remote", id)
@@ -725,13 +725,14 @@ func (env *Environment) UpdateRemotePort(id string, updates map[string][]byte) e
 
 func (env *Environment) AddRemotePort(id, host string, port int) error {
 	if id == "" {
-		return fmt.Errorf("id is empty")
+		return ERR.ILLEGAL_ARGUMENT("id", "zerovalue")
 	}
 	if host == "" {
-		return fmt.Errorf("host is empty")
+		return ERR.ILLEGAL_ARGUMENT("host", "zerovalue")
 	}
 	if port <= 0 {
-		return fmt.Errorf("invalid port number") // TODO: test for the actual non-reserved range
+		// TODO: test for the actual non-reserved range
+		return ERR.ILLEGAL_ARGUMENT("port", "invalid port number")
 	}
 
 	docId := fmt.Sprintf("remote.%s.remote", id)
