@@ -30,7 +30,7 @@ func Registrar(input chan []*FileEvent) {
     }
 
     if len(state) > 0 {
-      WriteRegistry(state, ".logstash-forwarder")
+      WriteRegistry(state, "/var/lib/logstash-forwarder.state")
     }
   }
 }
