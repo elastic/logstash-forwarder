@@ -1,13 +1,13 @@
 package main
 
 import (
-	"os"
-	"fmt"
-	"log"
 	"flag"
+	"fmt"
 	"github.com/elasticsearch/kriterium/panics"
+	"log"
 	"lsf"
 	"lsf/command"
+	"os"
 )
 
 type syserrCode int

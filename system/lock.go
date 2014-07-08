@@ -1,8 +1,8 @@
 package system
 
 import (
-	"os"
 	"fmt"
+	"os"
 	"time"
 )
 

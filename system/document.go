@@ -1,13 +1,13 @@
 package system
 
 import (
-	"os"
-	"io"
-	"fmt"
 	"bytes"
+	"fmt"
+	"github.com/elasticsearch/kriterium/panics"
+	"io"
+	"os"
 	"strings"
 	"time"
-	"github.com/elasticsearch/kriterium/panics"
 )
 
 var E_EXISTING_DOC = fmt.Errorf("document exists")

@@ -1,10 +1,10 @@
 package fs
 
 import (
-//	"bytes"
-//	"encoding/binary"
+	//	"bytes"
+	//	"encoding/binary"
 	"os"
-//	"syscall"
+	//	"syscall"
 )
 
 // source: http://man2.aiju.de/2/stat

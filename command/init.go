@@ -1,8 +1,8 @@
 package command
 
 import (
-	"log"
 	"github.com/elasticsearch/kriterium/panics"
+	"log"
 	"lsf"
 )
 

@@ -2,10 +2,10 @@ package fs
 
 import (
 	"fmt"
-	"log"
-	"time"
-	"strconv"
 	"github.com/elasticsearch/kriterium/panics"
+	"log"
+	"strconv"
+	"time"
 )
 
 type InfoAge time.Duration

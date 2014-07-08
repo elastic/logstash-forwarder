@@ -2,9 +2,9 @@ package schema
 
 import (
 	"fmt"
-	"net/url"
 	"github.com/elasticsearch/kriterium/panics"
 	"lsf/system"
+	"net/url"
 )
 
 type PortId string

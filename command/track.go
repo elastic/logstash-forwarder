@@ -2,15 +2,15 @@ package command
 
 import (
 	"fmt"
-	"log"
-	"time"
 	"github.com/elasticsearch/kriterium/panics"
+	"log"
 	"lsf"
 	"lsf/fs"
 	"lsf/lsfun"
 	"lsf/lslib"
 	"lsf/schema"
 	"lsf/system"
+	"time"
 )
 
 const trackCmdCode lsf.CommandCode = "track"

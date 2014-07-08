@@ -3,9 +3,9 @@ package command
 import (
 	"flag"
 	"fmt"
+	"github.com/elasticsearch/kriterium/panics"
 	"log"
 	"lsf"
-	"github.com/elasticsearch/kriterium/panics"
 	"lsf/system"
 )
 

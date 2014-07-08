@@ -2,8 +2,8 @@ package lsf
 
 import (
 	"fmt"
-	"log"
 	"github.com/elasticsearch/kriterium/panics"
+	"log"
 	"lsf/schema"
 	"lsf/system"
 	"os"
@@ -91,7 +91,7 @@ func CreateEnvironment(dir string, force bool) (rootpath string, err error) {
 	// if not existing
 	if !isUserHome {
 		// create user level .lsf environment if not existing
-//		if _, e := CreateEnvironment(userHome, false); e != nil && e != E_EXISTING_LSF {
+		//		if _, e := CreateEnvironment(userHome, false); e != nil && e != E_EXISTING_LSF {
 		if _, e := CreateEnvironment(userHome, false); e != nil && !ERR.EXISTING_LSF.Matches(e) {
 			return "", e
 		}

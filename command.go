@@ -3,8 +3,8 @@ package lsf
 import (
 	"flag"
 	"fmt"
-	"log"
 	"github.com/elasticsearch/kriterium/panics"
+	"log"
 	"lsf/system"
 	"lsf/system/process"
 	"os"

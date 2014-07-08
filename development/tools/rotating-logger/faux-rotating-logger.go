@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"github.com/elasticsearch/kriterium/panics"
+	"log"
 	"lsf/lslib"
 	"os"
 	"time"

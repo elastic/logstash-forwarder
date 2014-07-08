@@ -3,9 +3,9 @@ package fs
 import (
 	"bytes"
 	"encoding/binary"
+	"github.com/elasticsearch/kriterium/panics"
 	"os"
 	"syscall"
-	"github.com/elasticsearch/kriterium/panics"
 )
 
 // determine the oid per OS specific FileInfo

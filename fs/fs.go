@@ -1,10 +1,10 @@
 package fs
 
 import (
+	"github.com/elasticsearch/kriterium/panics"
 	"os"
 	"path"
 	"path/filepath"
-	"github.com/elasticsearch/kriterium/panics"
 )
 
 // Returns []string{} if pattern is ""/zv.

@@ -1,7 +1,7 @@
 package system
 
 import (
-	"errors"	// REVU: TODO use kriterium
+	"errors" // REVU: TODO use kriterium
 	"fmt"
 	"os"
 	"path"

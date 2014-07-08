@@ -2,11 +2,11 @@ package lslib
 
 import (
 	"fmt"
+	"github.com/elasticsearch/kriterium/panics"
 	"io"
-	"path"
 	"os"
 	"os/signal"
-	"github.com/elasticsearch/kriterium/panics"
+	"path"
 )
 
 // ----------------------------------------------------------------------

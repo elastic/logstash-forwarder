@@ -4,8 +4,8 @@ package main
 
 import (
 	"flag"
-	"log"
 	"github.com/elasticsearch/kriterium/panics"
+	"log"
 	"lsf/fs"
 	. "lsf/lsfun"
 	"os"

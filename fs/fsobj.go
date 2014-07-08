@@ -2,7 +2,7 @@ package fs
 
 import (
 	"encoding/hex"
-	"errors"	// REVU: TODO use kriterium
+	"errors" // REVU: TODO use kriterium
 	"fmt"
 	"os"
 	"sort"

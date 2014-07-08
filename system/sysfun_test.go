@@ -1,9 +1,9 @@
 package system
 
 import (
+	"lsf/test" // REVU: TODO use kriterium
 	"path"
 	"testing"
-	"lsf/test"	// REVU: TODO use kriterium
 )
 
 // TEST:
