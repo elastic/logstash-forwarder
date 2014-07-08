@@ -121,7 +121,7 @@ Streams are defined & managed with the `lsf stream [sub-command]`s.
     
 Let's ***define a logstream***:
 
-    ± lsf stream -s <stream-name> -p <basepath of tracked objects> -n <glob pattern> -m <mode>
+    ± lsf stream add -s <stream-name> -p <basepath of tracked objects> -n <glob pattern> -m <mode>
     
     # example:
     # you capture the click events of your server in a series of log files
