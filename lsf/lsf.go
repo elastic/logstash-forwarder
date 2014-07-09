@@ -39,6 +39,7 @@ const (
 // List of available commands
 var commands = []*lsf.Command{
 	command.Debug,
+	command.Give,
 	command.Help,
 	command.Init,
 	command.Stream,
