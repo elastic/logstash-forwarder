@@ -34,7 +34,7 @@ var ERR = struct {
 	LsfEnvironmentDoesNotExist,
 	ResourceExists,
 	ResourceDoesNotExist,
-	_stub            errors.TypedError
+	_stub errors.TypedError
 }{
 	Usage:                      errors.Usage,
 	IllegalArgument:            errors.IllegalArgument,

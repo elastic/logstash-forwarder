@@ -15,6 +15,5 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// Package lsf/test provides testing utility and helper functions.
-// TODO: move to kriterium
-package test
+// TODO: overview of lsf/fs package
+package fs
