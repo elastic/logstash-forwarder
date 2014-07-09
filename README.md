@@ -1,6 +1,22 @@
 ##`LS/F`
 LogStash/Forwarder. 
 
+## How to get the source
+
+    mkdir -p $HOME/gostuff/src
+    git clone https://github.com/elasticsearch/logstash-forwarder.git $HOME/gostuff/src/lsf
+
+You MUST use the exact directory structure or building will not work.
+
+## How to build
+
+Once you have gotten the source using the exact instructions as above:
+
+    cd $HOME/gostuff
+    (export GOPATH=$PWD; cd src/lsf; go get; cd lsf; go build -o ../../../lsf)
+
+Then in $PWD, you will see a binary `lsf`.
+
 ##`stat`
 
     star date:         july 02 2014 
