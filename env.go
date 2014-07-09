@@ -95,7 +95,7 @@ func NewEnvironment() *Environment {
 // Returns error if called on existing environemnt at path.
 func CreateEnvironment(dir string, force bool) (rootpath string, err error) {
 	if !IsAbsPath(dir) {
-		return "", ERR.RELATIVE_PATH("CreateEnvironment:")
+		return "", ERR.IllegalArgument("CreateEnvironment:", "dir:", "path must be absolute")
 	}
 
 	defer panics.Recover(&err)
@@ -109,7 +109,7 @@ func CreateEnvironment(dir string, force bool) (rootpath string, err error) {
 	if !isUserHome {
 		// create user level .lsf environment if not existing
 		//		if _, e := CreateEnvironment(userHome, false); e != nil && e != E_EXISTING_LSF {
-		if _, e := CreateEnvironment(userHome, false); e != nil && !ERR.EXISTING_LSF.Matches(e) {
+		if _, e := CreateEnvironment(userHome, false); e != nil && !ERR.LsfEnvironmentExists.Matches(e) {
 			return "", e
 		}
 	}
@@ -119,7 +119,7 @@ func CreateEnvironment(dir string, force bool) (rootpath string, err error) {
 	root := rootAt(dir)
 	exists := exists(root)
 	if exists && !force {
-		return "", ERR.EXISTING_LSF()
+		return "", ERR.LsfEnvironmentExists()
 	}
 
 	// lock out all others for this op
@@ -174,7 +174,7 @@ func (env *Environment) Shutdown() error {
 	defer env.lock.Unlock()
 
 	if !env.bound {
-		return ERR.ILLEGAL_STATE()
+		return ERR.IllegalState()
 	}
 
 	if registrar := env.registrar; registrar != nil {
@@ -199,7 +199,7 @@ func (env *Environment) Initialize(dir string) (err error) {
 		return nil
 	}
 	if dir == "" {
-		return ERR.ILLEGAL_ARGUMENT("dir", "zerovalue")
+		return ERR.IllegalArgument("dir", "zerovalue")
 	}
 
 	if !IsAbsPath(dir) {
@@ -209,7 +209,7 @@ func (env *Environment) Initialize(dir string) (err error) {
 
 	// check if exists
 	if !exists(root) {
-		return ERR.NOT_EXISTING_LSF()
+		return ERR.LsfEnvironmentDoesNotExist()
 	}
 
 	env.bound = true
@@ -235,7 +235,7 @@ func (env *Environment) startRegistrar() (err error) {
 
 	// REVU: what's the issue? why not just ignore it?
 	if env.registrar != nil {
-		return ERR.ILLEGAL_STATE_REGISTRAR_RUNNING()
+		return ERR.IllegalState("Environment.startRegistrar:", "registrar already started")
 	}
 
 	port, found := env.Get(VarHomePort)
@@ -390,7 +390,7 @@ func (env *Environment) Get(key varKey) (v interface{}, found bool) {
 // nil value not accepted.
 func (env *Environment) Set(key varKey, v interface{}) (prev interface{}, e error) {
 	if v == nil {
-		return nil, ERR.ILLEGAL_ARGUMENT("Environment.Set", "v", "nil value")
+		return nil, ERR.IllegalArgument("Environment.Set", "v", "nil value")
 	}
 
 	env.varslock.Lock()
@@ -411,7 +411,7 @@ var defaultDirMode = os.FileMode(0755)
 // Creates a document in the bound LSF Port.
 func (env *Environment) CreateDocument(docId string, datamap system.DataMap) error {
 	if !env.bound {
-		return ERR.ILLEGAL_STATE()
+		return ERR.IllegalState()
 	}
 	mappings := datamap.Mappings()
 	_, e := env.registrar.CreateDocument(docId, mappings)
@@ -474,7 +474,7 @@ func (env *Environment) AddSystemDocument(opcode system.OpCode, id, docId, meta 
 	// check if exists
 	doc, e := env.LoadDocument(docId)
 	if e == nil && doc != nil {
-		return ERR.EXISTING("AddSystemDocument:")
+		return ERR.ResourceExists("AddSystemDocument:", "id:", id)
 	}
 
 	// create it
@@ -497,12 +497,12 @@ func (env *Environment) UpdateSystemDocument(opcode system.OpCode, id, docId, me
 	// verify it exists
 	doc, e := env.LoadDocument(docId)
 	if e != nil || doc == nil {
-		return ERR.NOT_EXISTING()
+		return ERR.ResourceDoesNotExist("UpdateSystemDocument:", "id:", id)
 	}
 
 	previous := doc.SetAll(updates)
 	if len(previous) == 0 {
-		return WARN.NO_OP("no changes were made to document:", docId)
+		return WARN.NoOp("no changes were made to document:", docId)
 	}
 
 	ok, e := env.UpdateDocument(doc)
@@ -510,7 +510,7 @@ func (env *Environment) UpdateSystemDocument(opcode system.OpCode, id, docId, me
 		return e
 	}
 	if !ok {
-		return ERR.OP_FAILURE("updated failed:", docId)
+		return ERR.OpFailure("updated failed:", docId)
 	}
 
 	return nil
@@ -527,7 +527,7 @@ func (env *Environment) RemoveSystemDocument(opcode system.OpCode, id, docId, me
 	// check existing
 	doc, e := env.LoadDocument(docId)
 	if e != nil || doc == nil {
-		return ERR.NOT_EXISTING()
+		return ERR.ResourceDoesNotExist("RemoveSystemDocument:", "id:", id)
 	}
 
 	// remove doc
@@ -536,7 +536,7 @@ func (env *Environment) RemoveSystemDocument(opcode system.OpCode, id, docId, me
 		return e
 	}
 	if !ok {
-		return ERR.OP_FAILURE("updated failed:", docId)
+		return ERR.OpFailure("updated failed:", docId)
 	}
 
 	// remove the stream directory from the lsf environment
@@ -589,7 +589,7 @@ func getRecordHierarchy(record string) (documents []string, key string, err erro
 	terms := strings.Split(record, ".")
 	n := len(terms)
 	if n < 2 {
-		return nil, "", ERR.ILLEGAL_ARGUMENT("record")
+		return nil, "", ERR.IllegalArgument("record")
 	}
 
 	docname := terms[n-2]
@@ -622,7 +622,7 @@ func (env *Environment) GetRecord(record string) (value []byte, err error) {
 	defer panics.Recover(&err)
 
 	if !env.bound {
-		return nil, ERR.ILLEGAL_STATE()
+		return nil, ERR.IllegalState()
 	}
 
 	documents, key, e := getRecordHierarchy(record)
@@ -662,7 +662,7 @@ func (env *Environment) resolveRecord(documents []string, key string) []byte {
 
 func (env *Environment) UpdateLogStream(id string, updates map[string][]byte) error {
 	if id == "" {
-		return ERR.ILLEGAL_ARGUMENT("id", "zerovalue")
+		return ERR.IllegalArgument("id", "zerovalue")
 	}
 
 	docId := fmt.Sprintf("stream.%s.stream", id)
@@ -671,7 +671,7 @@ func (env *Environment) UpdateLogStream(id string, updates map[string][]byte) er
 
 func (env *Environment) RemoveLogStream(id string) error {
 	if id == "" {
-		return ERR.ILLEGAL_ARGUMENT("id", "zerovalue")
+		return ERR.IllegalArgument("id", "zerovalue")
 	}
 
 	docId := fmt.Sprintf("stream.%s.stream", id)
@@ -680,16 +680,16 @@ func (env *Environment) RemoveLogStream(id string) error {
 
 func (env *Environment) AddLogStream(id, basepath, pattern, journalModel string, fields map[string]string) error {
 	if id == "" {
-		return ERR.ILLEGAL_ARGUMENT("id", "zerovalue")
+		return ERR.IllegalArgument("id", "zerovalue")
 	}
 	if basepath == "" {
-		return ERR.ILLEGAL_ARGUMENT("basepath", "zerovalue")
+		return ERR.IllegalArgument("basepath", "zerovalue")
 	}
 	if pattern == "" {
-		return ERR.ILLEGAL_ARGUMENT("pattern", "zerovalue")
+		return ERR.IllegalArgument("pattern", "zerovalue")
 	}
 	if journalModel == "" {
-		return ERR.ILLEGAL_ARGUMENT("journalModel", "zerovalue")
+		return ERR.IllegalArgument("journalModel", "zerovalue")
 	}
 
 	docId := fmt.Sprintf("stream.%s.stream", id)
@@ -707,7 +707,7 @@ func (env *Environment) AddLogStream(id, basepath, pattern, journalModel string,
 
 func (env *Environment) RemoveRemotePort(id string) error {
 	if id == "" {
-		return ERR.ILLEGAL_ARGUMENT("id", "zerovalue")
+		return ERR.IllegalArgument("id", "zerovalue")
 	}
 
 	docId := fmt.Sprintf("remote.%s.remote", id)
@@ -716,7 +716,7 @@ func (env *Environment) RemoveRemotePort(id string) error {
 
 func (env *Environment) UpdateRemotePort(id string, updates map[string][]byte) error {
 	if id == "" {
-		return ERR.ILLEGAL_ARGUMENT("id", "zerovalue")
+		return ERR.IllegalArgument("id", "zerovalue")
 	}
 
 	docId := fmt.Sprintf("remote.%s.remote", id)
@@ -725,14 +725,14 @@ func (env *Environment) UpdateRemotePort(id string, updates map[string][]byte) e
 
 func (env *Environment) AddRemotePort(id, host string, port int) error {
 	if id == "" {
-		return ERR.ILLEGAL_ARGUMENT("id", "zerovalue")
+		return ERR.IllegalArgument("id", "zerovalue")
 	}
 	if host == "" {
-		return ERR.ILLEGAL_ARGUMENT("host", "zerovalue")
+		return ERR.IllegalArgument("host", "zerovalue")
 	}
 	if port <= 0 {
 		// TODO: test for the actual non-reserved range
-		return ERR.ILLEGAL_ARGUMENT("port", "invalid port number")
+		return ERR.IllegalArgument("port", "invalid port number")
 	}
 
 	docId := fmt.Sprintf("remote.%s.remote", id)

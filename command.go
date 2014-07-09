@@ -157,7 +157,7 @@ func RunActive(env *Environment, cmd0 *Command, args ...string) (err error) {
 	case Status.Ok, Status.Interrupted_Ok:
 		log.Printf("\nstream-track: %v", stat)
 	default:
-		err = ERR.OP_FAILURE("track fault on exit", stat)
+		err = ERR.OpFailure("track fault on exit", stat)
 		log.Printf("\n%s", err.Error())
 	}
 

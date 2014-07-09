@@ -21,11 +21,11 @@ func UserHome() string {
 // which is merely a semantic identifier exclusive to the system.
 func objectPathForId(lsfpath string, oid string) (basepath, basename string, err error) {
 	if lsfpath == "" {
-		err = errors.ILLEGAL_ARGUEMENT("lsfpath:", "can not be zerovalue")
+		err = errors.IllegalArgument("lsfpath:", "can not be zerovalue")
 		return
 	}
 	if oid == "" {
-		err = errors.ILLEGAL_ARGUEMENT("oid:", "can not be zerovalue")
+		err = errors.IllegalArgument("oid:", "can not be zerovalue")
 		return
 	}
 
@@ -52,7 +52,7 @@ func assertSystemObjectPath(fpath, fname string) (filename string, err error) {
 			return
 		}
 	} else if !dstat.IsDir() {
-		err = errors.ILLEGAL_STATE("BUG", "not a directory:", fpath)
+		err = errors.IllegalState("BUG", "not a directory:", fpath)
 		return
 	}
 	filename = path.Join(fpath, fname)

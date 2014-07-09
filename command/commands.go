@@ -95,13 +95,13 @@ func verifyRequiredOption(option interface{}) error {
 	if !option.(RequiredOption).Provided() {
 		switch t := option.(type) {
 		case StringOptionSpec:
-			return errors.REQUIRED_FLAG(t.long, "must be provided")
+			return errors.RequiredFlag(t.long, "must be provided")
 		case BoolOptionSpec:
-			return errors.REQUIRED_FLAG(t.long, "must be provided")
+			return errors.RequiredFlag(t.long, "must be provided")
 		case Int64OptionSpec:
-			return errors.REQUIRED_FLAG(t.long, "must be provided")
+			return errors.RequiredFlag(t.long, "must be provided")
 		case UintOptionSpec:
-			return errors.REQUIRED_FLAG(t.long, "must be provided")
+			return errors.RequiredFlag(t.long, "must be provided")
 		}
 	}
 	return nil
