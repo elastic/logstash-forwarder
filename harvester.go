@@ -7,6 +7,8 @@ import (
   "log"
   "os" // for File and friends
   "time"
+  "regexp"
+  "strconv"
 )
 
 type Harvester struct {
@@ -26,6 +28,9 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 
   h.open()
   info, _ := h.file.Stat() // TODO(sissel): Check error
+  fd := h.file.Fd()
+
+
   defer h.file.Close()
   //info, _ := file.Stat()
 
@@ -41,15 +46,28 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 
   var read_timeout = 10 * time.Second
   last_read_time := time.Now()
+  fdstring := "/proc/self/fd/"+strconv.Itoa(int(fd))
+  r, reg_err := regexp.Compile(`\s\(deleted\)$`)
+  if  reg_err != nil {
+          log.Printf("No harvester of %s; got error of Regex call %s \n", h.Path, reg_err.Error())
+	  return
+  }
   for {
     text, err := h.readline(reader, read_timeout)
-
     if err != nil {
       if err == io.EOF {
+        info, stat_err := h.file.Stat()
+	file ,link_err:= os.Readlink(fdstring)
+	var deleted bool = false
+	if link_err == nil {
+		deleted = r.MatchString(file)
+	}
         // timed out waiting for data, got eof.
         // Check to see if the file was truncated
-        info, _ := h.file.Stat()
-        if info.Size() < offset {
+	if ( stat_err != nil ) {
+          log.Printf("Stopping harvest of %s; got error of Stat call %s \n", h.Path, stat_err.Error())
+          return
+	} else if info.Size() < offset {
           log.Printf("File truncated, seeking to beginning: %s\n", h.Path)
           h.file.Seek(0, os.SEEK_SET)
           offset = 0
@@ -60,7 +78,10 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
           // This file is idle for more than 24 hours. Give up and stop harvesting.
           log.Printf("Stopping harvest of %s; last change was %d seconds ago\n", h.Path, age.Seconds())
           return
-        }
+        } else if ( deleted )  {
+          log.Printf("Stopping harvest of %s; file deleted\n", h.Path )
+          return
+	}
         continue
       } else {
         log.Printf("Unexpected state reading from %s; error: %s\n", h.Path, err)

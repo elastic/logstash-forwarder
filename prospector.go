@@ -125,11 +125,19 @@ func prospector_scan(path string, fields map[string]string,
         go harvester.Harvest(output)
       }
     } else if !is_fileinfo_same(lastinfo, info) {
-      log.Printf("Launching harvester on rotated file: %s\n", file)
-      // TODO(sissel): log 'file rotated' or osmething
-      // Start a harvester on the path; a new file appeared with the same name.
-      harvester := Harvester{Path: file, Fields: fields}
-      go harvester.Harvest(output)
+
+	    _,ok :=  fields["rsync"]
+	    if ok && info.Size() >= lastinfo.Size()  { 
+		    log.Printf("Rsync keyword found for file: %s\n", file)
+		    harvester := Harvester{Path: file, Fields: fields, Offset: lastinfo.Size() }
+		    go harvester.Harvest(output)
+	      } else {
+		      log.Printf("Launching harvester on rotated file: %s\n", file)
+		      // TODO(sissel): log 'file rotated' or osmething
+		      // Start a harvester on the path; a new file appeared with the same name.
+		      harvester := Harvester{Path: file, Fields: fields}
+		      go harvester.Harvest(output)
+	      }
     }
   } // for each file matched by the glob
 }
