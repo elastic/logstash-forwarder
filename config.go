@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"time"
-  "errors"
 )
 
 const default_NetworkConfig_Timeout int64 = 15
