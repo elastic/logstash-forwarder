@@ -161,7 +161,7 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
 
     cert, err := x509.ParseCertificate(block.Bytes)
     if err != nil {
-      log.Fatalf("Failed to parse a certificate: %s\n", config.SSLCA)
+      log.Fatalf("Failed to parse CA certificate %s - %s\n", config.SSLCA, err)
     }
     tlsconfig.RootCAs.AddCert(cert)
   }
