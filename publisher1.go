@@ -3,7 +3,8 @@ package main
 import (
   "bytes"
   "compress/zlib"
-  "crypto/tls"
+//  "crypto/tls"
+  "es/crypto/tls"
   "crypto/x509"
   "encoding/binary"
   "encoding/pem"

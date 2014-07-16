@@ -5,6 +5,11 @@
 (This project was recently renamed from 'lumberjack' to 'logstash-forwarder' to
 make its intended use clear. The 'lumberjack' name now remains as the network protocol, and 'logstash-forwarder' is the name of the program. It's still the same lovely log forwarding program you love.)
 
+## Go1.3 TLS Issues:
+[TODO: by Jordan]
+
+*** SEE IMPORTANT BUILD INSTRUCTION UPDATE BELOW ***
+
 ## Questions and support
 
 If you have questions and cannot find answers, please join the #logstash irc
@@ -112,6 +117,7 @@ include them in your config.:
 
         git clone git://github.com/elasticsearch/logstash-forwarder.git
         cd logstash-forwarder
+        GOPATH=$PWD:$GOPATH
         go build
 
 ## Packaging it (optional)
