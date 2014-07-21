@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"os" // for File and friends
 	"time"
 )
@@ -36,7 +35,7 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 	offset, _ := h.file.Seek(0, os.SEEK_CUR)
 
 	if h.Offset > 0 {
-		emit("harvest:%q position:%d (offset snapshot:%d)\n", h.Path, h.Offset, offset)
+		emit("harvest: %q position:%d (offset snapshot:%d)\n", h.Path, h.Offset, offset)
 	} else if options.tailOnRotate {
 		emit("harvest: (tailing) %q (offset snapshot:%d)\n", h.Path, offset)
 	} else {
@@ -45,8 +44,7 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 
 	h.Offset = offset
 
-	// TODO(sissel): Make the buffer size tunable at start-time
-	reader := bufio.NewReaderSize(h.file, 16<<10) // 16kb buffer by default
+	reader := bufio.NewReaderSize(h.file, options.harvesterBufferSize) // 16kb buffer by default
 	buffer := new(bytes.Buffer)
 
 	var read_timeout = 10 * time.Second
@@ -60,18 +58,18 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 				// Check to see if the file was truncated
 				info, _ := h.file.Stat()
 				if info.Size() < h.Offset {
-					log.Printf("File truncated, seeking to beginning: %s\n", h.Path)
+					emit("File truncated, seeking to beginning: %s\n", h.Path)
 					h.file.Seek(0, os.SEEK_SET)
 					h.Offset = 0
 				} else if age := time.Since(last_read_time); age > h.FileConfig.deadtime {
 					// if last_read_time was more than dead time, this file is probably
 					// dead. Stop watching it.
-					log.Printf("Stopping harvest of %s; last change was %v ago\n", h.Path, age)
+					emit("Stopping harvest of %s; last change was %v ago\n", h.Path, age)
 					return
 				}
 				continue
 			} else {
-				log.Printf("Unexpected state reading from %s; error: %s\n", h.Path, err)
+				emit("Unexpected state reading from %s; error: %s\n", h.Path, err)
 				return
 			}
 		}
@@ -105,7 +103,7 @@ func (h *Harvester) open() *os.File {
 
 		if err != nil {
 			// retry on failure.
-			log.Printf("Failed opening %s: %s\n", h.Path, err)
+			emit("Failed opening %s: %s\n", h.Path, err)
 			time.Sleep(5 * time.Second)
 		} else {
 			break
@@ -160,7 +158,7 @@ func (h *Harvester) readline(reader *bufio.Reader, buffer *bytes.Buffer, eof_tim
 				}
 				continue
 			} else {
-				log.Println(err)
+				emit("error: Harvester.readLine: %s", err.Error())
 				return nil, 0, err // TODO(sissel): don't do this?
 			}
 		}

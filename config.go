@@ -6,9 +6,15 @@ import (
 	"time"
 )
 
-const default_NetworkConfig_Timeout int64 = 15
+const configFileSizeLimit = 10 << 20
 
-const default_FileConfig_DeadTime string = "24h"
+var defaultConfig = &struct {
+		netTimeout int64
+		fileDeadtime string
+	}{
+	netTimeout: 15,
+	fileDeadtime: "24h",
+}
 
 type Config struct {
 	Network NetworkConfig `json:network`
@@ -39,10 +45,9 @@ func LoadConfig(path string) (config Config, err error) {
 	}
 
 	fi, _ := config_file.Stat()
-	if fi.Size() > (10 << 20) {
-		emit("Config file too large? Aborting, just in case. '%s' is %d bytes\n",
-			path, fi)
-		return
+	if size := fi.Size(); size > (configFileSizeLimit) {
+		emit("config file (%q) size exceeds reasonable limit (%d) - aborting", path, size)
+		return // REVU: shouldn't this return an error, then?
 	}
 
 	buffer := make([]byte, fi.Size())
@@ -56,14 +61,14 @@ func LoadConfig(path string) (config Config, err error) {
 	}
 
 	if config.Network.Timeout == 0 {
-		config.Network.Timeout = default_NetworkConfig_Timeout
+		config.Network.Timeout = defaultConfig.netTimeout
 	}
 
 	config.Network.timeout = time.Duration(config.Network.Timeout) * time.Second
 
 	for k, _ := range config.Files {
 		if config.Files[k].DeadTime == "" {
-			config.Files[k].DeadTime = default_FileConfig_DeadTime
+			config.Files[k].DeadTime = defaultConfig.fileDeadtime
 		}
 		config.Files[k].deadtime, err = time.ParseDuration(config.Files[k].DeadTime)
 		if err != nil {

@@ -18,31 +18,35 @@ var exitStat = struct {
 }
 
 var options = &struct {
-	configFile     string
-	spoolSize      uint64
-	cpuProfileFile string
-	idleTimeout    time.Duration
-	useSyslog      bool
-	tailOnRotate   bool
-	debug          bool
-	verbose        bool
+	configFile          string
+	spoolSize           uint64
+	harvesterBufferSize int
+	cpuProfileFile      string
+	idleTimeout         time.Duration
+	useSyslog           bool
+	tailOnRotate        bool
+	debug               bool
+	verbose             bool
 }{
-	spoolSize:   1024,
-	idleTimeout: time.Second * 5,
+	spoolSize:           1024,
+	harvesterBufferSize: 16 << 10,
+	idleTimeout:         time.Second * 5,
 }
 
 func emitOptions() {
 	emit("\t--- options -------\n")
-	emit("\tconfig-file:        %s\n", options.configFile)
-	emit("\tidle-timeout:       %v\n", options.idleTimeout)
+	emit("\tconfig-file:         %s\n", options.configFile)
+	emit("\tidle-timeout:        %v\n", options.idleTimeout)
+	emit("\tspool-size:          %d\n", options.spoolSize)
+	emit("\tharvester-buff-size: %d\n", options.harvesterBufferSize)
 	emit("\t--- flags ---------\n")
-	emit("\ttail (on-rotation): %t\n", options.tailOnRotate)
-	emit("\tuse-syslog:         %t\n", options.useSyslog)
-	emit("\tverbose:            %t\n", options.verbose)
-	emit("\tdebug:              %t\n", options.debug)
+	emit("\ttail (on-rotation):  %t\n", options.tailOnRotate)
+	emit("\tuse-syslog:          %t\n", options.useSyslog)
+	emit("\tverbose:             %t\n", options.verbose)
+	emit("\tdebug:               %t\n", options.debug)
 	if runProfiler() {
 		emit("\t--- profile run ---\n")
-		emit("\tcpu-profile-file: %s\n", options.cpuProfileFile)
+		emit("\tcpu-profile-file:    %s\n", options.cpuProfileFile)
 	}
 
 }
@@ -56,13 +60,24 @@ func assertRequiredOptions() {
 
 func init() {
 	flag.StringVar(&options.configFile, "config", options.configFile, "path to logstash-forwarder configuration file")
+
 	flag.StringVar(&options.cpuProfileFile, "cpuprofile", options.cpuProfileFile, "path to cpu profile output - note: exits on profile end.")
+
 	flag.Uint64Var(&options.spoolSize, "spool-size", options.spoolSize, "event count spool threshold - forces network flush")
-	flag.BoolVar(&options.useSyslog, "log-to-syslog", options.useSyslog, "log to syslog instead of stdout")
+	flag.Uint64Var(&options.spoolSize, "sv", options.spoolSize, "event count spool threshold - forces network flush")
+
+	flag.IntVar(&options.harvesterBufferSize, "harvest-buffer-size", options.harvesterBufferSize, "harvester reader buffer size")
+	flag.IntVar(&options.harvesterBufferSize, "hb", options.harvesterBufferSize, "harvester reader buffer size")
+
+	flag.BoolVar(&options.useSyslog, "log-to-syslog", options.useSyslog, "log to syslog instead of stdout") // deprecate this
+	flag.BoolVar(&options.useSyslog, "syslog", options.useSyslog, "log to syslog instead of stdout")
+
 	flag.BoolVar(&options.tailOnRotate, "tail", options.tailOnRotate, "always tail on log rotation -note: may skip entries ")
 	flag.BoolVar(&options.tailOnRotate, "t", options.tailOnRotate, "always tail on log rotation -note: may skip entries ")
+
 	flag.BoolVar(&options.verbose, "verbose", options.verbose, "operate in verbose mode - emits to log")
 	flag.BoolVar(&options.verbose, "v", options.verbose, "operate in verbose mode - emits to log")
+
 	flag.BoolVar(&options.debug, "debug", options.debug, "emit debg info (verbose must also be set)")
 }
 
@@ -73,7 +88,7 @@ func main() {
 		if p == nil {
 			return
 		}
-		log.Fatalf("panic: %v\n", p)
+		fault("recovered panic: %v", p)
 	}()
 
 	flag.Parse()
@@ -93,9 +108,9 @@ func main() {
 		}()
 	}
 
-	config, err := LoadConfig(options.configFile)
-	if err != nil {
-		return
+	config, e := LoadConfig(options.configFile)
+	if e != nil {
+		fault("on LoadConfig: %s\n", e.Error())
 	}
 
 	event_chan := make(chan *FileEvent, 16)
@@ -113,49 +128,48 @@ func main() {
 	// - publisher: writes to the network, notifies registrar
 	// - registrar: records positions of files read
 	// Finally, prospector uses the registrar information, on restart, to
-	// determine where in each file to resume a harvester.
+	// determine where in each file to restart a harvester.
 
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
 	if options.useSyslog {
 		configureSyslog()
 	}
 
-	resume := &ProspectorResume{}
-	resume.persist = make(chan *FileState)
+	restart := &ProspectorResume{}
+	restart.persist = make(chan *FileState)
 
 	// Load the previous log file locations now, for use in prospector
-	resume.files = make(map[string]*FileState)
-	history, err := os.Open(".logstash-forwarder")
-	if err == nil {
-		wd, err := os.Getwd()
-		if err != nil {
-			wd = ""
+	restart.files = make(map[string]*FileState)
+	if existing, e := os.Open(".logstash-forwarder"); e == nil {
+		defer existing.Close()
+		wd := ""
+		if wd, e = os.Getwd(); e != nil {
+			emit("WARNING: os.Getwd retuned unexpected error %s -- ignoring\n", e.Error())
 		}
 		emit("Loading registrar data from %s/.logstash-forwarder\n", wd)
 
-		decoder := json.NewDecoder(history)
-		decoder.Decode(&resume.files)
-		history.Close()
+		decoder := json.NewDecoder(existing)
+		decoder.Decode(&restart.files)
 	}
 
-	prospector_pending := 0
+	pendingProspectorCnt := 0
 
 	// Prospect the globs/paths given on the command line and launch harvesters
 	for _, fileconfig := range config.Files {
 		prospector := &Prospector{FileConfig: fileconfig}
-		go prospector.Prospect(resume, event_chan)
-		prospector_pending++
+		go prospector.Prospect(restart, event_chan)
+		pendingProspectorCnt++
 	}
 
 	// Now determine which states we need to persist by pulling the events from the prospectors
 	// When we hit a nil source a prospector had finished so we decrease the expected events
-	emit("Waiting for %d prospectors to initialise\n", prospector_pending)
+	emit("Waiting for %d prospectors to initialise\n", pendingProspectorCnt)
 	persist := make(map[string]*FileState)
 
-	for event := range resume.persist {
+	for event := range restart.persist {
 		if event.Source == nil {
-			prospector_pending--
-			if prospector_pending == 0 {
+			pendingProspectorCnt--
+			if pendingProspectorCnt == 0 {
 				break
 			}
 			continue
@@ -173,7 +187,7 @@ func main() {
 
 	// registrar records last acknowledged positions in all files.
 	Registrar(persist, registrar_chan)
-} /* main */
+}
 
 // REVU: yes, this is a temp hack.
 func emit(msgfmt string, args ...interface{}) {
@@ -186,6 +200,7 @@ func emit(msgfmt string, args ...interface{}) {
 func fault(msgfmt string, args ...interface{}) {
 	exit(exitStat.faulted, msgfmt, args...)
 }
+
 func exit(stat int, msgfmt string, args ...interface{}) {
 	log.Printf(msgfmt, args...)
 	os.Exit(stat)
