@@ -58,6 +58,10 @@ func assertRequiredOptions() {
 	}
 }
 
+const logflags = log.Ldate | log.Ltime | log.Lmicroseconds
+
+var infolog *log.Logger
+
 func init() {
 	flag.StringVar(&options.configFile, "config", options.configFile, "path to logstash-forwarder configuration file")
 
@@ -79,6 +83,11 @@ func init() {
 	flag.BoolVar(&options.verbose, "v", options.verbose, "operate in verbose mode - emits to log")
 
 	flag.BoolVar(&options.debug, "debug", options.debug, "emit debg info (verbose must also be set)")
+}
+
+func init() {
+	infolog = log.New(os.Stdout, "", logflags)
+	log.SetFlags(logflags)
 }
 
 func main() {
@@ -130,7 +139,7 @@ func main() {
 	// Finally, prospector uses the registrar information, on restart, to
 	// determine where in each file to restart a harvester.
 
-	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
+//	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
 	if options.useSyslog {
 		configureSyslog()
 	}
@@ -194,7 +203,7 @@ func emit(msgfmt string, args ...interface{}) {
 	if !options.verbose {
 		return
 	}
-	log.Printf(msgfmt, args...)
+	infolog.Printf(msgfmt, args...)
 }
 
 func fault(msgfmt string, args ...interface{}) {
