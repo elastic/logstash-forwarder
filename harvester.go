@@ -83,7 +83,7 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
       Fields: &h.FileConfig.Fields,
       fileinfo: &info,
     }
-    offset += int64(bytesread)
+    h.Offset += int64(bytesread)
 
     output <- event // ship the new event downstream
   } /* forever */
