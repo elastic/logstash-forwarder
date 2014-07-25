@@ -159,9 +159,9 @@ The config file is documented further up in this file.
 
 Logstash supports all certificates, including self-signed certificates. To generate a certificate, you can run the following command:
 
-    $ openssl req -x509 -batch -nodes -newkey rsa:2048 -keyout logstash-forwarder.key -out logstash-forwarder.crt
+    $ openssl req -x509 -batch -nodes -newkey rsa:2048 -keyout logstash-forwarder.key -out logstash-forwarder.crt -days 365
 
-This will generate a key at `logstash-forwarder.key` and the certificate at `logstash-forwarder.crt`. Both the server that is running logstash-forwarder as well as the logstash instances receiving logs will require these files on disk to verify the authenticity of messages.
+This will generate a key at `logstash-forwarder.key` and the 1-year valid certificate at `logstash-forwarder.crt`. Both the server that is running logstash-forwarder as well as the logstash instances receiving logs will require these files on disk to verify the authenticity of messages. 
 
 Recommended file locations:
 
