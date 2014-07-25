@@ -26,7 +26,7 @@ var options = &struct {
 	useSyslog           bool
 	tailOnRotate        bool
 	debug               bool
-	verbose             bool
+	quiet               bool
 }{
 	spoolSize:           1024,
 	harvesterBufferSize: 16 << 10,
@@ -42,7 +42,7 @@ func emitOptions() {
 	emit("\t--- flags ---------\n")
 	emit("\ttail (on-rotation):  %t\n", options.tailOnRotate)
 	emit("\tuse-syslog:          %t\n", options.useSyslog)
-	emit("\tverbose:             %t\n", options.verbose)
+	emit("\tverbose:             %t\n", options.quiet)
 	emit("\tdebug:               %t\n", options.debug)
 	if runProfiler() {
 		emit("\t--- profile run ---\n")
@@ -79,8 +79,8 @@ func init() {
 	flag.BoolVar(&options.tailOnRotate, "tail", options.tailOnRotate, "always tail on log rotation -note: may skip entries ")
 	flag.BoolVar(&options.tailOnRotate, "t", options.tailOnRotate, "always tail on log rotation -note: may skip entries ")
 
-	flag.BoolVar(&options.verbose, "verbose", options.verbose, "operate in verbose mode - emits to log")
-	flag.BoolVar(&options.verbose, "v", options.verbose, "operate in verbose mode - emits to log")
+	flag.BoolVar(&options.quiet, "verbose", options.quiet, "operate in quiet mode - only emit errors to log")
+	flag.BoolVar(&options.quiet, "v", options.quiet, "operate in quiet mode - only emit errors to log")
 
 	flag.BoolVar(&options.debug, "debug", options.debug, "emit debg info (verbose must also be set)")
 }
@@ -200,7 +200,7 @@ func main() {
 
 // REVU: yes, this is a temp hack.
 func emit(msgfmt string, args ...interface{}) {
-	if !options.verbose {
+	if options.quiet {
 		return
 	}
 	infolog.Printf(msgfmt, args...)
