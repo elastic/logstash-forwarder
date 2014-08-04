@@ -21,6 +21,7 @@ type NetworkConfig struct {
 	SSLCertificate string   `json:"ssl certificate"`
 	SSLKey         string   `json:"ssl key"`
 	SSLCA          string   `json:"ssl ca"`
+	InsecureSkipVerify bool `json:"insecure skip verify"` 
 	Timeout        int64    `json:timeout`
 	timeout        time.Duration
 }
