@@ -77,7 +77,7 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
     line++
     event := &FileEvent{
       Source: &h.Path,
-      Offset: h.Offset,
+      Offset: offset,
       Line: line,
       Text: text,
       Fields: &h.FileConfig.Fields,
