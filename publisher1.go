@@ -36,98 +36,187 @@ func Publishv1(input chan []*FileEvent,
   registrar chan []*FileEvent,
   config *NetworkConfig) {
   var buffer bytes.Buffer
+  var compressed_payload []byte
   var socket *tls.Conn
+  var last_ack_sequence uint32
   var sequence uint32
   var err error
 
   socket = connect(config)
   defer socket.Close()
 
-  for events := range input {
-    buffer.Truncate(0)
-    compressor, _ := zlib.NewWriterLevel(&buffer, 3)
+  // TODO(driskell): Make the idle timeout configurable like the network timeout is?
+  timer := time.NewTimer(900 * time.Second)
 
-    for _, event := range events {
-      sequence += 1
-      writeDataFrame(event, sequence, compressor)
-    }
-    compressor.Flush()
-    compressor.Close()
+  for {
+    select {
+    case events := <-input:
+      for {
+        // Do we need to populate the buffer again? Or do we already have it done?
+        if buffer.Len() == 0 {
+          sequence = last_ack_sequence
+          compressor, _ := zlib.NewWriterLevel(&buffer, 3)
 
-    compressed_payload := buffer.Bytes()
+          for _, event := range events {
+            sequence += 1
+            writeDataFrame(event, sequence, compressor)
+          }
+          compressor.Flush()
+          compressor.Close()
 
-    // Send buffer until we're successful...
-    oops := func(err error) {
-      // TODO(sissel): Track how frequently we timeout and reconnect. If we're
-      // timing out too frequently, there's really no point in timing out since
-      // basically everything is slow or down. We'll want to ratchet up the
-      // timeout value slowly until things improve, then ratchet it down once
-      // things seem healthy.
-      log.Printf("Socket error, will reconnect: %s\n", err)
-      time.Sleep(1 * time.Second)
-      socket.Close()
-      socket = connect(config)
-    }
-
-  SendPayload:
-    for {
-      // Abort if our whole request takes longer than the configured
-      // network timeout.
-      socket.SetDeadline(time.Now().Add(config.timeout))
-
-      // Set the window size to the length of this payload in events.
-      _, err = socket.Write([]byte("1W"))
-      if err != nil {
-        oops(err)
-        continue
-      }
-      binary.Write(socket, binary.BigEndian, uint32(len(events)))
-      if err != nil {
-        oops(err)
-        continue
-      }
-
-      // Write compressed frame
-      socket.Write([]byte("1C"))
-      if err != nil {
-        oops(err)
-        continue
-      }
-      binary.Write(socket, binary.BigEndian, uint32(len(compressed_payload)))
-      if err != nil {
-        oops(err)
-        continue
-      }
-      _, err = socket.Write(compressed_payload)
-      if err != nil {
-        oops(err)
-        continue
-      }
-
-      // read ack
-      response := make([]byte, 0, 6)
-      ackbytes := 0
-      for ackbytes != 6 {
-        n, err := socket.Read(response[len(response):cap(response)])
-        if err != nil {
-          log.Printf("Read error looking for ack: %s\n", err)
-          socket.Close()
-          socket = connect(config)
-          continue SendPayload // retry sending on new connection
-        } else {
-          ackbytes += n
+          compressed_payload = buffer.Bytes()
         }
+
+        // Abort if our whole request takes longer than the configured network timeout.
+        socket.SetDeadline(time.Now().Add(config.timeout))
+
+        // Set the window size to the length of this payload in events.
+        _, err = socket.Write([]byte("1W"))
+        if err != nil {
+          log.Printf("Socket error, will reconnect: %s\n", err)
+          goto RetryPayload
+        }
+        err = binary.Write(socket, binary.BigEndian, uint32(len(events)))
+        if err != nil {
+          log.Printf("Socket error, will reconnect: %s\n", err)
+          goto RetryPayload
+        }
+
+        // Write compressed frame
+        _, err = socket.Write([]byte("1C"))
+        if err != nil {
+          log.Printf("Socket error, will reconnect: %s\n", err)
+          goto RetryPayload
+        }
+        err = binary.Write(socket, binary.BigEndian, uint32(len(compressed_payload)))
+        if err != nil {
+          log.Printf("Socket error, will reconnect: %s\n", err)
+          goto RetryPayload
+        }
+        _, err = socket.Write(compressed_payload)
+        if err != nil {
+          log.Printf("Socket error, will reconnect: %s\n", err)
+          goto RetryPayload
+        }
+
+        // read ack
+        for {
+          var frame [2]byte
+
+          // Each time we've received a frame, reset the deadline
+          socket.SetDeadline(time.Now().Add(config.timeout))
+
+          err = binary.Read(socket, binary.BigEndian, &frame)
+          if err != nil {
+            log.Printf("Socket error, will reconnect: %s\n", err)
+            goto RetryPayload
+          }
+
+          if frame == [2]byte{'1', 'A'} {
+            var ack_sequence uint32
+
+            // Read the sequence number acked
+            err = binary.Read(socket, binary.BigEndian, &ack_sequence)
+            if err != nil {
+              log.Printf("Socket error, will reconnect: %s\n", err)
+              goto RetryPayload
+            }
+
+            if sequence == ack_sequence {
+              last_ack_sequence = ack_sequence
+              // All acknowledged! Stop reading acks
+              break
+            }
+
+            // NOTE(driskell): If the server is busy and not yet processed anything, we MAY
+            // end up receiving an ack for the last sequence in the previous payload, or 0
+            if ack_sequence == last_ack_sequence {
+              // Just keep waiting
+              continue
+            } else if ack_sequence - last_ack_sequence > uint32(len(events)) {
+              // This is wrong - we've already had an ack for these
+              log.Printf("Socket error, will reconnect: Repeated ACK\n")
+              goto RetryPayload
+            }
+
+            // Send a slice of the acknowledged events downstream and slice what we're still waiting for
+            // so that if we encounter an error, we only resend unacknowledged events
+            registrar <- events[:ack_sequence - last_ack_sequence]
+            events = events[ack_sequence - last_ack_sequence:]
+            last_ack_sequence = ack_sequence
+
+            // Reset the events buffer so it gets regenerated if we need to retry the payload
+            buffer.Truncate(0)
+            continue
+          }
+
+          // Unknown frame!
+          log.Printf("Socket error, will reconnect: Unknown frame received: %s\n", frame)
+          goto RetryPayload
+        }
+
+        // Success, stop trying to send the payload.
+        break
+
+      RetryPayload:
+        // TODO(sissel): Track how frequently we timeout and reconnect. If we're
+        // timing out too frequently, there's really no point in timing out since
+        // basically everything is slow or down. We'll want to ratchet up the
+        // timeout value slowly until things improve, then ratchet it down once
+        // things seem healthy.
+        time.Sleep(1 * time.Second)
+        socket.Close()
+        socket = connect(config)
       }
 
-      // TODO(sissel): verify ack
-      // Success, stop trying to send the payload.
-      break
-    }
+      // Tell the registrar that we've successfully sent the remainder of the events
+      registrar <- events
 
-    // Tell the registrar that we've successfully sent these events
-    registrar <- events
-  } /* for each event payload */
+      // Reset the events buffer
+      buffer.Truncate(0)
+
+      // Prepare to enter idle by setting a long deadline... if we have more events we'll drop it down again
+      socket.SetDeadline(time.Now().Add(1800 * time.Second))
+
+      // Reset the timer
+      timer.Reset(900 * time.Second)
+    case <-timer.C:
+      // We've no events to send - throw a ping (well... window frame) so our connection doesn't idle and die
+      err = ping(config, socket)
+      if err != nil {
+        log.Printf("Socket error during ping, will reconnect: %s\n", err)
+        time.Sleep(1 * time.Second)
+        socket.Close()
+        socket = connect(config)
+      }
+
+      // Reset the deadline
+      socket.SetDeadline(time.Now().Add(1800 * time.Second))
+
+      // Reset the timer
+      timer.Reset(900 * time.Second)
+    } /* select */
+  } /* for */
 } // Publish
+
+func ping(config *NetworkConfig, socket *tls.Conn) error {
+  // Set deadline for this write
+  socket.SetDeadline(time.Now().Add(config.timeout))
+
+  // This just keeps connection open through firewalls
+  // We don't await for a response so its not a real ping, the protocol does not provide for a real ping
+  // And with a complete replacement of protocol happening soon, makes no sense to add new frames and such
+  _, err := socket.Write([]byte("1W"))
+  if err != nil {
+    return err
+  }
+  err = binary.Write(socket, binary.BigEndian, uint32(*spool_size))
+  if err != nil {
+    return err
+  }
+
+  return nil
+}
 
 func connect(config *NetworkConfig) (socket *tls.Conn) {
   var tlsconfig tls.Config
@@ -208,24 +297,30 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
     socket.SetDeadline(time.Now().Add(config.timeout))
     err = socket.Handshake()
     if err != nil {
-      log.Printf("Failed to tls handshake with %s %s\n", address, err)
-      time.Sleep(1 * time.Second)
-      socket.Close()
-      continue
+      log.Printf("Handshake failure with %s: Failed to TLS handshake: %s\n", address, err)
+      goto TryNextServer
     }
 
-    log.Printf("Connected to %s\n", address)
+    log.Printf("Connected with %s\n", address)
 
     // connected, let's rock and roll.
     return
+
+  TryNextServer:
+    time.Sleep(1 * time.Second)
+    socket.Close()
+    continue
   }
   return
 }
 
 func writeDataFrame(event *FileEvent, sequence uint32, output io.Writer) {
   //log.Printf("event: %s\n", *event.Text)
-  // header, "1D"
-  output.Write([]byte("1D"))
+  // header, "2D"
+  // Why version 2 data frame? Because server.rb will correctly start returning partial ACKs if we specify version 2
+  // This keeps the old logstash forwarders, which broke on partial ACK, working with even the newer server.rb
+  // If the newer server.rb receives a 1D it will refuse to send partial ACK, just like before
+  output.Write([]byte("2D"))
   // sequence number
   binary.Write(output, binary.BigEndian, uint32(sequence))
   // 'pair' count

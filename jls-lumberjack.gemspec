@@ -14,7 +14,7 @@ Gem::Specification.new do |gem|
   gem.test_files    = []
   gem.name          = "jls-lumberjack"
   gem.require_paths = ["lib"]
-  gem.version       = "0.0.20"
+  gem.version       = "0.0.21"
 
   # This isn't used yet because the new protocol isn't ready
   #gem.add_runtime_dependency "ffi-rzmq", "~> 1.0.0"
