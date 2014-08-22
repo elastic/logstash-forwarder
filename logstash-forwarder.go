@@ -9,12 +9,15 @@ import (
   "time"
 )
 
-var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
-var spool_size = flag.Uint64("spool-size", 1024, "Maximum number of events to spool before a flush is forced.")
-var idle_timeout = flag.Duration("idle-flush-time", 5*time.Second, "Maximum time to wait for a full spool before flushing anyway")
-var config_file = flag.String("config", "", "The config file to load")
-var use_syslog = flag.Bool("log-to-syslog", false, "Log to syslog instead of stdout")
-var from_beginning = flag.Bool("from-beginning", false, "Read new files from the beginning, instead of the end")
+var (
+    cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
+    spool_size = flag.Uint64("spool-size", 1024, "Maximum number of events to spool before a flush is forced.")
+    idle_timeout = flag.Duration("idle-flush-time", 5*time.Second, "Maximum time to wait for a full spool before flushing anyway")
+    config_file = flag.String("config", "", "The config file to load")
+    use_log = flag.Bool("log-to-file", false, "Log to file instead of stdout")
+    log_file = flag.String("log-file", "/var/log/syslog", "Log file to use")
+    from_beginning = flag.Bool("from-beginning", false, "Read new files from the beginning, instead of the end")
+)
 
 func main() {
   flag.Parse()
@@ -55,8 +58,13 @@ func main() {
   // determine where in each file to resume a harvester.
 
   log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
-  if *use_syslog {
-    configureSyslog()
+  if *use_log {
+    f, err := os.OpenFile( *log_file, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
+    if err != nil {
+        log.Fatalf("error opening file: %v", err)
+    }
+    defer f.Close()
+    log.SetOutput(f)
   }
 
   resume := &ProspectorResume{}
