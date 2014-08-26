@@ -110,7 +110,7 @@ func (h *Harvester) open() *os.File {
   }
 
   // TODO(sissel): Only seek if the file is a file, not a pipe or socket.
-  if h.Offset > 0 {
+  if h.Offset >= 0 {
     h.file.Seek(h.Offset, os.SEEK_SET)
   } else if *from_beginning {
     h.file.Seek(0, os.SEEK_SET)
