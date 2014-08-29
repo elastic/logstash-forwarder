@@ -144,9 +144,13 @@ Generally:
 
     logstash-forwarder -config logstash-forwarder.conf
 
-See `logstash-forwarder -help` for all the flags
+See `logstash-forwarder -help` for all the flags. The `-config` option is required and logstash-forwrder will not run without it.
 
 The config file is documented further up in this file.
+
+And also note that logstash-forwarder runs quietly when all is a-ok. If you want informational feedback, use the `verbose` flag to enable log emits to stdout.
+
+Fatal errors are always sent to stderr regardless of the `-verbose` command-line option and process exits with a non-zero status.
 
 ### Key points
 
