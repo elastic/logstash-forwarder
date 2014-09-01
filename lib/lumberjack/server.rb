@@ -77,13 +77,20 @@ module Lumberjack
         spooler_thread = Thread.new do
           begin
             while true
-              block.call(event_queue.pop)
+              event = event_queue.pop
+              # If we've already processed this event, skip it (line will be missing if we alreayd processed)
+              # This is a normal condition where data()'s Timeout::timeout expired AFTER posting an event, and thus reposted it
+              next unless event.has_key? 'line'
+              block.call event
             end
           rescue ShutdownSignal
-            # Flush whatever we have left
           end
+          # Flush whatever we have left
           while event_queue.length
-            block.call(event_queue.pop)
+            event = event_queue.pop
+            # See above
+            next unless event.has_key? 'line'
+            block.call event
           end
         end
 
@@ -147,17 +154,17 @@ module Lumberjack
     end # def transition
 
     # Feed data to this parser.
-    # 
+    #
     # Currently, it will return the raw payload of websocket messages.
     # Otherwise, it returns nil if no complete message has yet been consumed.
     #
-    # @param [String] the string data to feed into the parser. 
+    # @param [String] the string data to feed into the parser.
     # @return [String, nil] the websocket message payload, if any, nil otherwise.
     def feed(data, &block)
       @buffer << data
       #p :need => @need
       while have?(@need)
-        send(@state, &block) 
+        send(@state, &block)
         #case @state
           #when :header; header(&block)
           #when :window_size; window_size(&block)
@@ -256,7 +263,7 @@ module Lumberjack
       length = get.unpack("N").first
       transition(:compressed_payload, length)
     end
-    
+
     def compressed_payload(&block)
       original = Zlib::Inflate.inflate(get)
       transition(:header, 2)
