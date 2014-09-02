@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"net"
 	"os"
@@ -26,7 +27,16 @@ var hostname string
 var hostport_re, _ = regexp.Compile("^(.+):([0-9]+)$")
 
 func init() {
-	hostname, _ = os.Hostname()
+	var err error
+
+	hostname = options.hostname
+	if options.hostname == "" {
+		hostname, err = os.Hostname()
+		if err != nil {
+			log.Fatal("Hostname detection failed. Set -hostname flag or fix server's hostname reporting.",
+				err)
+		}
+	}
 	rand.Seed(time.Now().UnixNano())
 }
 
