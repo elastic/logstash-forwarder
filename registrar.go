@@ -7,7 +7,7 @@ import (
 
 func Registrar(state map[string]*FileState, input chan []*FileEvent) {
 	for events := range input {
-		emit ("Registrar: precessing %d events\n", len(events))
+		emit ("Registrar: processing %d events\n", len(events))
 		// Take the last event found for each file source
 		for _, event := range events {
 			// skip stdin
