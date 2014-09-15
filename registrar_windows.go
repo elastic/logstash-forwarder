@@ -1,24 +1,21 @@
 package main
 
 import (
-  "encoding/json"
-  "log"
-  "os"
+	"os"
 )
 
-func WriteRegistry(state map[string]*FileState, path string) {
-  tmp := path + ".new"
-  file, err := os.Create(tmp)
-  if err != nil {
-    log.Printf("Failed to open .logstash-forwarder.new for writing: %s\n", err)
-    return
-  }
-
-  encoder := json.NewEncoder(file)
-  encoder.Encode(state)
-  file.Close()
-
-  old := path + ".old"
-  os.Rename(path, old)
-  os.Rename(tmp, path)
+func onRegistryWrite(path, tempfile string) error {
+	old := path + ".old"
+	var e error
+	
+	if e = os.Rename(path, old); e != nil {
+		emit("registry rotate: rename of %s to %s - %s\n", path, old, e)
+		return e
+	}
+	
+	if e = os.Rename(tempfile, path); e != nil {
+		emit("registry rotate: rename of %s to %s - %s\n", tempfile, path, e)
+		return e
+	}
+	return nil
 }
