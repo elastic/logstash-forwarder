@@ -46,12 +46,15 @@ module Lumberjack
       while true
         # NOTE: This means ssl accepting is single-threaded.
         begin
+          client = nil
           client = @ssl_server.accept
         rescue EOFError, OpenSSL::SSL::SSLError, IOError
           # ssl handshake failure or other issue, skip it.
           # TODO(sissel): log the error
           # TODO(sissel): try to identify what client was connecting that failed.
-          client.close rescue nil
+          if !client.nil?
+            client.close rescue nil
+          end
           next
         end
 
