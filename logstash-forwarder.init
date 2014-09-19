@@ -1,4 +1,5 @@
 #! /bin/sh
+# chkconfig: 2345 60 92
 ### BEGIN INIT INFO
 # Provides:          skeleton
 # Required-Start:    $remote_fs $syslog
@@ -17,72 +18,45 @@ PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC="log shipper"
 NAME=logstash-forwarder
 DAEMON=/opt/logstash-forwarder/bin/logstash-forwarder
-DAEMON_ARGS="-config /etc/logstash-forwarder -spool-size 100 -log-to-syslog"
+PROG=$(basename $DAEMON)
+DAEMON_ARGS="-config /etc/logstash-forwarder.conf -spool-size 100 -log-to-syslog"
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
 [ -r /etc/default/$NAME ] && . /etc/default/$NAME
-. /lib/init/vars.sh
-. /lib/lsb/init-functions
+. /etc/init.d/functions
 
 COMMAND="cd /var/run; exec $DAEMON $DAEMON_ARGS"
 
 do_start() {
   # Skip if it's already running
-  start-stop-daemon --start --quiet --pidfile $PIDFILE --exec /bin/sh --test > /dev/null || return 1
-
-  cd /var/run
-  # Actually start it now.
-  start-stop-daemon --start --quiet --make-pidfile --background \
-    --pidfile $PIDFILE --exec /bin/sh -- -c "$COMMAND" || return 2
+  /usr/local/sbin/daemonize -p $PIDFILE -a $DAEMON $DAEMON_ARGS
 }
 
 do_stop()
 {
-  start-stop-daemon --stop --quiet --retry=TERM/30/KILL/5 --pidfile $PIDFILE
+  killproc -p "$PIDFILE" $PROG
   RETVAL="$?"
-  [ "$RETVAL" = 2 ] && return 2
-  start-stop-daemon --stop --quiet --oknodo --retry=0/30/KILL/5 --exec $DAEMON
-  [ "$?" = 2 ] && return 2
-  rm -f $PIDFILE
-  return "$RETVAL"
+  echo
+  [ $RETVAL -eq 0 ] && rm -f $LOCKFILE
+  return $RETVAL
+
 }
 
 case "$1" in
   start)
-    [ "$VERBOSE" != no ] && log_daemon_msg "Starting $DESC" "$NAME"
     do_start
-    case "$?" in
-      0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
-      2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
-    esac
     ;;
   stop)
-    [ "$VERBOSE" != no ] && log_daemon_msg "Stopping $DESC" "$NAME"
     do_stop
-    case "$?" in
-      0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
-      2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
-    esac
     ;;
   status)
-    status_of_proc "$DAEMON" "$NAME" && exit 0 || exit $?
     ;;
   restart|force-reload)
-    log_daemon_msg "Restarting $DESC" "$NAME"
     do_stop
     case "$?" in
       0|1)
         do_start
-        case "$?" in
-          0) log_end_msg 0 ;;
-          1) log_end_msg 1 ;; # Old process is still running
-          *) log_end_msg 1 ;; # Failed to start
-        esac
-      ;;
-      *)
-        # Failed to stop
-        log_end_msg 1
       ;;
     esac
     ;;
