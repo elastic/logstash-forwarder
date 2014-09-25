@@ -149,8 +149,8 @@ func main() {
 
 	// Load the previous log file locations now, for use in prospector
 	restart.files = make(map[string]*FileState)
-	if existing, e := os.Open(".logstash-forwarder"); e == nil {
-		defer existing.Close()
+
+	if existing, e := os.OpenFile(".logstash-forwarder", os.O_RDONLY | os.O_CREATE, 0666); e == nil {
 		wd := ""
 		if wd, e = os.Getwd(); e != nil {
 			emit("WARNING: os.Getwd retuned unexpected error %s -- ignoring\n", e.Error())
@@ -159,6 +159,7 @@ func main() {
 
 		decoder := json.NewDecoder(existing)
 		decoder.Decode(&restart.files)
+		existing.Close()
 	}
 
 	pendingProspectorCnt := 0
