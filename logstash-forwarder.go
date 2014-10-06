@@ -25,6 +25,7 @@ var options = &struct {
 	idleTimeout         time.Duration
 	useSyslog           bool
 	tailOnRotate        bool
+	insecureTLS         bool
 	debug               bool
 	quiet               bool
 }{
@@ -78,6 +79,8 @@ func init() {
 
 	flag.BoolVar(&options.tailOnRotate, "tail", options.tailOnRotate, "always tail on log rotation -note: may skip entries ")
 	flag.BoolVar(&options.tailOnRotate, "t", options.tailOnRotate, "always tail on log rotation -note: may skip entries ")
+
+	flag.BoolVar(&options.insecureTLS, "insecuretls", false, "if set TLS does not verify the server's certificate chain or hostname, this leaves TLS susceptible to man-in-the-middle attacks")
 
 	flag.BoolVar(&options.quiet, "verbose", options.quiet, "operate in quiet mode - only emit errors to log")
 	flag.BoolVar(&options.quiet, "v", options.quiet, "operate in quiet mode - only emit errors to log")
@@ -192,7 +195,7 @@ func main() {
 	// Harvesters dump events into the spooler.
 	go Spool(event_chan, publisher_chan, options.spoolSize, options.idleTimeout)
 
-	go Publishv1(publisher_chan, registrar_chan, &config.Network)
+	go Publishv1(publisher_chan, registrar_chan, &config.Network, options.insecureTLS)
 
 	// registrar records last acknowledged positions in all files.
 	Registrar(persist, registrar_chan)

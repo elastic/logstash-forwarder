@@ -32,13 +32,14 @@ func init() {
 
 func Publishv1(input chan []*FileEvent,
 	registrar chan []*FileEvent,
-	config *NetworkConfig) {
+	config *NetworkConfig,
+	insecureTLS bool) {
 	var buffer bytes.Buffer
 	var socket *tls.Conn
 	var sequence uint32
 	var err error
 
-	socket = connect(config)
+	socket = connect(config, insecureTLS)
 	defer socket.Close()
 
 	for events := range input {
@@ -64,7 +65,7 @@ func Publishv1(input chan []*FileEvent,
 			emit("Socket error, will reconnect: %s\n", err)
 			time.Sleep(1 * time.Second)
 			socket.Close()
-			socket = connect(config)
+			socket = connect(config, insecureTLS)
 		}
 
 	SendPayload:
@@ -110,7 +111,7 @@ func Publishv1(input chan []*FileEvent,
 				if err != nil {
 					emit("Read error looking for ack: %s\n", err)
 					socket.Close()
-					socket = connect(config)
+					socket = connect(config, insecureTLS)
 					continue SendPayload // retry sending on new connection
 				} else {
 					ackbytes += n
@@ -127,7 +128,7 @@ func Publishv1(input chan []*FileEvent,
 	} /* for each event payload */
 } // Publish
 
-func connect(config *NetworkConfig) (socket *tls.Conn) {
+func connect(config *NetworkConfig, insecureTLS bool) (socket *tls.Conn) {
 	var tlsconfig tls.Config
 
 	if len(config.SSLCertificate) > 0 && len(config.SSLKey) > 0 {
@@ -201,6 +202,7 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
 		}
 
 		tlsconfig.ServerName = host
+		tlsconfig.InsecureSkipVerify = insecureTLS
 
 		socket = tls.Client(tcpsocket, &tlsconfig)
 		socket.SetDeadline(time.Now().Add(config.timeout))
