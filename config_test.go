@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 	"testing"
+	"fmt"
 )
 
 // -------------------------------------------------------------------
@@ -111,6 +112,103 @@ func TestLoadConfig(t *testing.T) {
 	}
 }
 
+// tests modular config
+func TestLoadModularConfig(t *testing.T) {
+	tempDir, e := ioutil.TempDir("", "TestLoadModularConfig")
+	if e != nil {
+		testBug(e)
+	}
+	
+	defer func() {
+		e := os.RemoveAll(tempDir)
+		
+		if e != nil {
+			t.Errorf("error removing %s: %v", tempDir, e)
+		}
+	}()
+	
+	var configJson = fmt.Sprintf(`
+	{
+	  "network": {
+	    "servers": [ "localhost:5043" ],
+	    "ssl certificate": "./lumberjack.crt",
+	    "ssl key": "./lumberjack.key",
+	    "ssl ca": "./lumberjack_ca.crt"
+	  },
+	  "includeFilesDirs": [
+	     "%s"
+	  ]
+	}
+	`, tempDir)
+	
+	var configFile1 = `
+	  {
+	    "paths": [
+	      "/var/log/*.log",
+	      "/var/log/messages"
+	    ],
+	    "fields": { "type": "syslog" }
+	  }
+	`
+	var configFile2 = `
+	  {
+	    "paths": [ "/var/log/apache2/access.log" ],
+	    "fields": { "type": "apache" }
+	  }
+	`
+
+	// set it up
+	fname := writeConfFile([]byte(configJson))
+	_, e = os.Stat(fname)
+	if e != nil {
+		testBug(e)
+	}
+
+	e = ioutil.WriteFile(path.Join(tempDir, "conf1.json"), []byte(configFile1), os.FileMode(0644))
+	if e != nil {
+		testBug(e)
+	}
+
+	e = ioutil.WriteFile(path.Join(tempDir, "conf2.json"), []byte(configFile2), os.FileMode(0644))
+	if e != nil {
+		testBug(e)
+	}
+
+	config, e := LoadConfig(fname)
+	if e != nil {
+		t.Errorf("filename:%s - error: %s", fname, e)
+	}
+
+	// check network
+	for i := 0; i < len(expected.network.Servers); i++ {
+		if config.Network.Servers[i] != expected.network.Servers[i] {
+			t.Errorf("networks do not match: i:%d", i)
+		}
+	}
+	if config.Network.SSLCertificate != expected.network.SSLCertificate {
+		t.Errorf("SSLCertificate do not match")
+	}
+	if config.Network.SSLKey != expected.network.SSLKey {
+		t.Errorf("SSLKey do not match")
+	}
+	if config.Network.SSLCA != expected.network.SSLCA {
+		t.Errorf("SSLCA do not match")
+	}
+	// check files
+	for i := 0; i < len(expected.files); i++ {
+		for k, v := range expected.files[i].Fields {
+			if config.Files[i].Fields[k] != v {
+				t.Errorf("fields do not match: i:%d k:%s", i, k)
+			}
+		}
+		for j := 0; j < len(expected.files[i].Paths); j++ {
+			if config.Files[i].Paths[j] != expected.files[i].Paths[j] {
+				t.Errorf("paths do not match: i:%d j:%d", i, j)
+			}
+		}
+	}
+}
+
 // -------------------------------------------------------------------
 // test support funcs
 // -------------------------------------------------------------------
@@ -118,7 +216,7 @@ func writeConfFile(data []byte) string {
 	fname := path.Join(os.TempDir(), "test-logstash-forwarder.conf")
 	e := ioutil.WriteFile(fname, data, os.FileMode(0644))
 	if e != nil {
-		panic("TESTBUG: " + e.Error())
+		testBug(e)
 	}
 	return fname
 }

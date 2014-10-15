@@ -94,6 +94,27 @@ include them in your config.:
       ]
     }
 
+Alternatively (or additionally), you may specify one or more directories from
+which to read the file configurations:
+
+    {
+      …
+      "includeFilesDirs": [
+        "/etc/logstash-forwarder.d"
+      ],
+      …
+    }
+  
+and with the following in `/etc/logstash-forwarder.d/syslog.json`:
+  
+    {
+      "paths": [
+        "/var/log/*.log",
+        "/var/log/messages"
+      ],
+      "fields": { "type": "syslog" }
+    }
+
 ### Goals
 
 * Minimize resource usage where possible (CPU, memory, network).

@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"os"
+	"path"
+	"io/ioutil"
 	"time"
 )
 
@@ -17,8 +19,9 @@ var defaultConfig = &struct {
 }
 
 type Config struct {
-	Network NetworkConfig `json:network`
-	Files   []FileConfig  `json:files`
+	Network          NetworkConfig `json:network`
+	Files            []FileConfig  `json:files`
+	IncludeFilesDirs []string      `json:includeFilesDirs`
 }
 
 type NetworkConfig struct {
@@ -37,16 +40,16 @@ type FileConfig struct {
 	deadtime time.Duration
 }
 
-func LoadConfig(path string) (config Config, err error) {
-	config_file, err := os.Open(path)
+func LoadConfig(configPath string) (config Config, err error) {
+	config_file, err := os.Open(configPath)
 	if err != nil {
-		emit("Failed to open config file '%s': %s\n", path, err)
+		emit("Failed to open config file '%s': %s\n", configPath, err)
 		return
 	}
 
 	fi, _ := config_file.Stat()
 	if size := fi.Size(); size > (configFileSizeLimit) {
-		emit("config file (%q) size exceeds reasonable limit (%d) - aborting", path, size)
+		emit("config file (%q) size exceeds reasonable limit (%d) - aborting", configPath, size)
 		return // REVU: shouldn't this return an error, then?
 	}
 
@@ -58,6 +61,37 @@ func LoadConfig(path string) (config Config, err error) {
 	if err != nil {
 		emit("Failed unmarshalling json: %s\n", err)
 		return
+	}
+	
+	for _, includeDir := range config.IncludeFilesDirs {
+		var files []os.FileInfo
+		
+		files, err = ioutil.ReadDir(includeDir)
+		if err != nil {
+			emit("Failed reading directory %s: %s\n", includeDir, err)
+			return
+		}
+		
+		for _, f := range files {
+			fqPath := path.Join(includeDir, f.Name())
+
+			var buf []byte
+			
+			buf, err = ioutil.ReadFile(fqPath)
+			if err != nil {
+				emit("Failed reading %s: %s\n", fqPath, err)
+				return
+			}
+			
+			fileConfig := FileConfig{}
+			err = json.Unmarshal(buf, &fileConfig)
+			if err != nil {
+				emit("Failed unmarshaling %s: %s\n", fqPath, err)
+				return
+			}
+			
+			config.Files = append(config.Files, fileConfig)
+		}
 	}
 
 	if config.Network.Timeout == 0 {
