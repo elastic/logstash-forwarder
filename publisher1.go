@@ -217,7 +217,6 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
 		// connected, let's rock and roll.
 		return
 	}
-	return
 }
 
 func writeDataFrame(event *FileEvent, sequence uint32, output io.Writer) {

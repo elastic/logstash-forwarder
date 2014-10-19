@@ -174,8 +174,6 @@ func (h *Harvester) readline(reader *bufio.Reader, buffer *bytes.Buffer, eof_tim
 			return str, bufferSize, nil
 		}
 	} /* forever read chunks */
-
-	return nil, 0, nil
 }
 
 // panics
