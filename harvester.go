@@ -187,6 +187,6 @@ func mustBeRegularFile(f *os.File) {
 	}
 
 	if !info.Mode().IsRegular() {
-		panic(fmt.Errorf("Harvester: not a regular file:%q", info.Mode(), info.Name()))
+		panic(fmt.Errorf("Harvester: not a regular file: %q %q", info.Mode(), info.Name()))
 	}
 }
