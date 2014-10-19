@@ -25,3 +25,5 @@ logstash-forwarder
 *.DS_Store
 *.idea
 *.iml
+.ruby-version
+.bundle/
