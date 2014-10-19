@@ -37,9 +37,9 @@ logstash-forwarder is configured with a json file you specify with the -config f
 
 `logstash-forwarder -config yourstuff.json`
 
-Here's a sample, with comments in-line to describe the settings. Please please
-please keep in mind that comments are technically invalid in JSON, so you can't
-include them in your config.:
+Here's a sample, with comments in-line to describe the settings. Comments are
+invalid in JSON, but logstash-forwarder will strip them out for you if they're
+the only thing on the line:
 
     {
       # The network section covers network configuration :)
@@ -71,7 +71,7 @@ include them in your config.:
         # An array of hashes. Each hash tells what paths to watch and
         # what fields to annotate on events from those paths.
         {
-          "paths": [ 
+          "paths": [
             # single paths are fine
             "/var/log/messages",
             # globs are fine too, they will be periodically evaluated
@@ -93,6 +93,8 @@ include them in your config.:
         }
       ]
     }
+
+You can also read an entire directory of JSON configs by specifying a directory instead of a file with the `-config` option.
 
 ### Goals
 
@@ -134,7 +136,7 @@ Or:
 
 If you don't use rpm or deb make targets as above, you can skip this section.
 
-Packages install to `/opt/logstash-forwarder`. 
+Packages install to `/opt/logstash-forwarder`.
 
 There are no run-time dependencies.
 
@@ -190,7 +192,7 @@ In logstash, you'll want to use the [lumberjack](http://logstash.net/docs/latest
       }
     }
 
-## Implementation details 
+## Implementation details
 
 Below is valid as of 2012/09/19
 
@@ -236,7 +238,7 @@ reliable transport of events.
 * HTTP is RPC and very high overhead for small events (uncompressable headers,
   etc). Streaming requires custom framing.
 
-## License 
+## License
 
 See LICENSE file.
 
