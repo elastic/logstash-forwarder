@@ -146,7 +146,7 @@ Generally:
 
     logstash-forwarder -config logstash-forwarder.conf
 
-See `logstash-forwarder -help` for all the flags. The `-config` option is required and logstash-forwrder will not run without it.
+See `logstash-forwarder -help` for all the flags. The `-config` option is required and logstash-forwarder will not run without it.
 
 The config file is documented further up in this file.
 
