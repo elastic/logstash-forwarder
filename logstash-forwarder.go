@@ -110,10 +110,11 @@ func main() {
 			log.Fatal(err)
 		}
 		pprof.StartCPUProfile(f)
+		emit("Profiling enabled. I will collect profiling information and then exit in 60 seconds.")
 		go func() {
 			time.Sleep(60 * time.Second)
 			pprof.StopCPUProfile()
-			panic("done")
+			panic("60-seconds of profiling is complete. Shutting down.")
 		}()
 	}
 
