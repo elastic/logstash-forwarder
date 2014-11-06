@@ -15,70 +15,98 @@
 # Description: Logstash Forwarder
 ### END INIT INFO
 
+# Source function library.
+. /etc/rc.d/init.d/functions
+
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
-NAME=logstash-forwarder
+
+prog=logstash-forwarder
 DAEMON=/opt/logstash-forwarder/bin/logstash-forwarder
-PIDFILE=/var/run/$NAME.pid
-SCRIPTNAME=/etc/init.d/$NAME
+pidfile=/var/run/$prog.pid
+lockfile=/var/lock/subsys/$prog
 
-[ -r /etc/default/$NAME ] && . /etc/default/$NAME
-. /etc/init.d/functions
+# load defaults
 
-[ -e /etc/sysconfig/logstash-forwarder ] && . /etc/sysconfig/logstash-forwarder
+[ -e /etc/default/$prog ] && . /etc/default/$prog
+[ -e /etc/sysconfig/$prog ] && . /etc/sysconfig/$prog
+
 DAEMON_ARGS="${DAEMON_ARGS:--config /etc/logstash-forwarder -spool-size 100 -log-to-syslog}"
 
 start()
 {
-	echo -n $"Starting $NAME: "
-	nohup $DAEMON $DAEMON_ARGS >/dev/null 2>&1 &
-	RETVAL=$?
-	PID=$!
-	echo $PID > $PIDFILE
-	echo
-	[ $RETVAL -eq 0 ] && touch /var/lock/subsys/$NAME
+    echo -n $"Starting $prog: "
+    nohup $DAEMON $DAEMON_ARGS >/dev/null 2>&1 &
+    retval=$?
+    pid=$!
+    echo $pid > $pidfile
+    if [ rh_status_q ]; then
+        touch $lockfile
+        success
+        echo
+    fi
+    return $retval
 }
 
 stop()
 {
-	echo -n $"Stopping $NAME: "
-	killproc -p "$PIDFILE" $DAEMON
-	RETVAL=$?
-	[ -f "$PIDFILE" ] && rm -f "$PIDFILE"
-	echo
-	[ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/$NAME
+    echo -n $"Stopping $prog: "
+    killproc -p "$pidfile" $prog
+    retval=$?
+    [ -f "$pidfile" ] && rm -f $pidfile
+    echo
+    [ $retval -eq 0 ] && rm -f $lockfile
+    return $retval
 }
 
-restart () {
-	stop
-	start
+restart() {
+    stop
+    start
 }
 
-RETVAL=0
+reload() {
+    restart
+}
+
+force_reload() {
+    restart
+}
+
+rh_status() {
+    status -p $pidfile $prog
+}
+
+rh_status_q() {
+    rh_status >/dev/null 2>&1
+}
 
 case "$1" in
-	start)
-		status -p $PIDFILE $NAME>/dev/null
-		RET=$?
-		if [ $RET -ne 0 ];then
-			start
-		fi
+    start)
+        rh_status_q && exit 0
+        $1
+        ;;
+    stop)
+        rh_status_q || exit 0
+        $1
 		;;
-	stop)
-		stop
-		;;
-	restart|reload|force-reload)
-		restart
-		;;
-	condrestart|try-restart)
-		[ -f /var/lock/subsys/$NAME ] && restart || :
-		;;
-	status)
-		status -p $PIDFILE $NAME
-		RETVAL=$?
-		;;
-	*)
-		echo "Usage: $0 {start|stop|status|restart|condrestart|try-restart|reload|force-reload}"
-		RETVAL=1
+    restart)
+        $1
+        ;;
+    reload)
+        rh_status_q || exit 7
+        $1
+        ;;
+    force-reload)
+        force_reload
+        ;;
+    condrestart|try-restart)
+        rh_status_q || exit 0
+        restart
+        ;;
+    status)
+        rh_status
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|status|restart|condrestart|try-restart|reload|force-reload}"
+        exit 2
 esac
-
-exit $RETVAL
+exit $?
