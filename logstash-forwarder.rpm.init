@@ -25,7 +25,7 @@ SCRIPTNAME=/etc/init.d/$NAME
 . /etc/init.d/functions
 
 [ -e /etc/sysconfig/logstash-forwarder ] && . /etc/sysconfig/logstash-forwarder
-DAEMON_ARGS="${DAEMON_ARGS:--config /etc/logstash-forwarder.conf -spool-size 100 -log-to-syslog}"
+DAEMON_ARGS="${DAEMON_ARGS:-config /etc/logstash-forwarder.conf -spool-size 100 -log-to-syslog}"
 
 start()
 {
@@ -57,7 +57,7 @@ RETVAL=0
 
 case "$1" in
 	start)
-		status -p $PIDFILE >/dev/null
+		status -p $PIDFILE $NAME>/dev/null
 		RET=$?
 		if [ $RET -ne 0 ];then
 			start
@@ -73,7 +73,7 @@ case "$1" in
 		[ -f /var/lock/subsys/$NAME ] && restart || :
 		;;
 	status)
-		status -p $PIDFILE
+		status -p $PIDFILE $NAME
 		RETVAL=$?
 		;;
 	*)
