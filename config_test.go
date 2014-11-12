@@ -24,6 +24,12 @@ func makeTempDir(t *testing.T) string {
 	return tmpdir
 }
 
+func makeSubDir(tmpdir string, t *testing.T) string {
+	ssldir, err := ioutil.TempDir(tmpdir, "/blarg")
+	chkerr(t, err)
+	return ssldir
+}
+
 func rmTempDir(tmpdir string) {
 	_ = os.RemoveAll(tmpdir)
 }
@@ -34,6 +40,34 @@ func rmTempDir(tmpdir string) {
 func TestDiscoverConfigs(t *testing.T) {
 	tmpdir := makeTempDir(t)
 	defer rmTempDir(tmpdir)
+	tmpfile1 := path.Join(tmpdir, "myfile1")
+	tmpfile2 := path.Join(tmpdir, "myfile2")
+	err := ioutil.WriteFile(tmpfile1, make([]byte, 0), 0644)
+	chkerr(t, err)
+	err = ioutil.WriteFile(tmpfile2, make([]byte, 0), 0644)
+
+	configs, err := DiscoverConfigs(tmpdir)
+	chkerr(t, err)
+
+	expected := []string{tmpfile1, tmpfile2}
+	if !reflect.DeepEqual(configs, expected) {
+		t.Fatalf("Expected to find %v, got %v instead", configs, expected)
+	}
+
+	configs, err = DiscoverConfigs(tmpfile1)
+
+	expected = []string{tmpfile1}
+	if !reflect.DeepEqual(configs, expected) {
+		t.Fatalf("Expected to find %v, got %v instead", configs, expected)
+	}
+}
+
+func TestDiscoverConfigsAndIgnoreDirectories(t *testing.T) {
+	tmpdir := makeTempDir(t)
+	subdir := makeSubDir(tmpdir, t)
+	defer rmTempDir(tmpdir)
+	defer rmTempDir(subdir)
+
 	tmpfile1 := path.Join(tmpdir, "myfile1")
 	tmpfile2 := path.Join(tmpdir, "myfile2")
 	err := ioutil.WriteFile(tmpfile1, make([]byte, 0), 0644)
@@ -140,6 +174,58 @@ func TestLoadConfigAndStripComments(t *testing.T) {
 		t.Fatalf("Expected\n%v\n\ngot\n\n%v\n\nfrom LoadConfig", expected, config)
 	}
 
+}
+
+func TestLoadConfigAndIgnoreDirectories(t *testing.T) {
+	configJson := `
+{
+  "network": {
+    "servers": [ "localhost:5043" ],
+    "ssl certificate": "./logstash-forwarder.crt",
+    "ssl key": "./logstash-forwarder.key",
+    "ssl ca": "./logstash-forwarder.ca",
+    "timeout": 20
+  },
+  "files": [
+    {
+      "paths": [
+        "/var/log/*.log",
+        "/var/log/messages"
+      ],
+      "fields": { "type": "syslog" },
+      "dead time": "6h"
+    }, {
+      "paths": [ "/var/log/apache2/access.log" ],
+       "fields": { "type": "apache" }
+    }
+  ]
+}`
+
+	tmpdir := makeTempDir(t)
+	subdir := makeSubDir(tmpdir, t)
+	defer rmTempDir(tmpdir)
+	defer rmTempDir(subdir)
+
+	configFile := path.Join(tmpdir, "myconfig")
+	err := ioutil.WriteFile(configFile, []byte(configJson), 0644)
+	chkerr(t, err)
+
+	var config Config
+	configFiles, err := DiscoverConfigs(tmpdir)
+
+	if err != nil {
+		t.Fatalf("Error discovering config file: %s", err)
+	}
+
+	for _, filename := range configFiles {
+		additional_config, lerr := LoadConfig(filename)
+		if lerr == nil {
+			lerr = MergeConfig(&config, additional_config)
+		}
+		if lerr != nil {
+			t.Fatalf("Could not load config file %s: %s", filename, err)
+		}
+	}
 }
 
 func TestFinalizeConfig(t *testing.T) {
