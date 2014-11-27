@@ -171,7 +171,11 @@ Logstash supports all certificates, including self-signed certificates.
 
 To generate a certificate, you can run the following command:
 
-   $ openssl req -x509 -nodes -days 365 -newkey rsa:4096 -keyout logstash-forwarder.key -out logstash-forwarder.crt
+```
+$ openssl req -x509 -nodes -days 365 -newkey rsa:4096 -keyout logstash-forwarder.key -out logstash-forwarder.crt
+```
+
+which will produce:
 
 ```
 Generating a 4096 bit RSA private key
