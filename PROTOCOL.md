@@ -97,7 +97,7 @@ data frames the writer will send before blocking for acks.
 Payload:
 
 * 32bit unsigned payload length
-* 'length' bytes of compressed payload
+* 'length' bytes of zlib compressed 'data' frames.
 
 This frame type allows you to compress many frames into a single compressed
 envelope and is useful for efficiently compressing many small data frames.
