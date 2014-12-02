@@ -2,7 +2,7 @@
 
 The needs that lead to this protocol are:
 
-* Encryption amd Authentication to protect 
+* Encryption amd Authentication to protect
 * Compression should be used to reduce bandwidth
 * Round-trip latency should not damage throughput
 * Application-level message acknowledgement
@@ -59,6 +59,8 @@ Payload:
 * 32bit unsigned value length followed by that many bytes for the value
 * repeat key/value 'count' times.
 
+Note all numeric values are network (big-endian) byte order.
+
 Sequence number roll-over: If you receive a sequence number less than the
 previous value, this signals that the sequence number has rolled over.
 
@@ -94,7 +96,7 @@ data frames the writer will send before blocking for acks.
 
 Payload:
 
-* 32bit unsigned payload length 
+* 32bit unsigned payload length
 * 'length' bytes of compressed payload
 
 This frame type allows you to compress many frames into a single compressed
