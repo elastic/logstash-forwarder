@@ -5,6 +5,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"path/filepath"
 	"runtime/pprof"
 	"time"
   "fmt"
@@ -28,10 +29,12 @@ var options = &struct {
 	tailOnRotate        bool
 	quiet               bool
   version bool
+	registryFile        string
 }{
 	spoolSize:           1024,
 	harvesterBufferSize: 16 << 10,
 	idleTimeout:         time.Second * 5,
+	registryFile:        ".logstash-forwarder",
 }
 
 func emitOptions() {
@@ -44,6 +47,7 @@ func emitOptions() {
 	emit("\ttail (on-rotation):  %t\n", options.tailOnRotate)
 	emit("\tlog-to-syslog:          %t\n", options.useSyslog)
 	emit("\tquiet:             %t\n", options.quiet)
+	emit("\tregistry-file:       %s\n", options.registryFile)
 	if runProfiler() {
 		emit("\t--- profile run ---\n")
 		emit("\tcpu-profile-file:    %s\n", options.cpuProfileFile)
@@ -64,6 +68,7 @@ func init() {
 	flag.StringVar(&options.configArg, "config", options.configArg, "path to logstash-forwarder configuration file or directory")
 
 	flag.StringVar(&options.cpuProfileFile, "cpuprofile", options.cpuProfileFile, "path to cpu profile output - note: exits on profile end.")
+	flag.StringVar(&options.registryFile, "registry", options.registryFile, "path to logstash-forwarder registry file")
 
 	flag.Uint64Var(&options.spoolSize, "spool-size", options.spoolSize, "event count spool threshold - forces network flush")
 	flag.Uint64Var(&options.spoolSize, "sv", options.spoolSize, "event count spool threshold - forces network flush")
@@ -162,13 +167,15 @@ func main() {
 
 	// Load the previous log file locations now, for use in prospector
 	restart.files = make(map[string]*FileState)
-	if existing, e := os.Open(".logstash-forwarder"); e == nil {
+	if existing, e := os.Open(options.registryFile); e == nil {
 		defer existing.Close()
 		wd := ""
-		if wd, e = os.Getwd(); e != nil {
-			emit("WARNING: os.Getwd retuned unexpected error %s -- ignoring\n", e.Error())
+		if !filepath.IsAbs(options.registryFile) {
+			if wd, e = os.Getwd(); e != nil {
+				emit("WARNING: os.Getwd returned unexpected error %s -- ignoring\n", e.Error())
+			}
 		}
-		emit("Loading registrar data from %s/.logstash-forwarder\n", wd)
+		emit("Loading registrar data from %s\n", filepath.Join(wd, options.registryFile))
 
 		decoder := json.NewDecoder(existing)
 		decoder.Decode(&restart.files)
