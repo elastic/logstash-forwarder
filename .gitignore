@@ -20,7 +20,7 @@ nacl.secret
 .lumberjack
 .lumberjack.new
 .rbx
-lumberjack
+./lumberjack
 logstash-forwarder
 *.DS_Store
 *.idea
