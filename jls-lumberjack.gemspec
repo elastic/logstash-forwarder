@@ -18,4 +18,7 @@ Gem::Specification.new do |gem|
 
   # This isn't used yet because the new protocol isn't ready
   #gem.add_runtime_dependency "ffi-rzmq", "~> 1.0.0"
+  gem.add_development_dependency 'rspec'
+  gem.add_development_dependency 'insist'
+  gem.add_development_dependency 'stud'
 end
