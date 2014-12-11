@@ -1,0 +1,113 @@
+#!/bin/sh
+#
+# /etc/init.d/logstash-forwarder -- startup script for Lumberjack
+#
+# Written by Rafal Zielinski <sq4ind@gmail.com>
+#
+### BEGIN INIT INFO
+# Provides:          logstash-forwarder
+# Required-Start:    $network $remote_fs $named
+# Required-Stop:     $network $remote_fs $named
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Starts logstash-forwarder
+# Description:       Starts logstash-forwarder using start-stop-daemon
+### END INIT INFO
+
+PATH=/bin:/usr/bin:/sbin:/usr/sbin
+NAME=logstash-forwarder
+DEFAULT=/etc/sysconfig/$NAME
+
+if [ `id -u` -ne 0 ]; then
+	echo "You need root privileges to run this script"
+	exit 1
+fi
+
+if [ -r /etc/default/rcS ]; then
+	. /etc/default/rcS
+fi
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+
+# The following variables can be overwritten in $DEFAULT
+
+# Directory where the ElasticSearch binary distribution resides
+LF_HOME=/opt/logstash-forwarder
+
+# Maximum number of open files
+MAX_OPEN_FILES=65535
+
+# Maximum amount of locked memory
+#MAX_LOCKED_MEMORY=
+
+# logstash-forwarder configuration file name
+CONF_FILE=logstash-forwarder.conf
+
+# overwrite settings from default file
+if [ -f "$DEFAULT" ]; then
+	. "$DEFAULT"
+fi
+
+# Define other required variables
+PID_FILE=/var/run/$NAME.pid
+DAEMON=$LF_HOME/bin/logstash-forwarder
+DAEMON_OPTS="-config $LF_HOME/$CONF_FILE"
+
+# Check DAEMON exists
+test -x $DAEMON || exit 0
+
+case "$1" in
+  start)
+	echo "Starting $DESC"
+
+	pid=`pidofproc -p $PID_FILE logstash-forwarder`
+	if [ -n "$pid" ] ; then
+		echo "Already running."
+		exit 0
+	fi
+
+	# Prepare environment
+	if [ -n "$MAX_OPEN_FILES" ]; then
+		ulimit -n $MAX_OPEN_FILES
+	fi
+
+	if [ -n "$MAX_LOCKED_MEMORY" ]; then
+		ulimit -l $MAX_LOCKED_MEMORY
+	fi
+
+	# Start Daemon
+	daemon --pidfile=$PID_FILE --user=root "$DAEMON $DAEMON_OPTS > /var/log/logstash-forwarder.log 2>&1 &"
+
+	# Write PID
+	ps -ef | fgrep '/opt/logstash-forwarder/bin/logstash-forwarder -config /opt/logstash-forwarder/logstash-forwarder.conf' | fgrep -v 'grep' | awk '{print $2}' > $PID_FILE
+	;;
+  stop)
+	echo "Stopping $DESC"
+
+	if [ -f "$PID_FILE" ]; then
+		killproc -p $PID_FILE -d 15 $DAEMON
+
+		rm -f "$PID_FILE"
+	else
+		echo "(not running)"
+	fi
+	;;
+  status)
+	status -p $PID_FILE $DAEMON && exit 0 || exit $?
+    ;;
+  restart|force-reload)
+	if [ -f "$PID_FILE" ]; then
+		$0 stop
+		sleep 1
+	fi
+	$0 start
+	;;
+  *)
+	echo "Usage: $0 {start|stop|restart|force-reload|status}"
+	exit 1
+	;;
+esac
+
+exit 0

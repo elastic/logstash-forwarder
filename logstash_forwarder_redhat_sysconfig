@@ -1,0 +1,2 @@
+# Options for the Logstash Forwarder
+LOGSTASH_FORWARDER_OPTIONS="-config /etc/logstash-forwarder/logstash-forwarder.conf"

@@ -10,7 +10,7 @@ PREFIX?=/opt/logstash-forwarder
 
 FETCH=sh fetch.sh
 MAKE?=make
-CFLAGS+=-Ibuild/include 
+CFLAGS+=-Ibuild/include
 LDFLAGS+=-Lbuild/lib -Wl,-rpath,'$$ORIGIN/../lib'
 
 default: build-all
@@ -45,7 +45,7 @@ vendor-clean:
 	$(MAKE) -C vendor/zlib/ clean
 
 rpm deb: PREFIX=/opt/logstash-forwarder
-rpm deb: | build-all
+deb: | build-all
 	fpm -s dir -t $@ -n logstash-forwarder -v $(VERSION) \
 		--replaces lumberjack \
 		--exclude '*.a' --exclude 'lib/pkgconfig/zlib.pc' \
@@ -54,6 +54,17 @@ rpm deb: | build-all
 		build/bin/logstash-forwarder=$(PREFIX)/bin/ \
 		build/bin/logstash-forwarder.sh=$(PREFIX)/bin/ \
 		logstash-forwarder.init=/etc/init.d/logstash-forwarder
+
+rpm: | build-all
+	fpm -s dir -t $@ -n logstash-forwarder -v $(VERSION) \
+		--replaces lumberjack \
+		--exclude '*.a' --exclude 'lib/pkgconfig/zlib.pc' \
+		--description "a log shipping tool" \
+		--url "https://github.com/elasticsearch/logstash-forwarder" \
+		build/bin/logstash-forwarder=$(PREFIX)/bin/ \
+		build/bin/logstash-forwarder.sh=$(PREFIX)/bin/ \
+		logstash_forwarder_redhat_init=/etc/init.d/logstash-forwarder \
+		logstash_forwarder_redhat_sysconfig=/etc/sysconfig/logstash-forwarder
 
 # Vendor'd dependencies
 # If VENDOR contains 'zeromq' download and build it.
