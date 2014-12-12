@@ -23,6 +23,7 @@ GEM
     stud (0.0.18)
 
 PLATFORMS
+  java
   ruby
 
 DEPENDENCIES
