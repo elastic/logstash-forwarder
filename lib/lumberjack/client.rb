@@ -116,7 +116,7 @@ module Lumberjack
   class Encoder
     def self.to_compressed_frame(hash, sequence)
       compress = Zlib::Deflate.deflate(to_frame(hash, sequence))
-      ["1","C",compress.length,compress].pack("AANA#{compress.length}")
+      ["1", "C", compress.bytesize, compress].pack("AANA#{compress.length}")
     end
 
     def self.to_frame(hash, sequence)

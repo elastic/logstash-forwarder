@@ -27,4 +27,15 @@ describe Lumberjack::Encoder do
       expect(data["message"].force_encoding('UTF-8')).to eq(content["message"])
     end
   end
+
+  it 'should creates compressed frames' do
+    content = {
+      "message" => "国際ホッケー連盟" # International Hockey Federation
+    }
+
+    parser = Lumberjack::Parser.new
+    parser.feed(Lumberjack::Encoder.to_compressed_frame(content, 0)) do |code, sequence, data|
+      expect(data["message"].force_encoding('UTF-8')).to eq(content["message"])
+    end
+  end
 end
