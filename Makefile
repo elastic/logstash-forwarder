@@ -21,7 +21,7 @@ include Makefile.ext
 .PHONY: go-check
 go-check:
 	@go version > /dev/null || (echo "Go not found. You need to install go: http://golang.org/doc/install"; false)
-	@go version | grep -q 'go version go1.3' || (echo "Go version 1.3 required, you have a version of go that is unsupported. See http://golang.org/doc/install"; false)
+	@go version | grep -qE 'go version go1.3|go version go1.4' || (echo "Go version 1.3 or 1.4 required, you have a version of go that is unsupported. See http://golang.org/doc/install"; false)
 
 
 clean:
