@@ -1,4 +1,4 @@
-VERSION=0.3.1
+VERSION=0.3.2
 
 # By default, all dependencies (zeromq, etc) will be downloaded and installed
 # locally. You can change this if you are deploying your own.
@@ -64,7 +64,8 @@ rpm: | build-all
 		build/bin/logstash-forwarder=$(PREFIX)/bin/ \
 		build/bin/logstash-forwarder.sh=$(PREFIX)/bin/ \
 		logstash_forwarder_redhat_init=/etc/init.d/logstash-forwarder \
-		logstash_forwarder_redhat_sysconfig=/etc/sysconfig/logstash-forwarder
+		logstash_forwarder_redhat_sysconfig=/etc/sysconfig/logstash-forwarder \
+		logstash_forwarder_logrotate=/etc/logrotate.d/logstash-forwarder
 
 # Vendor'd dependencies
 # If VENDOR contains 'zeromq' download and build it.
