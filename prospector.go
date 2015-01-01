@@ -42,9 +42,22 @@ func (p *Prospector) Prospect(resume *ProspectorResume, output chan *FileEvent) 
 	// Seed last scan time
 	p.lastscan = time.Now()
 
+	// Compile a list of files that match the exclusion rules
+	exclude_files := map[string]bool{}
+	for _, ep := range p.FileConfig.ExcludePaths {
+		em, err := filepath.Glob(ep)
+		if err != nil {
+			emit("exclusion glob(%s) failed: %v\n", ep, err)
+			return
+		}
+		for _, m := range em {
+			exclude_files[m] = true
+		}
+	}
+
 	// Now let's do one quick scan to pick up new files
 	for _, path := range p.FileConfig.Paths {
-		p.scan(path, output, resume)
+		p.scan(path, exclude_files, output, resume)
 	}
 
 	// This signals we finished considering the previous state
@@ -58,7 +71,7 @@ func (p *Prospector) Prospect(resume *ProspectorResume, output chan *FileEvent) 
 
 		for _, path := range p.FileConfig.Paths {
 			// Scan - flag false so new files always start at beginning
-			p.scan(path, output, nil)
+			p.scan(path, exclude_files, output, nil)
 		}
 
 		p.lastscan = newlastscan
@@ -77,7 +90,7 @@ func (p *Prospector) Prospect(resume *ProspectorResume, output chan *FileEvent) 
 	}
 } /* Prospect */
 
-func (p *Prospector) scan(path string, output chan *FileEvent, resume *ProspectorResume) {
+func (p *Prospector) scan(path string, exclude_files map[string]bool, output chan *FileEvent, resume *ProspectorResume) {
 
 	// Evaluate the path as a wildcards/shell glob
 	matches, err := filepath.Glob(path)
@@ -101,6 +114,12 @@ func (p *Prospector) scan(path string, output chan *FileEvent, resume *Prospecto
 
 		if fileinfo.IsDir() {
 			emit("Skipping directory: %s\n", file)
+			continue
+		}
+
+		// If the file is in the list of exclusions, skip it
+		if _, ok := exclude_files[file]; ok {
+			emit("Skipping exclusion: %s\n", file)
 			continue
 		}
 
