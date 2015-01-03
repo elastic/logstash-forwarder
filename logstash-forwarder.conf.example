@@ -11,7 +11,7 @@
         "/var/log/*.log",
         "/var/log/messages"
       ],
-      "exclude_paths": [
+      "exclude": [
         "/var/log/*.gz",
         "/var/log/*.[0-9]"
       ],
