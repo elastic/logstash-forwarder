@@ -130,6 +130,8 @@ func Publishv1(input chan []*FileEvent,
 func connect(config *NetworkConfig) (socket *tls.Conn) {
 	var tlsconfig tls.Config
 
+	tlsconfig.MinVersion = tls.VersionTLS11
+
 	if len(config.SSLCertificate) > 0 && len(config.SSLKey) > 0 {
 		emit("Loading client ssl certificate: %s and %s\n",
 			config.SSLCertificate, config.SSLKey)
