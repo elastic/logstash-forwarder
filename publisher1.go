@@ -137,7 +137,7 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
 			config.SSLCertificate, config.SSLKey)
 		cert, err := tls.LoadX509KeyPair(config.SSLCertificate, config.SSLKey)
 		if err != nil {
-			fault ("Failed loading client ssl certificate: %s\n", err)
+			fault("Failed loading client ssl certificate: %s\n", err)
 		}
 		tlsconfig.Certificates = []tls.Certificate{cert}
 	}
@@ -219,7 +219,6 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
 		// connected, let's rock and roll.
 		return
 	}
-	return
 }
 
 func writeDataFrame(event *FileEvent, sequence uint32, output io.Writer) {

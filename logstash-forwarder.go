@@ -153,7 +153,7 @@ func main() {
 	// Finally, prospector uses the registrar information, on restart, to
 	// determine where in each file to restart a harvester.
 
-//	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
+	//	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
 	if options.useSyslog {
 		configureSyslog()
 	}

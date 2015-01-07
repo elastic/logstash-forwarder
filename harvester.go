@@ -174,8 +174,6 @@ func (h *Harvester) readline(reader *bufio.Reader, buffer *bytes.Buffer, eof_tim
 			return str, bufferSize, nil
 		}
 	} /* forever read chunks */
-
-	return nil, 0, nil
 }
 
 // panics
@@ -189,6 +187,6 @@ func mustBeRegularFile(f *os.File) {
 	}
 
 	if !info.Mode().IsRegular() {
-		panic(fmt.Errorf("Harvester: not a regular file:%q", info.Mode(), info.Name()))
+		panic(fmt.Errorf("Harvester: not a regular file: %q %q", info.Mode(), info.Name()))
 	}
 }

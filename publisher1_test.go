@@ -149,11 +149,11 @@ func tryConnect(addr string, strict bool) (errchan chan error) {
 		tryAttempt := 0
 		exinfo := ""
 		config := &NetworkConfig{
-		SSLCA:     caCertFile.Name(),
-		Servers:   []string{addr},
-		Timeout:   wait,
-		timeout:   time.Second * wait,
-	}
+			SSLCA:   caCertFile.Name(),
+			Servers: []string{addr},
+			Timeout: wait,
+			timeout: time.Second * wait,
+		}
 
 		var socket *tls.Conn
 		for socket == nil && tryAttempt < retryLimit {
