@@ -25,7 +25,6 @@ var options = &struct {
 	idleTimeout         time.Duration
 	useSyslog           bool
 	tailOnRotate        bool
-	debug               bool
 	quiet               bool
 }{
 	spoolSize:           1024,
@@ -41,9 +40,8 @@ func emitOptions() {
 	emit("\tharvester-buff-size: %d\n", options.harvesterBufferSize)
 	emit("\t--- flags ---------\n")
 	emit("\ttail (on-rotation):  %t\n", options.tailOnRotate)
-	emit("\tuse-syslog:          %t\n", options.useSyslog)
-	emit("\tverbose:             %t\n", options.quiet)
-	emit("\tdebug:               %t\n", options.debug)
+	emit("\tlog-to-syslog:          %t\n", options.useSyslog)
+	emit("\tquiet:             %t\n", options.quiet)
 	if runProfiler() {
 		emit("\t--- profile run ---\n")
 		emit("\tcpu-profile-file:    %s\n", options.cpuProfileFile)
@@ -59,8 +57,6 @@ func assertRequiredOptions() {
 }
 
 const logflags = log.Ldate | log.Ltime | log.Lmicroseconds
-
-var infolog *log.Logger
 
 func init() {
 	flag.StringVar(&options.configArg, "config", options.configArg, "path to logstash-forwarder configuration file or directory")
@@ -79,14 +75,10 @@ func init() {
 	flag.BoolVar(&options.tailOnRotate, "tail", options.tailOnRotate, "always tail on log rotation -note: may skip entries ")
 	flag.BoolVar(&options.tailOnRotate, "t", options.tailOnRotate, "always tail on log rotation -note: may skip entries ")
 
-	flag.BoolVar(&options.quiet, "verbose", options.quiet, "operate in quiet mode - only emit errors to log")
-	flag.BoolVar(&options.quiet, "v", options.quiet, "operate in quiet mode - only emit errors to log")
-
-	flag.BoolVar(&options.debug, "debug", options.debug, "emit debg info (verbose must also be set)")
+	flag.BoolVar(&options.quiet, "quiet", options.quiet, "operate in quiet mode - only emit errors to log")
 }
 
 func init() {
-	infolog = log.New(os.Stdout, "", logflags)
 	log.SetFlags(logflags)
 }
 
@@ -101,6 +93,11 @@ func main() {
 	}()
 
 	flag.Parse()
+
+	if options.useSyslog {
+		configureSyslog()
+	}
+
 	assertRequiredOptions()
 	emitOptions()
 
@@ -152,11 +149,6 @@ func main() {
 	// - registrar: records positions of files read
 	// Finally, prospector uses the registrar information, on restart, to
 	// determine where in each file to restart a harvester.
-
-//	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
-	if options.useSyslog {
-		configureSyslog()
-	}
 
 	restart := &ProspectorResume{}
 	restart.persist = make(chan *FileState)
@@ -217,7 +209,7 @@ func emit(msgfmt string, args ...interface{}) {
 	if options.quiet {
 		return
 	}
-	infolog.Printf(msgfmt, args...)
+	log.Printf(msgfmt, args...)
 }
 
 func fault(msgfmt string, args ...interface{}) {
