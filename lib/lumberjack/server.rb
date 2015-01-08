@@ -39,12 +39,10 @@ module Lumberjack
       @ssl.cert = OpenSSL::X509::Certificate.new(File.read(@options[:ssl_certificate]))
       @ssl.key = OpenSSL::PKey::RSA.new(File.read(@options[:ssl_key]),
                                         @options[:ssl_key_passphrase])
-      # https://github.com/jruby/jruby/issues/1874
-      @ssl.ssl_version = OpenSSL::SSL::SSLContext::METHODS.find { |x| x.to_s.gsub("_",".") == "TLSv1.1" }
       @ssl_server = OpenSSL::SSL::SSLServer.new(@tcp_server, @ssl)
     end # def initialize
 
-    def each_connection(&block)
+    def run(&block)
       while true
         # NOTE: This means ssl accepting is single-threaded.
         begin
@@ -60,20 +58,11 @@ module Lumberjack
           next
         end
 
-        #require "pry"
-        #binding.pry
-
-        block.call(Connection.new(client))
-      end
-    end # def run
-
-    def run(&block)
-      each_connection do |connection|
-        Thread.new(connection) do |connection|
-          connection.run(&block)
+        Thread.new(client) do |fd|
+          Connection.new(fd).run(&block)
         end
       end
-    end
+    end # def run
   end # class Server
 
   class Parser

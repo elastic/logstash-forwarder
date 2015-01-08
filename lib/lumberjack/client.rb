@@ -75,11 +75,7 @@ module Lumberjack
 
       tcp_socket = TCPSocket.new(@opts[:address], @opts[:port])
       openssl_cert = OpenSSL::X509::Certificate.new(File.read(@opts[:ssl_certificate]))
-      sslctx = OpenSSL::SSL::SSLContext.new
-
-      # https://github.com/jruby/jruby/issues/1874
-      sslctx.ssl_version = OpenSSL::SSL::SSLContext::METHODS.find { |x| x.to_s.gsub("_",".") == "TLSv1.1" }
-      @socket = OpenSSL::SSL::SSLSocket.new(tcp_socket, sslctx)
+      @socket = OpenSSL::SSL::SSLSocket.new(tcp_socket)
       @socket.connect
 
       #if @socket.peer_cert.to_s != openssl_cert.to_s
