@@ -95,9 +95,15 @@ func main() {
 	flag.Parse()
 
 	if options.useSyslog {
-		log.SetOutput(getSyslogOutput())
-		// Disable logflags when use logging to syslog
-		log.SetFlags(0)
+		out, err := configureSyslog()
+		if err != nil {
+			log.Printf("%s\n", err)
+		} else {
+			log.SetOutput(out)
+
+			// Disable logflags when use logging to syslog
+			log.SetFlags(0)
+		}
 	}
 
 	assertRequiredOptions()
