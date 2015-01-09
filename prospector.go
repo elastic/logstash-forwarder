@@ -90,6 +90,7 @@ func (p *Prospector) scan(path string, exclude_paths []string, output chan *File
 	missinginfo := make(map[string]os.FileInfo)
 
 	// Check any matched files to see if we need to start a harvester
+NextFile:
 	for _, file := range matches {
 		// Stat the file, following any symlinks.
 		fileinfo, err := os.Stat(file)
@@ -111,7 +112,7 @@ func (p *Prospector) scan(path string, exclude_paths []string, output chan *File
 				emit("Exclusion filepath match error: %v", match_err)
 			} else if matched {
 				emit("\tSkipping exclusion: %s\n", file)
-				continue
+				continue NextFile
 			}
 
 		}
