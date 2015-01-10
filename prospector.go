@@ -44,7 +44,7 @@ func (p *Prospector) Prospect(resume *ProspectorResume, output chan *FileEvent) 
 
 	// Now let's do one quick scan to pick up new files
 	for _, path := range p.FileConfig.Paths {
-		p.scan(path, p.FileConfig.ExcludePaths, output, resume)
+		p.scan(path, output, resume)
 	}
 
 	// This signals we finished considering the previous state
@@ -58,7 +58,7 @@ func (p *Prospector) Prospect(resume *ProspectorResume, output chan *FileEvent) 
 
 		for _, path := range p.FileConfig.Paths {
 			// Scan - flag false so new files always start at beginning
-			p.scan(path, p.FileConfig.ExcludePaths, output, nil)
+			p.scan(path, output, nil)
 		}
 
 		p.lastscan = newlastscan
@@ -77,7 +77,7 @@ func (p *Prospector) Prospect(resume *ProspectorResume, output chan *FileEvent) 
 	}
 } /* Prospect */
 
-func (p *Prospector) scan(path string, exclude_paths []string, output chan *FileEvent, resume *ProspectorResume) {
+func (p *Prospector) scan(path string, output chan *FileEvent, resume *ProspectorResume) {
 
 	// Evaluate the path as a wildcards/shell glob
 	matches, err := filepath.Glob(path)
@@ -106,7 +106,7 @@ NextFile:
 		}
 
 		// If the file is in the list of exclusions, skip it
-		for _, pattern := range exclude_paths {
+		for _, pattern := range p.FileConfig.Exclude {
 			matched, match_err := filepath.Match(pattern, file)
 			if match_err != nil {
 				emit("Exclusion filepath match error: %v", match_err)
