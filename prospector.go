@@ -111,7 +111,7 @@ NextFile:
 			if match_err != nil {
 				emit("Exclusion filepath match error: %v", match_err)
 			} else if matched {
-				emit("\tSkipping exclusion: %s\n", file)
+				emit("Skipping exclusion: %s\n", file)
 				continue NextFile
 			}
 
