@@ -53,7 +53,7 @@ fi
 # Define other required variables
 PID_FILE=/var/run/$NAME.pid
 DAEMON=$LF_HOME/bin/logstash-forwarder
-DAEMON_OPTS="-config $LF_HOME/$CONF_FILE"
+DAEMON_OPTS="-config $LF_HOME/conf/"
 
 # Check DAEMON exists
 test -x $DAEMON || exit 0
@@ -81,7 +81,7 @@ case "$1" in
 	daemon --pidfile=$PID_FILE --user=root "$DAEMON $DAEMON_OPTS > /var/log/logstash-forwarder.log 2>&1 &"
 
 	# Write PID
-	ps -ef | fgrep '/opt/logstash-forwarder/bin/logstash-forwarder -config /opt/logstash-forwarder/logstash-forwarder.conf' | fgrep -v 'grep' | awk '{print $2}' > $PID_FILE
+	ps -ef | fgrep '/opt/logstash-forwarder/bin/logstash-forwarder -config /opt/logstash-forwarder/conf/' | fgrep -v 'grep' | awk '{print $2}' > $PID_FILE
 	;;
   stop)
 	echo "Stopping $DESC"
