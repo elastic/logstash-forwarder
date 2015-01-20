@@ -96,6 +96,22 @@ the only thing on the line:
 
 You can also read an entire directory of JSON configs by specifying a directory instead of a file with the `-config` option.
 
+# IMPORTANT TLS/SSL CERTIFICATE NOTES
+
+This program will reject SSL/TLS certificates which have a subject which does not match the `servers` value, for any given connection. For example, if you have `"servers": [ "foobar:12345" ]` then the 'foobar' server MUST use a certificate with subject or subject-alternative that includes `CN=foobar`. Wildcards are supported also for things like `CN=*.example.com`. If you use an IP address, such as `"servers": [ "1.2.3.4:12345" ]`, your ssl certificate MUST use an IP SAN with value "1.2.3.4". If you do not, the TLS handshake will FAIL and the lumberjack connection will close due to trust problems.
+
+Creating a correct SSL/TLS infrastructure is outside the scope of this document. 
+
+As a very poor example (largely due unpredictability in your system's defaults for openssl), you can try the following command as an example for creating a self-signed certificate/key pair for use with a server named "logstash.example.com":
+
+```
+openssl req -x509  -batch -nodes -newkey rsa:2048 -keyout lumberjack.key -out lumberjack.crt -subj /CN=logstash.example.com
+```
+
+logstash-forwarder needs the `.crt` file, and logstash will need both `.key` and `.crt` files.
+
+Again, creating a correct SSL/TLS certificate authority or generally doing certificate management is outside the scope of this document. 
+
 ### Goals
 
 * Minimize resource usage where possible (CPU, memory, network).
