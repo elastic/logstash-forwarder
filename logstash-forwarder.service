@@ -1,0 +1,11 @@
+[Unit]
+Description=Logstash Forwarder
+After=syslog.target
+
+[Service]
+ExecStart=/opt/logstash-forwarder/bin/logstash-forwarder -config /etc/logstash-forwarder.conf -spool-size 100 -log-to-syslog
+Restart=on-failure
+StandardError=syslog
+
+[Install]
+WantedBy=multi-user.target
