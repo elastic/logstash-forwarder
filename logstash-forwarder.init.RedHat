@@ -1,0 +1,65 @@
+#! /bin/sh
+# From The Logstash Book
+# The original of this file can be found at: http://logstashbook.com/code/index.html
+# https://github.com/jamtur01/logstashbook-code/blob/master/code/4/logstash_forwarder_redhat_init
+#
+# logstash-forwarder Start/Stop logstash-forwarder
+#
+# chkconfig: 345 99 99
+# description: logstash-forwarder
+# processname: logstash-forwarder
+
+# Check config
+#test -f /etc/sysconfig/logstash-forwarder && . /etc/sysconfig/logstash-forwarder
+
+LOGSTASH_FORWARDER_OPTIONS=" --config /etc/logstash-forwarder -spool-size 1024 -log-to-syslog"
+
+LOGSTASH_FORWARDER_BIN="/opt/logstash-forwarder/bin/logstash-forwarder"
+
+find_logstash_forwarder_process () {
+    PIDTEMP=`pgrep -f ${LOGSTASH_FORWARDER_BIN}`
+    # Pid not found
+    if [ "x$PIDTEMP" = "x" ]; then
+        PID=-1
+    else
+        PID=$PIDTEMP
+    fi
+}
+
+start () {
+  nohup ${LOGSTASH_FORWARDER_BIN} ${LOGSTASH_FORWARDER_OPTIONS} &
+}
+
+stop () {
+  pkill -f ${LOGSTASH_FORWARDER_BIN}
+}
+
+case $1 in
+start)
+        start
+        ;;
+stop)
+        stop
+        exit 0;
+        ;;
+reload)
+        stop
+        start
+        ;;
+restart)
+        stop
+        start
+        ;;
+status)
+        find_logstash_forwarder_process
+        if [ $PID -gt 0 ]; then
+            exit 0
+        else
+            exit 1
+fi
+        ;;
+*fi)
+        echo $"Usage: $0 {start|stop|restart|reload|status}"
+        RETVAL=1
+esac
+exit 0
