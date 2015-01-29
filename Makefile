@@ -51,6 +51,9 @@ rpm deb: | build-all
 		--exclude '*.a' --exclude 'lib/pkgconfig/zlib.pc' \
 		--description "a log shipping tool" \
 		--url "https://github.com/elasticsearch/logstash-forwarder" \
+		--before-install "preinst.sh" \
+		--after-install "postinst.sh" \
+		--before-remove "prerm.sh" \
 		build/bin/logstash-forwarder=$(PREFIX)/bin/ \
 		build/bin/logstash-forwarder.sh=$(PREFIX)/bin/ \
 		logstash-forwarder.init=/etc/init.d/logstash-forwarder
