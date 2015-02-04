@@ -133,7 +133,7 @@ module Lumberjack
     FRAME_DATA = "D".ord
     FRAME_COMPRESSED = "C".ord
     def header(&block)
-      version, frame_type = get.bytes.to_a[0..1]
+      _, frame_type = get.bytes.to_a[0..1]
 
       case frame_type
         when FRAME_WINDOW; transition(:window_size, 4)
