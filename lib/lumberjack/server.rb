@@ -235,11 +235,17 @@ module Lumberjack
       @window_size = size
     end
 
+    # Pass event data back to input
+    # If sequence has met (or exceded) window size
+    # Then pass event with block to be used to ack spooled event sequence
     def data(sequence, map, &block)
-      block.call(map)
-      if (sequence - @last_ack) >= @window_size
-        @fd.syswrite(["1A", sequence].pack("A*N"))
-        @last_ack = sequence
+      if (sequence - @last_ack) < @window_size
+        block.call(map)
+      else
+        block.call(map) do
+          @fd.syswrite(["1A", sequence].pack("A*N"))
+          @last_ack = sequence
+        end
       end
     end
   end # class Connection
