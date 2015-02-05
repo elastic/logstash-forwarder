@@ -31,7 +31,7 @@ module Lumberjack
         end
       end
 
-      @tcp_server = TCPServer.new(@options[:port])
+      @tcp_server = TCPServer.new(@options[:address], @options[:port])
       # Query the port in case the port number is '0'
       # TCPServer#addr == [ address_family, port, address, address ]
       @port = @tcp_server.addr[1]
