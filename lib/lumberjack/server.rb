@@ -16,6 +16,9 @@ module Lumberjack
     # * :ssl_certificate - the path to the ssl cert to use
     # * :ssl_key - the path to the ssl key to use
     # * :ssl_key_passphrase - the key passphrase (optional)
+    # * :ssl_include_system_ca - Include the system's CA repo for client auth (optional)
+    # * :ssl_client_cert_check - Verify client cert against CA (optional)
+    
     def initialize(options={})
       @options = {
         :port => 0,
@@ -23,6 +26,9 @@ module Lumberjack
         :ssl_certificate => nil,
         :ssl_key => nil,
         :ssl_key_passphrase => nil,
+        :ssl_ssl_cacert => nil,
+        :ssl_include_system_ca => false,
+        :ssl_client_cert_check => false,
       }.merge(options)
 
       [:ssl_certificate, :ssl_key].each do |k|
@@ -40,6 +46,20 @@ module Lumberjack
       @ssl.cert = OpenSSL::X509::Certificate.new(File.read(@options[:ssl_certificate]))
       @ssl.key = OpenSSL::PKey::RSA.new(File.read(@options[:ssl_key]),
                                         @options[:ssl_key_passphrase])
+      if @options[:ssl_client_cert_check]
+        @cert_store = OpenSSL::X509::Store.new
+        if @options[:ssl_include_system_ca]
+          # Load the system default certificate path to the store
+          @cert_store.set_default_paths
+        end
+        if File.directory?(@options[:ssl_cacert])
+           @cert_store.add_path(@options[:ssl_cacert)
+        else
+           @cert_store.add_file(@options[:ssl_cacert])
+        end
+        @ssl.cert_store = @cert_store
+        @ssl.verify_mode = OpenSSL::SSL::VERIFY_PEER|OpenSSL::SSL::VERIFY_FAIL_IF_NO_PEER_CERT 
+      end
       @ssl_server = OpenSSL::SSL::SSLServer.new(@tcp_server, @ssl)
     end # def initialize
 
