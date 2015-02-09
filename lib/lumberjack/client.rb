@@ -93,13 +93,12 @@ module Lumberjack
 
     private
     def write(msg)
-      compress = Zlib::Deflate.deflate(msg)
-      @socket.syswrite(["1","C",compress.length,compress].pack("AANA#{compress.length}"))
+      @socket.syswrite(msg)
     end
 
     public
     def write_hash(hash)
-      frame = to_frame(hash, inc)
+      frame = Encoder.to_compressed_frame(hash, inc)
       ack if (@sequence - (@last_ack + 1)) >= @window_size
       write frame
     end
@@ -112,9 +111,15 @@ module Lumberjack
       @last_ack = @socket.read(4).unpack("N").first
       ack if (@sequence - (@last_ack + 1)) >= @window_size
     end
+  end
 
-    private
-    def to_frame(hash, sequence)
+  class Encoder
+    def self.to_compressed_frame(hash, sequence)
+      compress = Zlib::Deflate.deflate(to_frame(hash, sequence))
+      ["1", "C", compress.bytesize, compress].pack("AANA#{compress.length}")
+    end
+
+    def self.to_frame(hash, sequence)
       frame = ["1", "D", sequence]
       pack = "AAN"
       keys = deep_keys(hash)
@@ -122,8 +127,8 @@ module Lumberjack
       pack << "N"
       keys.each do |k|
         val = deep_get(hash,k)
-        key_length = k.length
-        val_length = val.length
+        key_length = k.bytesize
+        val_length = val.bytesize
         frame << key_length
         pack << "N"
         frame << k
@@ -137,7 +142,7 @@ module Lumberjack
     end
 
     private
-    def deep_get(hash, key="")
+    def self.deep_get(hash, key="")
       return hash if key.nil?
       deep_get(
         hash[key.split('.').first],
@@ -146,7 +151,7 @@ module Lumberjack
     end
 
     private
-    def deep_keys(hash, prefix="")
+    def self.deep_keys(hash, prefix="")
       keys = []
       hash.each do |k,v|
         keys << "#{prefix}#{k}" if v.class == String

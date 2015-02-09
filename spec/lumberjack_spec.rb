@@ -3,6 +3,7 @@ require "tempfile"
 require "lumberjack/server"
 require "insist"
 require "stud/try"
+require "stud/temporary"
 
 describe "lumberjack" do
   before :each do
@@ -21,7 +22,8 @@ describe "lumberjack" do
       :ssl_certificate => @ssl_cert.path,
       :ssl_key => @ssl_key.path
     )
-    @lumberjack = IO.popen("build/bin/lumberjack --host localhost " \
+
+    @lumberjack = IO.popen("./logstash-forwarder --host localhost " \
                            "--port #{@server.port} " \
                            "--ssl-ca-path #{@ssl_cert.path} #{@file.path}",
                            "r")
