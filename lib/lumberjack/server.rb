@@ -45,25 +45,23 @@ module Lumberjack
 
     def run(&block)
       while true
-        # NOTE: This means ssl accepting is single-threaded.
-        begin
-          client = nil
-          client = @ssl_server.accept
-        rescue EOFError, OpenSSL::SSL::SSLError, IOError
-          # ssl handshake failure or other issue, skip it.
-          # TODO(sissel): log the error
-          # TODO(sissel): try to identify what client was connecting that failed.
-          if !client.nil?
-            client.close rescue nil
-          end
-          next
-        end
+        connection = accept
 
-        Thread.new(client) do |fd|
-          Connection.new(fd).run(&block)
+        Thread.new(connection) do |connection|
+          connection.run(&block)
         end
       end
     end # def run
+
+    def accept
+      begin
+        fd = @ssl_server.accept
+      rescue EOFError, OpenSSL::SSL::SSLError, IOError
+        # ssl handshake or other accept-related failure.
+        # TODO(sissel): Make it possible to log this.
+      end
+      Connection.new(fd)
+    end
   end # class Server
 
   class Parser
@@ -233,9 +231,12 @@ module Lumberjack
       # EOF or other read errors, only action is to shutdown which we'll do in
       # 'ensure'
     ensure
-      # Try to ensure it's closed, but if this fails I don't care.
-      @fd.close rescue nil
+      close
     end # def run
+
+    def close
+      @fd.close
+    end
 
     def window_size(size)
       @window_size = size
