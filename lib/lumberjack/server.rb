@@ -6,6 +6,7 @@ require "zlib"
 module Lumberjack
   class Server
     attr_reader :port
+    attr_reader :codec
 
     # Create a new Lumberjack server.
     #
@@ -32,7 +33,7 @@ module Lumberjack
       end
 
       @tcp_server = TCPServer.new(@options[:address], @options[:port])
- 
+      
       # Query the port in case the port number is '0'
       # TCPServer#addr == [ address_family, port, address, address ]
       @port = @tcp_server.addr[1]
@@ -41,26 +42,26 @@ module Lumberjack
       @ssl.key = OpenSSL::PKey::RSA.new(File.read(@options[:ssl_key]),
                                         @options[:ssl_key_passphrase])
       @ssl_server = OpenSSL::SSL::SSLServer.new(@tcp_server, @ssl)
+
     end # def initialize
 
-    def run(&block)
+    def run(codec, &block)
       while true
-        connection = accept
-
+        connection = accept(codec)
         Thread.new(connection) do |connection|
           connection.run(&block)
         end
       end
     end # def run
 
-    def accept
+    def accept(codec)
       begin
         fd = @ssl_server.accept
       rescue EOFError, OpenSSL::SSL::SSLError, IOError
         # ssl handshake or other accept-related failure.
         # TODO(sissel): Make it possible to log this.
       end
-      Connection.new(fd)
+      Connection.new(fd, codec)
     end
   end # class Server
 
@@ -202,10 +203,11 @@ module Lumberjack
   end # class Parser
 
   class Connection
-    def initialize(fd)
+    def initialize(fd, codec)
       super()
       @parser = Parser.new
       @fd = fd
+      @codec = codec
       @last_ack = 0
 
       # a safe default until we are told by the client what window size to use
@@ -243,7 +245,7 @@ module Lumberjack
     end
 
     def data(sequence, map, &block)
-      block.call(map)
+      block.call(map, @codec)
       if (sequence - @last_ack) >= @window_size
         @fd.syswrite(["1A", sequence].pack("A*N"))
         @last_ack = sequence
