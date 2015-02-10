@@ -7,6 +7,7 @@ import (
 	"os"
 	"runtime/pprof"
 	"time"
+  "fmt"
 )
 
 var exitStat = struct {
@@ -26,6 +27,7 @@ var options = &struct {
 	useSyslog           bool
 	tailOnRotate        bool
 	quiet               bool
+  version bool
 }{
 	spoolSize:           1024,
 	harvesterBufferSize: 16 << 10,
@@ -76,6 +78,7 @@ func init() {
 	flag.BoolVar(&options.tailOnRotate, "t", options.tailOnRotate, "always tail on log rotation -note: may skip entries ")
 
 	flag.BoolVar(&options.quiet, "quiet", options.quiet, "operate in quiet mode - only emit errors to log")
+	flag.BoolVar(&options.version, "version", options.version, "output the version of this program")
 }
 
 func init() {
@@ -84,7 +87,6 @@ func init() {
 
 func main() {
 	defer func() {
-		println("sanity")
 		p := recover()
 		if p == nil {
 			return
@@ -93,6 +95,11 @@ func main() {
 	}()
 
 	flag.Parse()
+
+	if options.version {
+		fmt.Println(Version);
+		return
+	}
 
 	if options.useSyslog {
 		configureSyslog()
