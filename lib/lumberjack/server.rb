@@ -231,7 +231,7 @@ module Lumberjack
       # EOF or other read errors, only action is to shutdown which we'll do in
       # 'ensure'
     ensure
-      close
+      close rescue 'Already closed stream'
     end # def run
 
     def close
