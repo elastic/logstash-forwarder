@@ -1,13 +1,13 @@
 #! /bin/sh
 ### BEGIN INIT INFO
-# Provides:          skeleton
+# Provides:          logstash-forwarder
 # Required-Start:    $remote_fs $syslog
 # Required-Stop:     $remote_fs $syslog
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
-# Short-Description: Example initscript
-# Description:       This file should be used to construct scripts to be
-#                    placed in /etc/init.d.
+# Short-Description: Logstash Forwarder
+# Description:       Logstash Forwarder is a lightweight shipper that forwards
+#                    logs to logstash via the lumberjack protocol
 ### END INIT INFO
 
 # Author: Jordan Sissel <jordan.sissel@dreamhost.com>
@@ -21,6 +21,11 @@ DAEMON_ARGS="-config /etc/logstash-forwarder -spool-size 100 -log-to-syslog"
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
+if [ `id -u` -ne 0 ]; then
+  echo "You need root privileges to run this script"
+  exit 1
+fi
+
 [ -r /etc/default/$NAME ] && . /etc/default/$NAME
 . /lib/init/vars.sh
 . /lib/lsb/init-functions
@@ -29,7 +34,7 @@ COMMAND="cd /var/run; exec $DAEMON $DAEMON_ARGS"
 
 do_start() {
   # Skip if it's already running
-  start-stop-daemon --start --quiet --pidfile $PIDFILE --exec /bin/sh --test > /dev/null || return 1
+  do_status > /dev/null && return 0
 
   cd /var/run
   # Actually start it now.
@@ -37,8 +42,7 @@ do_start() {
     --pidfile $PIDFILE --exec /bin/sh -- -c "$COMMAND" || return 2
 }
 
-do_stop()
-{
+do_stop() {
   start-stop-daemon --stop --quiet --retry=TERM/30/KILL/5 --pidfile $PIDFILE
   RETVAL="$?"
   [ "$RETVAL" = 2 ] && return 2
@@ -48,25 +52,39 @@ do_stop()
   return "$RETVAL"
 }
 
+do_status() {
+    if [ -f $PIDFILE ]; then
+      status_of_proc -p $PIDFILE "$DAEMON" "$NAME" && return 0 || return $?
+    else
+      status_of_proc "$DAEMON" "$NAME" && return 0 || return $?
+    fi
+}
+
 case "$1" in
   start)
-    [ "$VERBOSE" != no ] && log_daemon_msg "Starting $DESC" "$NAME"
+    log_daemon_msg "Starting $DESC" "$NAME"
     do_start
     case "$?" in
-      0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
-      2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
+      0|1) log_end_msg 0 ;;
+      2) log_end_msg 1 ;;
     esac
     ;;
   stop)
-    [ "$VERBOSE" != no ] && log_daemon_msg "Stopping $DESC" "$NAME"
+    log_daemon_msg "Stopping $DESC" "$NAME"
     do_stop
     case "$?" in
-      0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
-      2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
+      0|1) log_end_msg 0 ;;
+      2) log_end_msg 1 ;;
     esac
     ;;
   status)
-    status_of_proc "$DAEMON" "$NAME" && exit 0 || exit $?
+    do_status > /dev/null
+    case "$?" in
+      0) log_success_msg "$NAME is running with pid `cat $PIDFILE`"; exit 0;;
+      1) log_success_msg "$NAME is not running, but pid file exists"; exit 1;;
+      3) log_success_msg "$NAME is not running"; exit 3;;
+      *) log_success_msg "Could not get status for $NAME"; exit 4;;
+    esac
     ;;
   restart|force-reload)
     log_daemon_msg "Restarting $DESC" "$NAME"
