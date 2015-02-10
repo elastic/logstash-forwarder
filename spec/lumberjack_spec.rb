@@ -49,7 +49,8 @@ describe "lumberjack" do
       File.unlink(path) if File.exists?(path)
     end
     Process::kill("KILL", lsf.pid)
-    Process::wait(lsf.pid)
+    #Calling this method raises a SystemCallError if there are no child processes.
+    Process::wait(lsf.pid) rescue ''
   end
 
   before do
