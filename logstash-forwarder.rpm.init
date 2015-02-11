@@ -1,0 +1,112 @@
+#!/bin/bash
+# chkconfig: 345 80 20
+# description: Logstash Forwarder
+# processname: logstash-forwarder
+# config: /etc/logstash-forwarder
+# pidfile: /var/run/logstash-forwarder.pid
+
+### BEGIN INIT INFO
+# Provides: logstash-forwarder
+# Required-Start: $local_fs $network $remote_fs
+# Required-Stop: $local_fs $network $remote_fs
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: start and stop logstash-forwarder
+# Description: Logstash Forwarder
+### END INIT INFO
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+
+prog=logstash-forwarder
+DAEMON=/opt/logstash-forwarder/bin/logstash-forwarder
+pidfile=/var/run/$prog.pid
+lockfile=/var/lock/subsys/$prog
+
+# load defaults
+
+[ -e /etc/default/$prog ] && . /etc/default/$prog
+[ -e /etc/sysconfig/$prog ] && . /etc/sysconfig/$prog
+
+DAEMON_ARGS="${DAEMON_ARGS:--config /etc/logstash-forwarder -spool-size 100 -log-to-syslog}"
+
+start()
+{
+    echo -n $"Starting $prog: "
+    nohup $DAEMON $DAEMON_ARGS </dev/null >/dev/null 2>&1 &
+    retval=$?
+    pid=$!
+    echo $pid > $pidfile
+    if [ rh_status_q ]; then
+        touch $lockfile
+        success
+        echo
+    fi
+    return $retval
+}
+
+stop()
+{
+    echo -n $"Stopping $prog: "
+    killproc -p "$pidfile" $prog
+    retval=$?
+    [ -f "$pidfile" ] && rm -f $pidfile
+    echo
+    [ $retval -eq 0 ] && rm -f $lockfile
+    return $retval
+}
+
+restart() {
+    stop
+    start
+}
+
+reload() {
+    restart
+}
+
+force_reload() {
+    restart
+}
+
+rh_status() {
+    status -p $pidfile $prog
+}
+
+rh_status_q() {
+    rh_status >/dev/null 2>&1
+}
+
+case "$1" in
+    start)
+        rh_status_q && exit 0
+        $1
+        ;;
+    stop)
+        rh_status_q || exit 0
+        $1
+		;;
+    restart)
+        $1
+        ;;
+    reload)
+        rh_status_q || exit 7
+        $1
+        ;;
+    force-reload)
+        force_reload
+        ;;
+    condrestart|try-restart)
+        rh_status_q || exit 0
+        restart
+        ;;
+    status)
+        rh_status
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|status|restart|condrestart|try-restart|reload|force-reload}"
+        exit 2
+esac
+exit $?

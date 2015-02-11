@@ -53,7 +53,7 @@ rpm deb: | build-all
 		--url "https://github.com/elasticsearch/logstash-forwarder" \
 		build/bin/logstash-forwarder=$(PREFIX)/bin/ \
 		build/bin/logstash-forwarder.sh=$(PREFIX)/bin/ \
-		logstash-forwarder.init=/etc/init.d/logstash-forwarder
+		logstash-forwarder.$@.init=/etc/init.d/logstash-forwarder
 
 # Vendor'd dependencies
 # If VENDOR contains 'zeromq' download and build it.
