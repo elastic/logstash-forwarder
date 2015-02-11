@@ -1,4 +1,4 @@
-VERSION=0.3.1
+VERSION=0.3.1-3
 
 # By default, all dependencies (zeromq, etc) will be downloaded and installed
 # locally. You can change this if you are deploying your own.
@@ -45,6 +45,28 @@ vendor-clean:
 	$(MAKE) -C vendor/zlib/ clean
 
 rpm deb: PREFIX=/opt/logstash-forwarder
+
+deb6 deb7: | build-all
+	fpm -s dir -t deb -n logstash-forwarder -v $(VERSION) \
+		--replaces lumberjack \
+		--exclude '*.a' --exclude 'lib/pkgconfig/zlib.pc' \
+		--description "a log shipping tool" \
+		--url "https://github.com/elasticsearch/logstash-forwarder" \
+		build/bin/logstash-forwarder=$(PREFIX)/bin/ \
+		build/bin/logstash-forwarder.sh=$(PREFIX)/bin/ \
+		logstash-forwarder.init.Debian=/etc/init.d/logstash-forwarder
+
+rpm5 rpm6: | build-all
+	fpm -s dir -t rpm -n logstash-forwarder -v $(VERSION) \
+		--replaces lumberjack \
+		--exclude '*.a' --exclude 'lib/pkgconfig/zlib.pc' \
+		--description "a log shipping tool" \
+		--url "https://github.com/elasticsearch/logstash-forwarder" \
+		build/bin/logstash-forwarder=$(PREFIX)/bin/ \
+		build/bin/logstash-forwarder.sh=$(PREFIX)/bin/ \
+		logstash-forwarder.init.RedHat=/etc/init.d/logstash-forwarder
+
+
 rpm deb: | build-all
 	fpm -s dir -t $@ -n logstash-forwarder -v $(VERSION) \
 		--replaces lumberjack \
@@ -53,7 +75,8 @@ rpm deb: | build-all
 		--url "https://github.com/elasticsearch/logstash-forwarder" \
 		build/bin/logstash-forwarder=$(PREFIX)/bin/ \
 		build/bin/logstash-forwarder.sh=$(PREFIX)/bin/ \
-		logstash-forwarder.init=/etc/init.d/logstash-forwarder
+		logstash-forwarder.init.RedHat=/etc/init.d/logstash-forwarder
+
 
 # Vendor'd dependencies
 # If VENDOR contains 'zeromq' download and build it.

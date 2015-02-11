@@ -142,11 +142,11 @@ To build the packages, you will need ruby and fpm installed.
 
 Now build an rpm:
 
-        make rpm
+        make rpm (rpm5,rpm6 build with new init script)
 
 Or:
 
-        make deb
+        make deb (deb6, deb7 build with new init script)
 
 ## Installing it (via packages only)
 
