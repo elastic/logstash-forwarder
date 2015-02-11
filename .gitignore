@@ -17,10 +17,13 @@ vendor/libsodium/*/
 vendor/zlib/*/
 nacl.public
 nacl.secret
-.lumberjack
+.logstash-forwarder
 .lumberjack.new
 .rbx
 logstash-forwarder
 *.DS_Store
 *.idea
 *.iml
+*.crt
+*.key
+*.json
