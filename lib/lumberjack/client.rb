@@ -93,12 +93,12 @@ module Lumberjack
     private
     def write(msg)
       compress = Zlib::Deflate.deflate(msg)
-      @socket.syswrite(["1","C",compress.length,compress].pack("AANA#{compress.length}"))
+      @socket.syswrite(["1","C",compress.bytesize,compress].pack("AANA#{compress.bytesize}"))
     end
 
     public
     def write_hash(hash)
-      frame = to_frame(hash, inc)
+      frame = Encoder.to_compressed_frame(hash, inc)
       ack if unacked_sequence_size >= @window_size
       write frame
     end
@@ -136,8 +136,8 @@ module Lumberjack
       pack << "N"
       keys.each do |k|
         val = deep_get(hash,k)
-        key_length = k.length
-        val_length = val.length
+        key_length = k.bytesize
+        val_length = val.bytesize
         frame << key_length
         pack << "N"
         frame << k
@@ -169,4 +169,51 @@ module Lumberjack
       keys.flatten
     end
   end
+
+  module Encoder
+    def self.to_compressed_frame(hash, sequence)
+      compress = Zlib::Deflate.deflate(to_frame(hash, sequence))
+      ["1", "C", compress.bytesize, compress].pack("AANA#{compress.length}")
+    end
+
+    def self.to_frame(hash, sequence)
+      frame = ["1", "D", sequence]
+      pack = "AAN"
+      keys = deep_keys(hash)
+      frame << keys.length
+      pack << "N"
+      keys.each do |k|
+        val = deep_get(hash,k)
+        key_length = k.bytesize
+        val_length = val.bytesize
+        frame << key_length
+        pack << "N"
+        frame << k
+        pack << "A#{key_length}"
+        frame << val_length
+        pack << "N"
+        frame << val
+        pack << "A#{val_length}"
+      end
+      frame.pack(pack)
+    end
+
+    private
+    def self.deep_get(hash, key="")
+      return hash if key.nil?
+      deep_get(
+        hash[key.split('.').first],
+        key[key.split('.').first.length+1..key.length]
+      )
+    end
+    private
+    def self.deep_keys(hash, prefix="")
+      keys = []
+      hash.each do |k,v|
+        keys << "#{prefix}#{k}" if v.class == String
+        keys << deep_keys(hash[k], "#{k}.") if v.class == Hash
+      end
+      keys.flatten
+    end
+  end # module Encoder
 end
