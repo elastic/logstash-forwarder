@@ -126,11 +126,9 @@ Again, creating a correct SSL/TLS certificate authority or generally doing certi
 
 1. Install [go](http://golang.org/doc/install)
 
-2. Compile logstash-forwarder
+2. Download and build logstash-forwarder
 
-        git clone git://github.com/elasticsearch/logstash-forwarder.git
-        cd logstash-forwarder
-        go build
+    go get github.com/elasticsearch/logstash-forwarder
 
 ## Packaging it (optional)
 
