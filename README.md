@@ -136,10 +136,13 @@ you're probably OK to ignore this.
         go build
 
 gccgo note: Using gccgo is not recommended because it produces a binary with a
-runtime dependency on libgo. With normal the normal go compiler, this
-dependency doesn't exist and, as a result, makes it easier to deploy. You can
-check if your binary with `ldd ./logstash-forwarder`. If you see `libgo` in the
-output, then it means you've built with gccgo.
+runtime dependency on libgo. With the normal go compiler, this dependency
+doesn't exist and, as a result, makes it easier to deploy. You can check if you
+are using gccgo by running `go version` and if it outputs something like `go
+version xgcc`, you're probably not using gccgo, and I recommend you don't.
+You can also check the resulting binary by doing `ldd ./logstash-forwarder` and
+seeing if `libgo` appears in the output; if it appears, then you are using gccgo,
+and I recommend you don't.
 
 ## Packaging it (optional)
 
