@@ -146,7 +146,11 @@ output, then it means you've built with gccgo.
 You can make native packages of logstash-forwarder.
 
 To do this, a recent version of Ruby is required. At least version 2.0.0 or
-newer.
+newer. If you are using your OS distribution's version of Ruby, especially on
+Red Hat- or Debian-derived systems (Ubuntu, CentOS, etc), you will need to install
+ruby and whatever the "ruby development" package is called for your system.
+On Red Hat systems, you probably want `yum install ruby-devel`. On Debian systems,
+you probably want `apt-get install ruby-dev`.
 
 Prerequisite steps to prepare ruby to build your packages are:
 
@@ -154,6 +158,9 @@ Prerequisite steps to prepare ruby to build your packages are:
 gem install bundler
 bundle install
 ```
+
+The `bundle install` will install any Ruby library dependencies that are used
+in building packages.
 
 Now build an rpm:
 
