@@ -93,7 +93,13 @@ module Lumberjack
     private
     def write(msg)
       compress = Zlib::Deflate.deflate(msg)
-      @socket.syswrite(["1","C",compress.bytesize,compress].pack("AANA#{compress.bytesize}"))
+      payload = ["1","C",compress.length,compress].pack("AANA#{compress.length}")
+      # SSLSocket has a limit of 16k per message
+      # execute multiple writes if needed
+      bytes_written = 0
+      while bytes_written < payload.bytesize
+        bytes_written += @socket.syswrite(payload.byteslice(bytes_written..-1))
+      end
     end
 
     public
