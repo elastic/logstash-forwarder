@@ -128,9 +128,18 @@ Again, creating a correct SSL/TLS certificate authority or generally doing certi
 
 2. Compile logstash-forwarder
 
+Note: Do not use gccgo for this project. If you don't know what that means,
+you're probably OK to ignore this.
+
         git clone git://github.com/elasticsearch/logstash-forwarder.git
         cd logstash-forwarder
         go build
+
+gccgo note: Using gccgo is not recommended because it produces a binary with a
+runtime dependency on libgo. With normal the normal go compiler, this
+dependency doesn't exist and, as a result, makes it easier to deploy. You can
+check if your binary with `ldd ./logstash-forwarder`. If you see `libgo` in the
+output, then it means you've built with gccgo.
 
 ## Packaging it (optional)
 
