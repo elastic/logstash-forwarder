@@ -136,9 +136,15 @@ Again, creating a correct SSL/TLS certificate authority or generally doing certi
 
 You can make native packages of logstash-forwarder.
 
-To build the packages, you will need ruby and fpm installed.
+To do this, a recent version of Ruby is required. At least version 2.0.0 or
+newer.
 
-    gem install fpm
+Prerequisite steps to prepare ruby to build your packages are:
+
+```
+gem install bundler
+bundle install
+```
 
 Now build an rpm:
 
@@ -187,8 +193,8 @@ This will generate a key at `logstash-forwarder.key` and the 1-year valid certif
 
 Recommended file locations:
 
-- certificates: `/etc/pki/tls/certs`
-- keys: `/etc/pki/tls/private`
+- certificates: `/etc/pki/tls/certs/logstash-forwarder/`
+- keys: `/etc/pki/tls/private/logstash-forwarder/`
 
 ## Use with logstash
 
@@ -229,30 +235,6 @@ Below is valid as of 2012/09/19
 ### Configurable event data
 
 * The protocol supports sending a `string:string` map.
-
-### Easy deployment
-
-* The `make deb` or `make rpm` commands will package everything into a
-  single DEB or RPM.
-
-### Future protocol discussion
-
-I would love to not have a custom protocol, but nothing I've found implements
-what I need, which is: encrypted, trusted, compressed, latency-resilient, and
-reliable transport of events.
-
-* Redis development refuses to accept encryption support, would likely reject
-  compression as well.
-* ZeroMQ lacks authentication, encryption, and compression.
-* Thrift also lacks authentication, encryption, and compression, and also is an
-  RPC framework, not a streaming system.
-* Websockets don't do authentication or compression, but support encrypted
-  channels with SSL. Websockets also require XORing the entire payload of all
-  messages - wasted energy.
-* SPDY is still changing too frequently and is also RPC. Streaming requires
-  custom framing.
-* HTTP is RPC and very high overhead for small events (uncompressable headers,
-  etc). Streaming requires custom framing.
 
 ## License
 
