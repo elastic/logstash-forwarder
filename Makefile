@@ -17,7 +17,7 @@ clean:
 .PHONY: generate-init-scripts
 generate-init-script:
 	pleaserun --install --no-install-actions --install-prefix ./build \
-		--overwrite -p sysv -v lsb-3.1 $(PREFIX)/bin/logstash-forwarder 
+		--overwrite -p sysv -v lsb-3.1 $(PREFIX)/bin/logstash-forwarder -config /etc/logstash-forwarder.conf
  
 .PHONY: rpm deb
 deb: AFTER_INSTALL=pkg/ubuntu/after-install.sh
@@ -39,4 +39,5 @@ rpm deb: compile generate-init-script
 		--before-install $(BEFORE_INSTALL) \
 		--before-remove $(BEFORE_REMOVE) \
 		./logstash-forwarder=$(PREFIX)/bin/ \
+		./logstash-forwarder.conf.example=/etc/logstash-forwarder.conf \
 		./build/=/
