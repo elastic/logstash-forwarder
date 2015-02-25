@@ -58,6 +58,7 @@ module Lumberjack
       rescue EOFError, OpenSSL::SSL::SSLError, IOError
         # ssl handshake or other accept-related failure.
         # TODO(sissel): Make it possible to log this.
+        retry
       end
       if block_given?
         block.call(fd)
