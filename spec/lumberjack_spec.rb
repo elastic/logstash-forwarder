@@ -6,17 +6,13 @@ require "lumberjack/server"
 require "stud/try"
 require "stud/temporary"
 
-describe "lumberjack" do
+shared_examples_for "logstash-forwarder" do
   # TODO(sissel): Refactor this to use factory pattern instead of so many 'let' statements.
-  let(:ssl_certificate) { Stud::Temporary.pathname("ssl_certificate") }
-  let(:ssl_key) { Stud::Temporary.pathname("ssl_key") }
-  let(:config_file) { Stud::Temporary.pathname("config_file") }
-  let(:input_file) { Stud::Temporary.pathname("input_file") }
-
-  let(:lsf) do
-    # Start the process, return the pid
-    lsf = IO.popen(["./logstash-forwarder", "-config", config_file, "-quiet"])
-  end
+  let(:workdir) { Stud::Temporary.directory }
+  let(:ssl_certificate) { File.join(workdir, "certificate.pem") }
+  let(:ssl_key) { File.join(workdir, "certificate.key") }
+  let(:config_file) { File.join(workdir, "config.json") }
+  let(:input_file) { File.join(workdir, "input.log") }
 
   let(:random_field) { (rand(30)+1).times.map { (rand(26) + 97).chr }.join }
   let(:random_value) { (rand(30)+1).times.map { (rand(26) + 97).chr }.join }
@@ -54,7 +50,7 @@ describe "lumberjack" do
   end
 
   before do
-    system("openssl req -x509  -batch -nodes -newkey rsa:2048 -keyout #{ssl_key} -out #{ssl_certificate} -subj /CN=localhost > /dev/null 2>&1")
+    system("openssl req -x509  -batch -nodes -newkey rsa:2048 -keyout #{ssl_key} -out #{ssl_certificate} -subj /CN=localhost #{redirect}")
     
     File.write(config_file, logstash_forwarder_config)
     lsf
@@ -81,6 +77,7 @@ describe "lumberjack" do
     # TODO(sissel): Make sure this doesn't take forever, do a timeout.
     count = 0
     events = []
+    p :connection => connection
     connection.run do |event|
       events << event
       connection.close if events.length == lines.length
@@ -92,6 +89,56 @@ describe "lumberjack" do
       event["line"].force_encoding("UTF-8")
       expect(event["line"]).to(eq(line))
       expect(event[random_field]).to(eq(random_value))
+    end
+  end
+end
+
+describe "operation" do
+  let(:redirect) { ENV["DEBUG"] ? "" : "> /dev/null 2>&1" }
+  context "when compiled from source" do
+    let(:lsf) do
+      # Start the process, return the pid
+      IO.popen(["./logstash-forwarder", "-config", config_file, "-quiet"])
+    end
+    it_behaves_like "logstash-forwarder" do
+    end
+  end
+
+  context "when installed from a deb", :deb => true do
+    let (:deb) { Dir.glob(File.join(File.dirname(__FILE__), "..", "*.deb")).first }
+    let(:container_name) { "lsf-spec-#{$$}" }
+    let(:lsf) do
+      args = ["docker", "run", "--name", container_name, "-v", "#{workdir}:#{workdir}", "-i", "ubuntu:14.04", "/bin/bash"]
+      IO.popen(args, "wb")
+    end
+
+    it_behaves_like "logstash-forwarder" do
+      before do
+        if !File.exist?("logstash-forwarder")
+          system("make logstash-forwarder #{redirect}") 
+          expect($?).to(be_success)
+        end
+        system("make deb #{redirect}")
+        expect($?).to(be_success)
+        expect(File).to(be_exist(deb))
+        
+        FileUtils.cp(deb, workdir)
+        lsf.write("dpkg -i #{workdir}/#{File.basename(deb)}\n")
+
+        # Put a custom config for testing
+        ip = JSON.parse(`docker inspect #{container_name}`)[0]["NetworkSettings"]["Gateway"]
+        lsf.write("sed -e 's/localhost:/#{ip}:/' #{config_file} > /etc/logstash-forwarder.conf\n")
+
+        # Start lsf
+        lsf.write("/etc/init.d/logstash-forwarder start\n")
+
+        # Watch the logs
+        lsf.write("tail -F /var/log/logstash-forwarder.{err,log}\n")
+      end
+
+      after do
+        system("docker", "kill", container_name)
+      end
     end
   end
 end
