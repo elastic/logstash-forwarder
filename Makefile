@@ -16,14 +16,14 @@ clean:
 
 .PHONY: generate-init-scripts
 generate-init-script:
-	pleaserun --install --no-install-actions --install-prefix ./build \
+	bundler exec pleaserun --install --no-install-actions --install-prefix ./build \
 		--overwrite -p sysv -v lsb-3.1 $(PREFIX)/bin/logstash-forwarder 
  
 .PHONY: rpm deb
 rpm deb: PREFIX=/opt/logstash-forwarder
 rpm deb: VERSION=$(shell ./logstash-forwarder -version)
 rpm deb: compile generate-init-script
-	fpm -f -s dir -t $@ -n logstash-forwarder -v $(VERSION) \
+	bundler exec fpm -f -s dir -t $@ -n logstash-forwarder -v $(VERSION) \
 		--architecture native \
 		--replaces lumberjack \
 		--description "a log shipping tool" \
