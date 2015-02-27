@@ -81,6 +81,13 @@ the only thing on the line:
 
           # A dictionary of fields to annotate on each event.
           "fields": { "type": "syslog" }
+
+          # how long to keep following a file if it's unchanged
+          # It will refollow the file if it changes but it closes 
+          # file handle. 
+          # example values: "300ms", "-1.5h" or "2h45m"
+          # valid units: "ns", "us" (or "µs"), "ms", "s", "m", "h".
+          "dead time": "1h"
         }, {
           # A path of "-" means stdin.
           "paths": [ "-" ],
