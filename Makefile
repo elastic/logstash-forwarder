@@ -7,7 +7,7 @@ OBJECTS=logstash-forwarder
 compile: $(OBJECTS)
 
 logstash-forwarder:
-	go build
+	go build -o $@
 
 .PHONY: clean
 clean: 

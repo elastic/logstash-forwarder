@@ -133,7 +133,7 @@ you're probably OK to ignore this.
 
         git clone git://github.com/elasticsearch/logstash-forwarder.git
         cd logstash-forwarder
-        go build
+        go build -o logstash-forwarder
 
 gccgo note: Using gccgo is not recommended because it produces a binary with a
 runtime dependency on libgo. With the normal go compiler, this dependency
