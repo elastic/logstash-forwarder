@@ -1,3 +1,4 @@
+# encoding: utf-8
 describe "packaging" do
   let(:redirect) { ENV["DEBUG"] ? "" : "> /dev/null 2>&1" }
   let(:version) { `./logstash-forwarder -version`.chomp }
