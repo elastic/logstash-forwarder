@@ -2,7 +2,7 @@
 
 if [ $1 = "remove" ]; then
   service logstash-forwarder stop >/dev/null 2>&1 || true
-  update-rc.d logstash-forwarder remove:w
+  update-rc.d logstash-forwarder remove
 
   if getent passwd logstash-forwarder >/dev/null ; then
     userdel logstash-forwarder
