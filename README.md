@@ -112,6 +112,17 @@ logstash-forwarder needs the `.crt` file, and logstash will need both `.key` and
 
 Again, creating a correct SSL/TLS certificate authority or generally doing certificate management is outside the scope of this document. 
 
+If you see an error like this:
+
+```
+x509: cannot validate certificate for 1.2.3.4 because it doesn't contain any IP SANs
+```
+
+It means you are telling logstash-forwarder to connect to a host by IP address,
+and therefore you must include an IP SAN in your certificate. Generating an SSL
+certificate with an IP SAN is quite annoying, so I *HIGHLY* recommend you use
+dns names and set the CN in your cert to your dns name.
+
 ### Goals
 
 * Minimize resource usage where possible (CPU, memory, network).
