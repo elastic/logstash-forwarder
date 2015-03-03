@@ -1,7 +1,6 @@
 *.o
 build
 bin
-pkg
 *.tar.gz
 *.rpm
 *.deb
