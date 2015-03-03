@@ -19,6 +19,9 @@ generate-init-script:
 	pleaserun --install --no-install-actions --install-prefix ./build \
 		--overwrite -p sysv -v lsb-3.1 $(PREFIX)/bin/logstash-forwarder -config /etc/logstash-forwarder.conf
  
+build/empty: | build
+	mkdir $@
+
 .PHONY: rpm deb
 deb: AFTER_INSTALL=pkg/ubuntu/after-install.sh
 rpm: AFTER_INSTALL=pkg/centos/after-install.sh
@@ -29,7 +32,7 @@ deb: BEFORE_INSTALL=pkg/ubuntu/before-install.sh
 deb: BEFORE_REMOVE=pkg/ubuntu/before-remove.sh
 rpm deb: PREFIX=/opt/logstash-forwarder
 rpm deb: VERSION=$(shell ./logstash-forwarder -version)
-rpm deb: compile generate-init-script
+rpm deb: compile generate-init-script build/empty
 	fpm -f -s dir -t $@ -n logstash-forwarder -v $(VERSION) \
 		--architecture native \
 		--replaces lumberjack \
@@ -40,4 +43,6 @@ rpm deb: compile generate-init-script
 		--before-remove $(BEFORE_REMOVE) \
 		./logstash-forwarder=$(PREFIX)/bin/ \
 		./logstash-forwarder.conf.example=/etc/logstash-forwarder.conf \
-		./build/=/
+		./build/etc=/ \
+		./build/empty/=/var/lib/logstash-forwarder/ \
+		./build/empty/=/var/log/logstash-forwarder/ \
