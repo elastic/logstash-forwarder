@@ -1,7 +1,10 @@
 package main
 
-import "log"
+import (
+	"errors"
+	"io"
+)
 
-func configureSyslog() {
-  log.Printf("Logging to syslog not supported on this platform\n")
+func configureSyslog() (io.Writer, error) {
+	return nil, errors.New("Logging to syslog not supported on this platform")
 }
