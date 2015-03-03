@@ -11,6 +11,10 @@
         "/var/log/*.log",
         "/var/log/messages"
       ],
+      "exclude": [
+        "/var/log/*.gz",
+        "/var/log/*.[0-9]"
+      ],
       "fields": { "type": "syslog" }
     }, {
       "paths": [ "/var/log/apache2/access.log" ],

@@ -40,6 +40,7 @@ type FileConfig struct {
 	Fields   map[string]string `json:fields`
 	DeadTime string            `json:"dead time"`
 	deadtime time.Duration
+	Exclude  []string `json:"exclude"`
 }
 
 func DiscoverConfigs(file_or_directory string) (files []string, err error) {

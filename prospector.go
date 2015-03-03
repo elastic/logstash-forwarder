@@ -90,6 +90,7 @@ func (p *Prospector) scan(path string, output chan *FileEvent, resume *Prospecto
 	missinginfo := make(map[string]os.FileInfo)
 
 	// Check any matched files to see if we need to start a harvester
+NextFile:
 	for _, file := range matches {
 		// Stat the file, following any symlinks.
 		fileinfo, err := os.Stat(file)
@@ -102,6 +103,18 @@ func (p *Prospector) scan(path string, output chan *FileEvent, resume *Prospecto
 		if fileinfo.IsDir() {
 			emit("Skipping directory: %s\n", file)
 			continue
+		}
+
+		// If the file is in the list of exclusions, skip it
+		for _, pattern := range p.FileConfig.Exclude {
+			matched, match_err := filepath.Match(pattern, file)
+			if match_err != nil {
+				emit("Exclusion filepath match error: %v", match_err)
+			} else if matched {
+				emit("Skipping exclusion: %s\n", file)
+				continue NextFile
+			}
+
 		}
 
 		// Check the current info against p.prospectorinfo[file]
@@ -205,6 +218,7 @@ func (p *Prospector) scan(path string, output chan *FileEvent, resume *Prospecto
 		// rotation/etc
 		p.prospectorinfo[file] = newinfo
 	} // for each file matched by the glob
+
 }
 
 func (p *Prospector) calculate_resume(file string, fileinfo os.FileInfo, resume *ProspectorResume) (int64, bool) {
