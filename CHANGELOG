@@ -1,0 +1,22 @@
+0.4.0
+- rpm and deb packaging supported with init scripts
+- Comments '#' are supported in the config file now! (#154, Michael Pearson)
+- The argument to -config can be a directory. If so, all files in that directory
+  are loaded and merged into a single config. (#154, Michael Pearson)
+- Add -quiet flag to omit any notification/informational log messages from lsf.
+- Open files are now closed after they are idle for some time period. This
+  time period is called "dead time" and it is configurable per file section.
+  (Jason Woods)
+- Fix bug where EOF on an unfinished line would cause a partial event to be emitted.
+  (#164, tzahari)
+- SSL Certs with CN or IP SAN are now required for server verification (#205, alex)
+- Fix a bug causing the registrar to lose track of files (#198, Jason Woods)
+- Supports sha256 and sha512 certificate signatures (#188, Philip Hofstetter)
+- OpenBSD supported.
+- Stronger test suite (alex, Joubin Houshyar, Michael Pearson, Jordan Sissel,
+  Pier-Hugues Pellerin, Pere Urbon-Bayes)
+- Lots of small bugfixes and general love invested by Joubin Houshyar and Jason
+  Woods.
+
+
+Versions 0.3.1 and older did not have curated changelogs 
