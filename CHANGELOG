@@ -1,4 +1,11 @@
 0.4.0
+= Security:
+- Requires server support TLS 1.0 or higher (#402). This resolves a number of
+  security concerns, including POODLE. The POODLE concern was reported
+  and validated by Tray Torrance, Marc Chadwick, and David Arena. Additionally,
+  the PCI SSC announced that SSLv3 was not acceptable anymore.
+
+= General:
 - rpm and deb packaging supported with init scripts
 - Comments '#' are supported in the config file now! (#154, Michael Pearson)
 - The argument to -config can be a directory. If so, all files in that directory
