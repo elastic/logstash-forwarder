@@ -24,7 +24,7 @@ GEM
     json (1.8.2)
     json (1.8.2-java)
     mustache (0.99.8)
-    pleaserun (0.0.10)
+    pleaserun (0.0.12)
       cabin (> 0)
       clamp
       insist
