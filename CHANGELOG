@@ -6,6 +6,7 @@
   the PCI SSC announced that SSLv3 was not acceptable anymore.
 
 = General:
+- Tested succsesfully against Logstash 1.4.2 and Logstash 1.5.
 - rpm and deb packaging supported with init scripts
 - Comments '#' are supported in the config file now! (#154, Michael Pearson)
 - The argument to -config can be a directory. If so, all files in that directory
