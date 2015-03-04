@@ -43,6 +43,7 @@ rpm deb: compile generate-init-script build/empty
 		--after-install $(AFTER_INSTALL) \
 		--before-install $(BEFORE_INSTALL) \
 		--before-remove $(BEFORE_REMOVE) \
+		--config-files /etc/logstash-forwarder.conf \
 		./logstash-forwarder=$(PREFIX)/bin/ \
 		./logstash-forwarder.conf.example=/etc/logstash-forwarder.conf \
 		./build/etc=/ \
