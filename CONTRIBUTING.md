@@ -1,4 +1,4 @@
-# Contributing to lumberjack
+# Contributing to logstash-forwarder
 
 All contributions are welcome: ideas, patches, documentation, bug reports,
 complaints, etc!
@@ -26,7 +26,7 @@ irc.freenode.org and ask for help there!
 
 ## Have an Idea or Feature Request?
 
-* File a ticket on [jira](https://github.com/jordansissel/lumberjack), or email the
+* File a ticket on [github](https://github.com/elasticsearch/logstash-forwarder), or email the
   [mailing list](http://groups.google.com/group/logstash-users), or email
   me personally (jls@semicomplete.com) if that is more comfortable.
 
@@ -34,7 +34,7 @@ irc.freenode.org and ask for help there!
 
 If you think you found a bug, it probably is a bug.
 
-* File it on [jira](https://github.com/jordansissel/lumberjack)
+* File it on [github](https://github.com/elasticsearch/logstash-forwarder)
 * or the [mailing list](http://groups.google.com/group/logstash-users).
 
 # Contributing Documentation and Code Changes
@@ -43,13 +43,13 @@ If you have a bugfix or new feature that you would like to contribute to
 logstash, and you think it will take more than a few minutes to produce the fix
 (ie; write code), it is worth discussing the change with the logstash users and
 developers first! You can reach us via
-[jira](https://github.com/jordansissel/lumberjack), the [mailing
+[github](https://github.com/elasticsearch/logstash-forwarder), the [mailing
 list](http://groups.google.com/group/logstash-users), or via IRC (#logstash on
 freenode irc)
 
-## Contribution Steps
+## Code and Docs Contribution Steps
 
-1. Test your changes! Run the test suite ('make test') 
+1. Test your changes! Run the test suite ('go test' and 'rspec') 
 2. Please make sure you have signed our [Contributor License
    Agreement](http://www.elasticsearch.org/contributor-agreement/). We are not
    asking you to assign copyright to us, but to give us the right to distribute
