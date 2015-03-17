@@ -99,7 +99,7 @@ describe "operating" do
   context "when compiled from source" do
     let(:lsf) do
       # Start the process, return the pid
-      IO.popen(["./logstash-forwarder", "-config", config_file, "-quiet", "-from-beginning=true"])
+      IO.popen(["./logstash-forwarder", "-config", config_file, "-quiet"])
     end
     let(:host) { "localhost" }
     it_behaves_like "logstash-forwarder" 

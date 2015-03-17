@@ -37,16 +37,15 @@ module Lumberjack
       # Query the port in case the port number is '0'
       # TCPServer#addr == [ address_family, port, address, address ]
       @port = @tcp_server.addr[1]
-      @ssl = OpenSSL::SSL::SSLContext.new
-      @ssl.cert = OpenSSL::X509::Certificate.new(File.read(@options[:ssl_certificate]))
-      @ssl.key = OpenSSL::PKey::RSA.new(File.read(@options[:ssl_key]),
+      @ssl_context = OpenSSL::SSL::SSLContext.new
+      @ssl_context.cert = OpenSSL::X509::Certificate.new(File.read(@options[:ssl_certificate]))
+      @ssl_context.key = OpenSSL::PKey::RSA.new(File.read(@options[:ssl_key]),
                                         @options[:ssl_key_passphrase])
-      @ssl_server = OpenSSL::SSL::SSLServer.new(@tcp_server, @ssl)
       @stop = false
     end # def initialize
 
     def run(&block)
-      while !@stop
+      while running?
         sock = @tcp_server.accept
         Thread.new(sock) do |sock|
           connection = accept_ssl(sock)
@@ -58,7 +57,7 @@ module Lumberjack
     def accept_ssl(socket)
       tries = 0
       begin
-        ssl = OpenSSL::SSL::SSLSocket.new(socket, @ssl)
+        ssl = OpenSSL::SSL::SSLSocket.new(socket, @ssl_context)
         ssl.sync_close = true
         Connection.new(ssl.accept)
       rescue EOFError, OpenSSL::SSL::SSLError, IOError
@@ -69,7 +68,7 @@ module Lumberjack
           retry
         else
           socket.close
-          raise $!
+          raise
         end
       end
     end
@@ -77,6 +76,10 @@ module Lumberjack
     # allow (tests) to stop the server.
     def stop
       @stop = true
+    end
+
+    def running?
+      !@stop
     end
   end # class Server
 
