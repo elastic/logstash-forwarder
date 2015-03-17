@@ -42,30 +42,41 @@ module Lumberjack
       @ssl.key = OpenSSL::PKey::RSA.new(File.read(@options[:ssl_key]),
                                         @options[:ssl_key_passphrase])
       @ssl_server = OpenSSL::SSL::SSLServer.new(@tcp_server, @ssl)
+      @stop = false
     end # def initialize
 
     def run(&block)
-      while true
-        connection = accept
-        Thread.new(connection) do |connection|
+      while !@stop
+        sock = @tcp_server.accept
+        Thread.new(sock) do |sock|
+          connection = accept_ssl(sock)
           connection.run(&block)
         end
       end
     end # def run
 
-    def accept(&block)
+    def accept_ssl(socket)
+      tries = 0
       begin
-        fd = @ssl_server.accept
+        ssl = OpenSSL::SSL::SSLSocket.new(socket, @ssl)
+        ssl.sync_close = true
+        Connection.new(ssl.accept)
       rescue EOFError, OpenSSL::SSL::SSLError, IOError
         # ssl handshake or other accept-related failure.
         # TODO(sissel): Make it possible to log this.
-        retry
+        if tries <= 3
+          tries += 1
+          retry
+        else
+          socket.close
+          raise $!
+        end
       end
-      if block_given?
-        block.call(fd)
-      else
-        Connection.new(fd)
-      end
+    end
+
+    # allow (tests) to stop the server.
+    def stop
+      @stop = true
     end
   end # class Server
 
