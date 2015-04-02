@@ -1,0 +1,6 @@
+---
+hostname: 127.0.0.1
+username: vagrant
+ssh_key: "/Users/alain.lefebvre/Documents/code/github/logstash-forwarder/test_excludes/.kitchen/kitchen-vagrant/kitchen-test_excludes-default-ubuntu-1404/.vagrant/machines/default/virtualbox/private_key"
+port: '2222'
+last_action: verify

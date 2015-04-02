@@ -1,0 +1,188 @@
+E, [2015-04-02T15:28:28.283661 #14024] ERROR -- Kitchen: ------Exception-------
+E, [2015-04-02T15:28:28.283757 #14024] ERROR -- Kitchen: Class: Kitchen::ShellOut::ShellCommandFailed
+E, [2015-04-02T15:28:28.283776 #14024] ERROR -- Kitchen: Message: Expected process to exit with [0], but received '1'
+---- Begin output of vagrant --version ----
+STDOUT: 
+STDERR: Vagrant is not installed.
+See http://www.vagrantup.com for instructions.
+---- End output of vagrant --version ----
+Ran vagrant --version returned 1
+E, [2015-04-02T15:28:28.283790 #14024] ERROR -- Kitchen: ---Nested Exception---
+E, [2015-04-02T15:28:28.283805 #14024] ERROR -- Kitchen: Class: Mixlib::ShellOut::ShellCommandFailed
+E, [2015-04-02T15:28:28.283826 #14024] ERROR -- Kitchen: Message: Expected process to exit with [0], but received '1'
+---- Begin output of vagrant --version ----
+STDOUT: 
+STDERR: Vagrant is not installed.
+See http://www.vagrantup.com for instructions.
+---- End output of vagrant --version ----
+Ran vagrant --version returned 1
+E, [2015-04-02T15:28:28.283845 #14024] ERROR -- Kitchen: ------Backtrace-------
+E, [2015-04-02T15:28:28.283856 #14024] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/shell_out.rb:69:in `rescue in run_command'
+E, [2015-04-02T15:28:28.283868 #14024] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/shell_out.rb:59:in `run_command'
+E, [2015-04-02T15:28:28.283879 #14024] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/driver/base.rb:182:in `run_command'
+E, [2015-04-02T15:28:28.283890 #14024] ERROR -- Kitchen: /Users/alain.lefebvre/.chefdk/gem/ruby/2.1.0/gems/kitchen-vagrant-0.16.0/lib/kitchen/driver/vagrant.rb:250:in `run'
+E, [2015-04-02T15:28:28.283901 #14024] ERROR -- Kitchen: /Users/alain.lefebvre/.chefdk/gem/ruby/2.1.0/gems/kitchen-vagrant-0.16.0/lib/kitchen/driver/vagrant.rb:270:in `run_silently'
+E, [2015-04-02T15:28:28.283912 #14024] ERROR -- Kitchen: /Users/alain.lefebvre/.chefdk/gem/ruby/2.1.0/gems/kitchen-vagrant-0.16.0/lib/kitchen/driver/vagrant.rb:322:in `vagrant_version'
+E, [2015-04-02T15:28:28.283923 #14024] ERROR -- Kitchen: /Users/alain.lefebvre/.chefdk/gem/ruby/2.1.0/gems/kitchen-vagrant-0.16.0/lib/kitchen/driver/vagrant.rb:148:in `verify_dependencies'
+E, [2015-04-02T15:28:28.283968 #14024] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/driver.rb:45:in `for_plugin'
+E, [2015-04-02T15:28:28.283981 #14024] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/config.rb:226:in `new_driver'
+E, [2015-04-02T15:28:28.283992 #14024] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/config.rb:240:in `new_instance'
+E, [2015-04-02T15:28:28.284002 #14024] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/config.rb:129:in `block in build_instances'
+E, [2015-04-02T15:28:28.284012 #14024] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/config.rb:128:in `map'
+E, [2015-04-02T15:28:28.284022 #14024] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/config.rb:128:in `with_index'
+E, [2015-04-02T15:28:28.284032 #14024] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/config.rb:128:in `build_instances'
+E, [2015-04-02T15:28:28.284042 #14024] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/config.rb:104:in `instances'
+E, [2015-04-02T15:28:28.284052 #14024] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/command.rb:115:in `filtered_instances'
+E, [2015-04-02T15:28:28.284062 #14024] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/command.rb:145:in `parse_subcommand'
+E, [2015-04-02T15:28:28.284075 #14024] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/command/list.rb:32:in `call'
+E, [2015-04-02T15:28:28.284085 #14024] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/cli.rb:56:in `perform'
+E, [2015-04-02T15:28:28.284095 #14024] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/cli.rb:97:in `list'
+E, [2015-04-02T15:28:28.284105 #14024] ERROR -- Kitchen: /opt/chefdk/embedded/lib/ruby/gems/2.1.0/gems/thor-0.19.1/lib/thor/command.rb:27:in `run'
+E, [2015-04-02T15:28:28.284123 #14024] ERROR -- Kitchen: /opt/chefdk/embedded/lib/ruby/gems/2.1.0/gems/thor-0.19.1/lib/thor/invocation.rb:126:in `invoke_command'
+E, [2015-04-02T15:28:28.284134 #14024] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/cli.rb:304:in `invoke_task'
+E, [2015-04-02T15:28:28.284145 #14024] ERROR -- Kitchen: /opt/chefdk/embedded/lib/ruby/gems/2.1.0/gems/thor-0.19.1/lib/thor.rb:359:in `dispatch'
+E, [2015-04-02T15:28:28.284155 #14024] ERROR -- Kitchen: /opt/chefdk/embedded/lib/ruby/gems/2.1.0/gems/thor-0.19.1/lib/thor/base.rb:440:in `start'
+E, [2015-04-02T15:28:28.284165 #14024] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/bin/kitchen:13:in `block in <top (required)>'
+E, [2015-04-02T15:28:28.284204 #14024] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/errors.rb:154:in `with_friendly_errors'
+E, [2015-04-02T15:28:28.284215 #14024] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/bin/kitchen:13:in `<top (required)>'
+E, [2015-04-02T15:28:28.284225 #14024] ERROR -- Kitchen: /usr/bin/kitchen:15:in `load'
+E, [2015-04-02T15:28:28.284234 #14024] ERROR -- Kitchen: /usr/bin/kitchen:15:in `<main>'
+E, [2015-04-02T15:28:28.284244 #14024] ERROR -- Kitchen: ----------------------
+E, [2015-04-02T15:30:24.381066 #14181] ERROR -- Kitchen: ------Exception-------
+E, [2015-04-02T15:30:24.381177 #14181] ERROR -- Kitchen: Class: Kitchen::ShellOut::ShellCommandFailed
+E, [2015-04-02T15:30:24.381197 #14181] ERROR -- Kitchen: Message: Expected process to exit with [0], but received '1'
+---- Begin output of vagrant --version ----
+STDOUT: 
+STDERR: Vagrant is not installed.
+See http://www.vagrantup.com for instructions.
+---- End output of vagrant --version ----
+Ran vagrant --version returned 1
+E, [2015-04-02T15:30:24.381212 #14181] ERROR -- Kitchen: ---Nested Exception---
+E, [2015-04-02T15:30:24.381224 #14181] ERROR -- Kitchen: Class: Mixlib::ShellOut::ShellCommandFailed
+E, [2015-04-02T15:30:24.381260 #14181] ERROR -- Kitchen: Message: Expected process to exit with [0], but received '1'
+---- Begin output of vagrant --version ----
+STDOUT: 
+STDERR: Vagrant is not installed.
+See http://www.vagrantup.com for instructions.
+---- End output of vagrant --version ----
+Ran vagrant --version returned 1
+E, [2015-04-02T15:30:24.381272 #14181] ERROR -- Kitchen: ------Backtrace-------
+E, [2015-04-02T15:30:24.381284 #14181] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/shell_out.rb:69:in `rescue in run_command'
+E, [2015-04-02T15:30:24.381299 #14181] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/shell_out.rb:59:in `run_command'
+E, [2015-04-02T15:30:24.381311 #14181] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/driver/base.rb:182:in `run_command'
+E, [2015-04-02T15:30:24.381323 #14181] ERROR -- Kitchen: /Users/alain.lefebvre/.chefdk/gem/ruby/2.1.0/gems/kitchen-vagrant-0.16.0/lib/kitchen/driver/vagrant.rb:250:in `run'
+E, [2015-04-02T15:30:24.381334 #14181] ERROR -- Kitchen: /Users/alain.lefebvre/.chefdk/gem/ruby/2.1.0/gems/kitchen-vagrant-0.16.0/lib/kitchen/driver/vagrant.rb:270:in `run_silently'
+E, [2015-04-02T15:30:24.381346 #14181] ERROR -- Kitchen: /Users/alain.lefebvre/.chefdk/gem/ruby/2.1.0/gems/kitchen-vagrant-0.16.0/lib/kitchen/driver/vagrant.rb:322:in `vagrant_version'
+E, [2015-04-02T15:30:24.381357 #14181] ERROR -- Kitchen: /Users/alain.lefebvre/.chefdk/gem/ruby/2.1.0/gems/kitchen-vagrant-0.16.0/lib/kitchen/driver/vagrant.rb:148:in `verify_dependencies'
+E, [2015-04-02T15:30:24.381369 #14181] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/driver.rb:45:in `for_plugin'
+E, [2015-04-02T15:30:24.381380 #14181] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/config.rb:226:in `new_driver'
+E, [2015-04-02T15:30:24.381392 #14181] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/config.rb:240:in `new_instance'
+E, [2015-04-02T15:30:24.381405 #14181] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/config.rb:129:in `block in build_instances'
+E, [2015-04-02T15:30:24.381439 #14181] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/config.rb:128:in `map'
+E, [2015-04-02T15:30:24.381454 #14181] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/config.rb:128:in `with_index'
+E, [2015-04-02T15:30:24.381465 #14181] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/config.rb:128:in `build_instances'
+E, [2015-04-02T15:30:24.381477 #14181] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/config.rb:104:in `instances'
+E, [2015-04-02T15:30:24.381489 #14181] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/command.rb:115:in `filtered_instances'
+E, [2015-04-02T15:30:24.381500 #14181] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/command.rb:145:in `parse_subcommand'
+E, [2015-04-02T15:30:24.381531 #14181] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/command/list.rb:32:in `call'
+E, [2015-04-02T15:30:24.381543 #14181] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/cli.rb:56:in `perform'
+E, [2015-04-02T15:30:24.381557 #14181] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/cli.rb:97:in `list'
+E, [2015-04-02T15:30:24.381569 #14181] ERROR -- Kitchen: /opt/chefdk/embedded/lib/ruby/gems/2.1.0/gems/thor-0.19.1/lib/thor/command.rb:27:in `run'
+E, [2015-04-02T15:30:24.381580 #14181] ERROR -- Kitchen: /opt/chefdk/embedded/lib/ruby/gems/2.1.0/gems/thor-0.19.1/lib/thor/invocation.rb:126:in `invoke_command'
+E, [2015-04-02T15:30:24.381591 #14181] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/cli.rb:304:in `invoke_task'
+E, [2015-04-02T15:30:24.381603 #14181] ERROR -- Kitchen: /opt/chefdk/embedded/lib/ruby/gems/2.1.0/gems/thor-0.19.1/lib/thor.rb:359:in `dispatch'
+E, [2015-04-02T15:30:24.381614 #14181] ERROR -- Kitchen: /opt/chefdk/embedded/lib/ruby/gems/2.1.0/gems/thor-0.19.1/lib/thor/base.rb:440:in `start'
+E, [2015-04-02T15:30:24.381625 #14181] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/bin/kitchen:13:in `block in <top (required)>'
+E, [2015-04-02T15:30:24.381637 #14181] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/lib/kitchen/errors.rb:154:in `with_friendly_errors'
+E, [2015-04-02T15:30:24.381650 #14181] ERROR -- Kitchen: /opt/chefdk/embedded/apps/test-kitchen/bin/kitchen:13:in `<top (required)>'
+E, [2015-04-02T15:30:24.381662 #14181] ERROR -- Kitchen: /usr/bin/kitchen:15:in `load'
+E, [2015-04-02T15:30:24.381673 #14181] ERROR -- Kitchen: /usr/bin/kitchen:15:in `<main>'
+E, [2015-04-02T15:30:24.381684 #14181] ERROR -- Kitchen: ----------------------
+I, [2015-04-02T15:32:37.825930 #14275]  INFO -- Kitchen: -----> Starting Kitchen (v1.3.1)
+I, [2015-04-02T15:32:38.143715 #14275]  INFO -- Kitchen: -----> Creating <default-ubuntu-1404>...
+I, [2015-04-02T15:34:34.489618 #14275]  INFO -- Kitchen: -----> Converging <default-ubuntu-1404>...
+I, [2015-04-02T15:39:22.392210 #14275]  INFO -- Kitchen: -----> Kitchen is finished. (6m44.57s)
+I, [2015-04-02T15:42:19.201235 #14418]  INFO -- Kitchen: -----> Starting Kitchen (v1.3.1)
+I, [2015-04-02T15:42:19.416658 #14418]  INFO -- Kitchen: -----> Setting up <default-ubuntu-1404>...
+I, [2015-04-02T15:42:55.032552 #14418]  INFO -- Kitchen: -----> Verifying <default-ubuntu-1404>...
+E, [2015-04-02T15:43:36.693819 #14418] ERROR -- Kitchen: Verify failed on instance <default-ubuntu-1404>.
+I, [2015-04-02T15:44:58.545314 #14440]  INFO -- Kitchen: -----> Starting Kitchen (v1.3.1)
+I, [2015-04-02T15:44:58.761038 #14440]  INFO -- Kitchen: -----> Verifying <default-ubuntu-1404>...
+E, [2015-04-02T15:45:00.411286 #14440] ERROR -- Kitchen: Verify failed on instance <default-ubuntu-1404>.
+I, [2015-04-02T15:45:24.513614 #14451]  INFO -- Kitchen: -----> Starting Kitchen (v1.3.1)
+I, [2015-04-02T15:45:24.728524 #14451]  INFO -- Kitchen: -----> Verifying <default-ubuntu-1404>...
+E, [2015-04-02T15:45:26.328257 #14451] ERROR -- Kitchen: Verify failed on instance <default-ubuntu-1404>.
+I, [2015-04-02T15:46:13.217247 #14463]  INFO -- Kitchen: -----> Starting Kitchen (v1.3.1)
+I, [2015-04-02T15:46:13.425951 #14463]  INFO -- Kitchen: -----> Verifying <default-ubuntu-1404>...
+E, [2015-04-02T15:46:14.822348 #14463] ERROR -- Kitchen: Verify failed on instance <default-ubuntu-1404>.
+I, [2015-04-02T15:46:54.047158 #14474]  INFO -- Kitchen: -----> Starting Kitchen (v1.3.1)
+I, [2015-04-02T15:46:54.266950 #14474]  INFO -- Kitchen: -----> Verifying <default-ubuntu-1404>...
+I, [2015-04-02T15:46:56.014050 #14474]  INFO -- Kitchen: -----> Kitchen is finished. (0m1.97s)
+I, [2015-04-02T15:48:07.767853 #14487]  INFO -- Kitchen: -----> Starting Kitchen (v1.3.1)
+I, [2015-04-02T15:48:07.991543 #14487]  INFO -- Kitchen: -----> Verifying <default-ubuntu-1404>...
+I, [2015-04-02T15:48:09.855869 #14487]  INFO -- Kitchen: -----> Kitchen is finished. (0m2.09s)
+I, [2015-04-02T15:48:22.065248 #14498]  INFO -- Kitchen: -----> Starting Kitchen (v1.3.1)
+I, [2015-04-02T15:48:22.270445 #14498]  INFO -- Kitchen: -----> Verifying <default-ubuntu-1404>...
+I, [2015-04-02T15:48:23.968182 #14498]  INFO -- Kitchen: -----> Kitchen is finished. (0m1.90s)
+I, [2015-04-02T15:49:07.152394 #14508]  INFO -- Kitchen: -----> Starting Kitchen (v1.3.1)
+I, [2015-04-02T15:49:07.356140 #14508]  INFO -- Kitchen: -----> Verifying <default-ubuntu-1404>...
+I, [2015-04-02T15:49:09.068335 #14508]  INFO -- Kitchen: -----> Kitchen is finished. (0m1.92s)
+I, [2015-04-02T15:49:46.600083 #14518]  INFO -- Kitchen: -----> Starting Kitchen (v1.3.1)
+I, [2015-04-02T15:49:46.826913 #14518]  INFO -- Kitchen: -----> Verifying <default-ubuntu-1404>...
+I, [2015-04-02T15:49:48.845364 #14518]  INFO -- Kitchen: -----> Kitchen is finished. (0m2.25s)
+I, [2015-04-02T15:51:03.515024 #14528]  INFO -- Kitchen: -----> Starting Kitchen (v1.3.1)
+I, [2015-04-02T15:51:03.724671 #14528]  INFO -- Kitchen: -----> Verifying <default-ubuntu-1404>...
+E, [2015-04-02T15:51:05.507368 #14528] ERROR -- Kitchen: Verify failed on instance <default-ubuntu-1404>.
+I, [2015-04-02T15:51:31.527116 #14538]  INFO -- Kitchen: -----> Starting Kitchen (v1.3.1)
+I, [2015-04-02T15:51:31.737245 #14538]  INFO -- Kitchen: -----> Verifying <default-ubuntu-1404>...
+I, [2015-04-02T15:51:33.528148 #14538]  INFO -- Kitchen: -----> Kitchen is finished. (0m2.00s)
+I, [2015-04-02T15:52:08.866880 #14548]  INFO -- Kitchen: -----> Starting Kitchen (v1.3.1)
+I, [2015-04-02T15:52:09.092317 #14548]  INFO -- Kitchen: -----> Verifying <default-ubuntu-1404>...
+I, [2015-04-02T15:52:10.842428 #14548]  INFO -- Kitchen: -----> Kitchen is finished. (0m1.98s)
+I, [2015-04-02T15:56:29.307144 #14566]  INFO -- Kitchen: -----> Starting Kitchen (v1.3.1)
+I, [2015-04-02T15:56:29.531267 #14566]  INFO -- Kitchen: -----> Destroying <default-ubuntu-1404>...
+I, [2015-04-02T15:56:34.438157 #14566]  INFO -- Kitchen: -----> Kitchen is finished. (0m5.13s)
+I, [2015-04-02T15:56:38.527325 #14606]  INFO -- Kitchen: -----> Starting Kitchen (v1.3.1)
+I, [2015-04-02T15:56:38.740223 #14606]  INFO -- Kitchen: -----> Cleaning up any prior instances of <default-ubuntu-1404>
+I, [2015-04-02T15:56:38.740431 #14606]  INFO -- Kitchen: -----> Destroying <default-ubuntu-1404>...
+I, [2015-04-02T15:56:38.741933 #14606]  INFO -- Kitchen: -----> Testing <default-ubuntu-1404>
+I, [2015-04-02T15:56:38.742046 #14606]  INFO -- Kitchen: -----> Creating <default-ubuntu-1404>...
+I, [2015-04-02T15:58:26.039814 #14606]  INFO -- Kitchen: -----> Converging <default-ubuntu-1404>...
+I, [2015-04-02T16:01:04.815983 #14606]  INFO -- Kitchen: -----> Setting up <default-ubuntu-1404>...
+E, [2015-04-02T16:01:04.964037 #14606] ERROR -- Kitchen: Setup failed on instance <default-ubuntu-1404>.
+I, [2015-04-02T16:07:09.068681 #14746]  INFO -- Kitchen: -----> Starting Kitchen (v1.3.1)
+I, [2015-04-02T16:07:09.311043 #14746]  INFO -- Kitchen: -----> Setting up <default-ubuntu-1404>...
+E, [2015-04-02T16:07:09.410134 #14746] ERROR -- Kitchen: Setup failed on instance <default-ubuntu-1404>.
+I, [2015-04-02T16:07:58.416491 #14762]  INFO -- Kitchen: -----> Starting Kitchen (v1.3.1)
+I, [2015-04-02T16:07:58.640743 #14762]  INFO -- Kitchen: -----> Setting up <default-ubuntu-1404>...
+E, [2015-04-02T16:07:58.741312 #14762] ERROR -- Kitchen: Setup failed on instance <default-ubuntu-1404>.
+I, [2015-04-02T16:09:49.419005 #14851]  INFO -- Kitchen: -----> Starting Kitchen (v1.3.1)
+I, [2015-04-02T16:09:49.654564 #14851]  INFO -- Kitchen: -----> Setting up <default-ubuntu-1404>...
+E, [2015-04-02T16:09:49.773267 #14851] ERROR -- Kitchen: Setup failed on instance <default-ubuntu-1404>.
+I, [2015-04-02T16:10:11.143925 #14861]  INFO -- Kitchen: -----> Starting Kitchen (v1.3.1)
+I, [2015-04-02T16:10:11.371550 #14861]  INFO -- Kitchen: -----> Setting up <default-ubuntu-1404>...
+I, [2015-04-02T16:10:56.095678 #14861]  INFO -- Kitchen: -----> Verifying <default-ubuntu-1404>...
+E, [2015-04-02T16:11:22.870130 #14861] ERROR -- Kitchen: Verify failed on instance <default-ubuntu-1404>.
+I, [2015-04-02T16:11:48.563209 #14871]  INFO -- Kitchen: -----> Starting Kitchen (v1.3.1)
+I, [2015-04-02T16:11:48.775696 #14871]  INFO -- Kitchen: -----> Verifying <default-ubuntu-1404>...
+I, [2015-04-02T16:11:50.528672 #14871]  INFO -- Kitchen: -----> Kitchen is finished. (0m1.97s)
+I, [2015-04-02T16:11:57.024767 #14881]  INFO -- Kitchen: -----> Starting Kitchen (v1.3.1)
+I, [2015-04-02T16:11:57.245953 #14881]  INFO -- Kitchen: -----> Destroying <default-ubuntu-1404>...
+I, [2015-04-02T16:12:02.471957 #14881]  INFO -- Kitchen: -----> Kitchen is finished. (0m5.45s)
+I, [2015-04-02T16:12:12.080381 #14921]  INFO -- Kitchen: -----> Starting Kitchen (v1.3.1)
+I, [2015-04-02T16:12:12.293193 #14921]  INFO -- Kitchen: -----> Creating <default-ubuntu-1404>...
+I, [2015-04-02T16:14:06.147272 #14921]  INFO -- Kitchen: -----> Converging <default-ubuntu-1404>...
+I, [2015-04-02T16:18:23.118706 #14921]  INFO -- Kitchen: -----> Setting up <default-ubuntu-1404>...
+I, [2015-04-02T16:19:02.974187 #14921]  INFO -- Kitchen: -----> Verifying <default-ubuntu-1404>...
+I, [2015-04-02T16:19:36.148738 #14921]  INFO -- Kitchen: -----> Kitchen is finished. (7m24.07s)
+I, [2015-04-02T16:24:16.900795 #15092]  INFO -- Kitchen: -----> Starting Kitchen (v1.3.1)
+I, [2015-04-02T16:24:17.124082 #15092]  INFO -- Kitchen: -----> Destroying <default-ubuntu-1404>...
+I, [2015-04-02T16:24:22.467487 #15092]  INFO -- Kitchen: -----> Kitchen is finished. (0m5.57s)
+I, [2015-04-02T16:25:49.828663 #15134]  INFO -- Kitchen: -----> Starting Kitchen (v1.3.1)
+I, [2015-04-02T16:25:50.101627 #15134]  INFO -- Kitchen: -----> Creating <default-ubuntu-1404>...
+I, [2015-04-02T16:28:13.035344 #15134]  INFO -- Kitchen: -----> Converging <default-ubuntu-1404>...
+I, [2015-04-02T16:31:34.166441 #15134]  INFO -- Kitchen: -----> Kitchen is finished. (5m44.34s)
+I, [2015-04-02T16:32:01.165764 #15254]  INFO -- Kitchen: -----> Starting Kitchen (v1.3.1)
+I, [2015-04-02T16:32:01.385518 #15254]  INFO -- Kitchen: -----> Setting up <default-ubuntu-1404>...
+I, [2015-04-02T16:32:37.657397 #15254]  INFO -- Kitchen: -----> Verifying <default-ubuntu-1404>...
+I, [2015-04-02T16:33:36.123494 #15254]  INFO -- Kitchen: -----> Kitchen is finished. (1m34.96s)
