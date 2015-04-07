@@ -65,8 +65,7 @@ function build_lsfw()
   go build && mv logstash-forwarder /usr/bin
   mkdir -p /etc/logstash-forwarder/ssl
   cp /tmp/kitchen/data/logstash-forwarder.json /etc/logstash-forwarder
-  #cp /tmp/kitchen/data/lumberjack_ca.crt /etc/logstash-forwarder/ssl/lumberjack_ca.crt
-  cp /tmp/kitchen/data/logstash-forwarder /etc/init.d/logstash-forwarder 
+  cp /tmp/kitchen/data/logstash-forwarder-init /etc/init.d/logstash-forwarder 
   chmod u+x /etc/init.d/logstash-forwarder
 }
 
