@@ -125,6 +125,8 @@ func LoadConfig(path string) (config Config, err error) {
 		return
 	}
 
+	buffer = []byte(os.ExpandEnv(string(buffer)))
+
 	err = json.Unmarshal(buffer, &config)
 	if err != nil {
 		emit("Failed unmarshalling json: %s\n", err)
