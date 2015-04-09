@@ -94,6 +94,8 @@ the only thing on the line:
       ]
     }
 
+Any part of config can use environment variables as `$VAR` or `${VAR}`. They will be evaluated before processing JSON, allowing to pass any structure.
+
 You can also read an entire directory of JSON configs by specifying a directory instead of a file with the `-config` option.
 
 # IMPORTANT TLS/SSL CERTIFICATE NOTES
