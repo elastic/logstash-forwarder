@@ -20,6 +20,7 @@ var exitStat = struct {
 
 var options = &struct {
 	configArg           string
+	stateFileName       string
 	spoolSize           uint64
 	harvesterBufferSize int
 	cpuProfileFile      string
@@ -29,6 +30,7 @@ var options = &struct {
 	quiet               bool
   version bool
 }{
+	stateFileName:       ".logstash-forwarder",
 	spoolSize:           1024,
 	harvesterBufferSize: 16 << 10,
 	idleTimeout:         time.Second * 5,
@@ -64,6 +66,8 @@ func init() {
 	flag.StringVar(&options.configArg, "config", options.configArg, "path to logstash-forwarder configuration file or directory")
 
 	flag.StringVar(&options.cpuProfileFile, "cpuprofile", options.cpuProfileFile, "path to cpu profile output - note: exits on profile end.")
+
+	flag.StringVar(&options.stateFileName, "state", options.stateFileName, "name of state file.")
 
 	flag.Uint64Var(&options.spoolSize, "spool-size", options.spoolSize, "event count spool threshold - forces network flush")
 	flag.Uint64Var(&options.spoolSize, "sv", options.spoolSize, "event count spool threshold - forces network flush")
