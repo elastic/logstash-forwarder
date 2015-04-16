@@ -28,7 +28,7 @@ func Registrar(state map[string]*FileState, input chan []*FileEvent) {
 			//log.Printf("State %s: %d\n", *event.Source, event.Offset)
 		}
 
-		if e := writeRegistry(state, ".logstash-forwarder"); e != nil {
+		if e := writeRegistry(state, options.stateFileName); e != nil {
 			// REVU: but we should panic, or something, right?
 			emit("WARNING: (continuing) update of registry returned error: %s", e)
 		}
