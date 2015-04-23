@@ -133,48 +133,6 @@ module Lumberjack
     def read_last_ack
       @socket.read(4).unpack("N").first
     end
-
-    private
-    def to_frame(hash, sequence)
-      frame = ["1", "D", sequence]
-      pack = "AAN"
-      keys = deep_keys(hash)
-      frame << keys.length
-      pack << "N"
-      keys.each do |k|
-        val = deep_get(hash,k)
-        key_length = k.bytesize
-        val_length = val.bytesize
-        frame << key_length
-        pack << "N"
-        frame << k
-        pack << "A#{key_length}"
-        frame << val_length
-        pack << "N"
-        frame << val
-        pack << "A#{val_length}"
-      end
-      frame.pack(pack)
-    end
-
-    private
-    def deep_get(hash, key="")
-      return hash if key.nil?
-      deep_get(
-        hash[key.split('.').first],
-        key[key.split('.').first.length+1..key.length]
-      )
-    end
-
-    private
-    def deep_keys(hash, prefix="")
-      keys = []
-      hash.each do |k,v|
-        keys << "#{prefix}#{k}" if v.class == String
-        keys << deep_keys(hash[k], "#{k}.") if v.class == Hash
-      end
-      keys.flatten
-    end
   end
 
   module Encoder
