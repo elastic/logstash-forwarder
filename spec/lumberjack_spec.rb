@@ -76,10 +76,12 @@ shared_examples_for "logstash-forwarder" do
     # TODO(sissel): Make sure this doesn't take forever, do a timeout.
     count = 0
     events = []
-    connection = server.accept
-    connection.run do |event|
+    server.run do |event|
       events << event
-      connection.close if events.length == lines.length
+      if events.length == lines.length
+        server.stop
+        raise EOFError.new("Force the connection out of the read loop")
+      end
     end
 
     expect(events.count).to(eq(lines.length))
