@@ -23,6 +23,7 @@ shared_examples_for "logstash-forwarder" do
     Lumberjack::Server.new(:ssl_certificate => ssl_certificate, :ssl_key => ssl_key, :port => port)
   end
 
+  let(:max_line_bytes) { 32 }
   let(:logstash_forwarder_config) do
     <<-CONFIG
     {
@@ -68,7 +69,9 @@ shared_examples_for "logstash-forwarder" do
     # TODO(sissel): Refactor this once we figure out a good way to do
     # multi-component integration tests and property tests.
     fd = File.new(input_file, "wb")
-    lines = [ "Hello world", "Fancy Pants", "Some Unicode Emoji: 👍 💗 " ]
+    lines = [ "Hello world", "Fancy Pants", "Some Unicode Emoji: 👍 💗 ",
+              "A really long line that should get truncated",
+              "X" * (2 ** 12) ]
     lines.each { |l| fd.write(l + "\n") }
     fd.flush
     fd.close
@@ -86,7 +89,7 @@ shared_examples_for "logstash-forwarder" do
     lines.zip(events).each do |line, event|
       # TODO(sissel): Resolve the need for this hack.
       event["line"].force_encoding("UTF-8")
-      expect(event["line"]).to(eq(line))
+      expect(event["line"]).to(eq(line[0...max_line_bytes]))
       expect(event[random_field]).to(eq(random_value))
     end
   end
@@ -97,7 +100,9 @@ describe "operating" do
   context "when compiled from source" do
     let(:lsf) do
       # Start the process, return the pid
-      IO.popen(["./logstash-forwarder", "-config", config_file, "-quiet"])
+      IO.popen(["./logstash-forwarder", "-config", config_file, "-quiet",
+                "-max-line-bytes", "#{max_line_bytes}",
+                "-harvest-buffer-size", "#{max_line_bytes-1}"])
     end
     let(:host) { "localhost" }
     it_behaves_like "logstash-forwarder" 

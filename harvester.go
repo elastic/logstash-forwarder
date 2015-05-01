@@ -126,6 +126,7 @@ func (h *Harvester) open() *os.File {
 
 func (h *Harvester) readline(reader *bufio.Reader, buffer *bytes.Buffer, eof_timeout time.Duration) (*string, int, error) {
 	var is_partial bool = true
+	var over_line_limit = false
 	var newline_length int = 1
 	start_time := time.Now()
 
@@ -143,8 +144,16 @@ func (h *Harvester) readline(reader *bufio.Reader, buffer *bytes.Buffer, eof_tim
 				}
 			}
 
-			// TODO(sissel): if buffer exceeds a certain length, maybe report an error condition? chop it?
-			buffer.Write(segment)
+			if options.maxLineBytes > 0 && buffer.Len() + len(segment) > options.maxLineBytes {
+				if !over_line_limit {
+					emit("harvest: max line length reached, ignoring rest of line.")
+					over_line_limit = true
+				}
+				newline_length = 0
+				buffer.Write(segment[:options.maxLineBytes-buffer.Len()])
+			} else {
+				buffer.Write(segment)
+			}
 		}
 
 		if err != nil {
