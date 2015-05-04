@@ -1,5 +1,5 @@
-CROSSARCH ?= amd64
-PKGARCH ?= amd64
+CROSSARCH ?=
+PKGARCH ?= native
 
 .PHONY: default
 default: logstash-forwarder
