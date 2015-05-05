@@ -62,6 +62,21 @@ describe "Lumberjack::Client" do
     end
   end
 
+  describe Lumberjack::Parser do
+    let(:invalid_frame) { "NOT VALID AT ALL" }
+    subject { Lumberjack::Parser.new }
+
+    context "invalid frames" do
+      before do
+        expect(subject).to receive(:get).and_return(invalid_frame)
+      end
+
+      it "raises an exception" do
+        expect { subject.header }.to raise_error(Lumberjack::Parser::InvalidFrame)
+      end
+    end
+  end
+
   describe Lumberjack::Encoder do
     it 'should creates frames without truncating accentued characters' do
       content = {
