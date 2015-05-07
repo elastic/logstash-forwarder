@@ -5,5 +5,6 @@ gem "insist"
 gem "stud"
 gem "fpm"
 gem "pleaserun"
+gem "jls-lumberjack", :github => "ph/lumberjack"
 
 gem "jruby-openssl", :platform => :jruby

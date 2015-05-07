@@ -26,3 +26,4 @@ logstash-forwarder
 *.crt
 *.key
 *.json
+*.lock
