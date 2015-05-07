@@ -65,7 +65,7 @@ describe "Lumberjack::Client" do
   describe Lumberjack::Encoder do
     it 'should creates frames without truncating accentued characters' do
       content = {
-        "message" => "Le Canadien de Montréal est la meilleur équipe au monde!",
+        "message" => "Le Canadien de Montréal est la meilleure équipe au monde!",
         "other" => "éléphant"
       }
       parser = Lumberjack::Parser.new
