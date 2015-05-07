@@ -70,6 +70,8 @@ module Lumberjack
   end # class Server
 
   class Parser
+    class InvalidFrame < RuntimeError; end
+
     def initialize
       @buffer_offset = 0
       @buffer = ""
@@ -146,7 +148,8 @@ module Lumberjack
       when FRAME_WINDOW; transition(:window_size, 4)
       when FRAME_DATA; transition(:data_lead, 8)
       when FRAME_COMPRESSED; transition(:compressed_lead, 4)
-      else; raise "Unknown frame type: #{frame_type}"
+      else
+        raise InvalidFrame, "Unknown frame type: #{frame_type}"
       end
     end
 
@@ -255,5 +258,4 @@ module Lumberjack
       end
     end
   end # class Connection
-
 end # module Lumberjack
