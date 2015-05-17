@@ -7,7 +7,6 @@ import (
 	"crypto/x509"
 	"encoding/binary"
 	"encoding/pem"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -183,14 +182,9 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
 		}
 
 		address := addresses[rand.Int()%len(addresses)]
-		var addressport string
+		addressport := net.JoinHostPort(address, port)
 
 		ip := net.ParseIP(address)
-		if len(ip) == net.IPv4len {
-			addressport = fmt.Sprintf("%s:%s", address, port)
-		} else if len(ip) == net.IPv6len {
-			addressport = fmt.Sprintf("[%s]:%s", address, port)
-		}
 
 		emit("Connecting to %s (%s) \n", addressport, host)
 
