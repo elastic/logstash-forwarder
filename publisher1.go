@@ -173,18 +173,21 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
 		}
 		host := string(submatch[1])
 		port := string(submatch[2])
-		addresses, err := net.LookupHost(host)
 
-		if err != nil {
-			emit("DNS lookup failure \"%s\": %s\n", host, err)
-			time.Sleep(1 * time.Second)
-			continue
+		var address string
+		if net.ParseIP(host) != nil {
+			address = host
+		} else {
+			addresses, err := net.LookupHost(host)
+			if err != nil {
+				emit("DNS lookup failure \"%s\": %s\n", host, err)
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
+			address = addresses[rand.Int()%len(addresses)]
 		}
-
-		address := addresses[rand.Int()%len(addresses)]
 		addressport := net.JoinHostPort(address, port)
-
-		ip := net.ParseIP(address)
 
 		emit("Connecting to %s (%s) \n", addressport, host)
 
