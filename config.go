@@ -53,8 +53,13 @@ func DiscoverConfigs(file_or_directory string) (files []string, err error) {
 		if err != nil {
 			return nil, err
 		}
-		for _, filename := range entries {
-			files = append(files, path.Join(file_or_directory, filename.Name()))
+		for _, file := range entries {
+			fullPath := path.Join(file_or_directory, file.Name())
+			if file.IsDir() {
+				emit("Directory found while looking for configuration files, skipping: %s", fullPath)
+				continue
+			}
+			files = append(files, fullPath)
 		}
 	} else {
 		files = append(files, file_or_directory)

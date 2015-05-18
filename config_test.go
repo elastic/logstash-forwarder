@@ -34,25 +34,47 @@ func rmTempDir(tmpdir string) {
 // -------------------------------------------------------------------
 func TestDiscoverConfigs(t *testing.T) {
 	tests := []struct {
+		dirsToCreate    []string
 		filesToCreate   []string
 		expectedConfigs []string
 		discoverPath    string
 	}{
 		{
+			[]string{},
 			[]string{"myfile1", "myfile2"},
 			[]string{"myfile1", "myfile2"},
 			".",
 		},
 		{
+			[]string{},
 			[]string{"myfile1"},
 			[]string{"myfile1"},
 			"myfile1",
+		},
+		{
+			[]string{"empty_dir"},
+			[]string{"myfile1"},
+			[]string{"myfile1"},
+			".",
+		},
+		{
+			[]string{"sub_dir"},
+			[]string{"myfile1", "sub_dir/ignore_me"},
+			[]string{"myfile1"},
+			".",
 		},
 	}
 
 	for testidx, test := range tests {
 		tmpdir := makeTempDir(t)
 		defer rmTempDir(tmpdir)
+
+		// Create directories first to allow creation of files
+		// inside those directories.
+		for _, dir := range test.dirsToCreate {
+			err := os.MkdirAll(path.Join(tmpdir, dir), 0755)
+			chkerr(t, err)
+		}
 
 		for _, file := range test.filesToCreate {
 			err := ioutil.WriteFile(path.Join(tmpdir, file), make([]byte, 0), 0644)
