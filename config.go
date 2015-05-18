@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -57,6 +58,10 @@ func DiscoverConfigs(file_or_directory string) (files []string, err error) {
 			fullPath := path.Join(file_or_directory, file.Name())
 			if file.IsDir() {
 				emit("Directory found while looking for configuration files, skipping: %s", fullPath)
+				continue
+			}
+			if strings.HasSuffix(file.Name(), "~") {
+				emit("Skipping backup file: %s", fullPath)
 				continue
 			}
 			files = append(files, fullPath)

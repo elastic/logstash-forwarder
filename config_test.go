@@ -63,6 +63,12 @@ func TestDiscoverConfigs(t *testing.T) {
 			[]string{"myfile1"},
 			".",
 		},
+		{
+			[]string{},
+			[]string{"myfile1", "myfile1~"},
+			[]string{"myfile1"},
+			".",
+		},
 	}
 
 	for testidx, test := range tests {
