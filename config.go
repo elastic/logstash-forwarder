@@ -36,10 +36,12 @@ type NetworkConfig struct {
 }
 
 type FileConfig struct {
-	Paths    []string          `json:paths`
-	Fields   map[string]string `json:fields`
-	DeadTime string            `json:"dead time"`
-	deadtime time.Duration
+	Paths       []string          `json:paths`
+	Fields      map[string]string `json:fields`
+	DeadTime    string            `json:"dead time"`
+	deadTimeDur time.Duration
+	DeadSize    string            `json:"dead size"`
+	deadSizeVal uint64 
 }
 
 func DiscoverConfigs(file_or_directory string) (files []string, err error) {
@@ -135,9 +137,16 @@ func LoadConfig(path string) (config Config, err error) {
 		if config.Files[k].DeadTime == "" {
 			config.Files[k].DeadTime = defaultConfig.fileDeadtime
 		}
-		config.Files[k].deadtime, err = time.ParseDuration(config.Files[k].DeadTime)
+		config.Files[k].deadTimeDur, err = time.ParseDuration(config.Files[k].DeadTime)
 		if err != nil {
 			emit("Failed to parse dead time duration '%s'. Error was: %s\n", config.Files[k].DeadTime, err)
+			return
+		}
+		if config.Files[k].DeadSize != "" {
+			config.Files[k].deadSizeVal, err = ToBytes(config.Files[k].DeadSize)
+		}
+		if err != nil {
+			emit("Failed to parse dead size value '%s'. Error was: %s\n", config.Files[k].DeadSize, err)
 			return
 		}
 	}

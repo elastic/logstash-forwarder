@@ -48,9 +48,24 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 	buffer := new(bytes.Buffer)
 
 	var read_timeout = 10 * time.Second
+        var total_read_bytes uint64 = 0
 	last_read_time := time.Now()
 	for {
 		text, bytesread, err := h.readline(reader, buffer, read_timeout)
+
+		if h.FileConfig.deadSizeVal > 0 {
+			total_read_bytes += uint64(bytesread)
+			if total_read_bytes > h.FileConfig.deadSizeVal {
+				// if total_read_bytes is more than specified dead size, stop
+				// watching it.
+				emit("Stopping harvest of %s; total bytes sent :%v\n", h.Path, total_read_bytes - uint64(bytesread))
+				// mark this file as dead
+				deadFilesMutex.Lock()
+				deadFiles[h.Path] = true
+				deadFilesMutex.Unlock()
+				return
+			}
+		}
 
 		if err != nil {
 			if err == io.EOF {
@@ -61,7 +76,7 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 					emit("File truncated, seeking to beginning: %s\n", h.Path)
 					h.file.Seek(0, os.SEEK_SET)
 					h.Offset = 0
-				} else if age := time.Since(last_read_time); age > h.FileConfig.deadtime {
+				} else if age := time.Since(last_read_time); age > h.FileConfig.deadTimeDur {
 					// if last_read_time was more than dead time, this file is probably
 					// dead. Stop watching it.
 					emit("Stopping harvest of %s; last change was %v ago\n", h.Path, age)

@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"runtime/pprof"
+	"sync"
 	"time"
   "fmt"
 )
@@ -17,6 +18,11 @@ var exitStat = struct {
 	usageError: 1,
 	faulted:    2,
 }
+
+// use this global map to mark files as dead
+var deadFiles = make(map[string]bool)
+
+var deadFilesMutex = &sync.Mutex{}
 
 var options = &struct {
 	configArg           string
