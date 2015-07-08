@@ -3,25 +3,12 @@ package main
 import (
 	"os"
 	"encoding/json"
-	//"fmt"
-	"strings"
 )
 
 func Registrar(state map[string]*FileState, input chan []*FileEvent) {
-
-	f, err := os.OpenFile("/Users/mac/PycharmProjects/logstash-forwarder/splunk.log", 
-					  os.O_RDWR|os.O_APPEND|os.O_CREATE, 0660)
-
-	if err != nil {
-	    panic(err)
-	}
-
 	for events := range input {
 		emit ("Registrar: processing %d events\n", len(events))
 		// Take the last event found for each file source
-
-		filtered_events := make([]string, len(events))
-		counter := 0
 		for _, event := range events {
 			// skip stdin
 			if *event.Source == "-" {
@@ -38,18 +25,7 @@ func Registrar(state map[string]*FileState, input chan []*FileEvent) {
 				Inode:  ino,
 				Device: dev,
 			}
-
-			if strings.Contains(*event.Text, `"msg":"MSG2"`) {
-				filtered_events[counter] = *event.Text
-				counter++
-			}
-		}
-
-		for i,element := range filtered_events {
-			if i<counter {
-  				//fmt.Printf(element)
-  				f.WriteString(element + "\n")
-  			}
+			//log.Printf("State %s: %d\n", *event.Source, event.Offset)
 		}
 
 		if e := writeRegistry(state, ".logstash-forwarder"); e != nil {
