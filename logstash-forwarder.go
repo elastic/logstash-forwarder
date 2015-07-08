@@ -207,6 +207,8 @@ func main() {
 
 	go Publishv1(publisher_chan, registrar_chan, &config.Network)
 
+	go Filter(registrar_chan)
+
 	// registrar records last acknowledged positions in all files.
 	Registrar(persist, registrar_chan)
 }
