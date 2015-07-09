@@ -11,7 +11,7 @@ import (
 const CONFIG_FILE string = "./filter.conf"
 
 type ConfigType struct {
-	Filters FilterConfig `json:filters`
+	Filters FilterType `json:filters`
 }
  
 type FilterType struct {
