@@ -87,7 +87,7 @@ func Filter(input chan []*FileEvent) {
 
 			for i,element := range filteredEvents {
 				if i<counter {
-	  				//fmt.Printf(element)
+	  				//emit("FILTERED TEXT: " + element)
 	  				f.WriteString(element + "\n")
 	  			}
 			}

@@ -143,6 +143,7 @@ func main() {
 	event_chan := make(chan *FileEvent, 16)
 	publisher_chan := make(chan []*FileEvent, 1)
 	registrar_chan := make(chan []*FileEvent, 1)
+    formatter_chan := make(chan []*FileEvent, 1)
 
 	if len(config.Files) == 0 {
 		log.Fatalf("No paths given. What files do you want me to watch?\n")
@@ -203,7 +204,9 @@ func main() {
 	emit("All prospectors initialised with %d states to persist\n", len(persist))
 
 	// Harvesters dump events into the spooler.
-	go Spool(event_chan, publisher_chan, options.spoolSize, options.idleTimeout)
+	go Spool(event_chan, formatter_chan, options.spoolSize, options.idleTimeout)
+
+	go Formatter(formatter_chan, publisher_chan, &config)
 
 	go Publishv1(publisher_chan, registrar_chan, &config.Network)
 
