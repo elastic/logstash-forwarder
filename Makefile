@@ -1,13 +1,19 @@
-.PHONY: default
-default: compile
+CROSSARCH ?=
+PKGARCH ?= native
 
-OBJECTS=logstash-forwarder
+.PHONY: default
+default: logstash-forwarder
+
+OBJECTS=logstash-forwarder logstash-forwarder-$(CROSSARCH)
 
 .PHONY: compile
 compile: $(OBJECTS)
 
 logstash-forwarder:
 	go build -o $@
+
+logstash-forwarder-$(CROSSARCH):
+	GOARCH=$(CROSSARCH) go build -o $@
 
 .PHONY: clean
 clean: 
@@ -36,7 +42,7 @@ rpm deb: PREFIX=/opt/logstash-forwarder
 rpm deb: VERSION=$(shell ./logstash-forwarder -version)
 rpm deb: compile generate-init-script build/empty
 	fpm -f -s dir -t $@ -n logstash-forwarder -v $(VERSION) \
-		--architecture native \
+		--architecture $(PKGARCH) \
 		--replaces lumberjack \
 		--description "a log shipping tool" \
 		--url "https://github.com/elasticsearch/logstash-forwarder" \
@@ -44,7 +50,7 @@ rpm deb: compile generate-init-script build/empty
 		--before-install $(BEFORE_INSTALL) \
 		--before-remove $(BEFORE_REMOVE) \
 		--config-files /etc/logstash-forwarder.conf \
-		./logstash-forwarder=$(PREFIX)/bin/ \
+		./logstash-forwarder-$(CROSSARCH)=$(PREFIX)/bin/logstash-forwarder \
 		./logstash-forwarder.conf.example=/etc/logstash-forwarder.conf \
 		./build/etc=/ \
 		./build/empty/=/var/lib/logstash-forwarder/ \
