@@ -45,6 +45,7 @@ func emitOptions() {
 	emit("\ttail (on-rotation):  %t\n", options.tailOnRotate)
 	emit("\tlog-to-syslog:          %t\n", options.useSyslog)
 	emit("\tquiet:             %t\n", options.quiet)
+	emit("\tworkingdir:             %s\n", options.workingdir)
 	if runProfiler() {
 		emit("\t--- profile run ---\n")
 		emit("\tcpu-profile-file:    %s\n", options.cpuProfileFile)
