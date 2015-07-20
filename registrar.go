@@ -3,9 +3,10 @@ package main
 import (
 	"os"
 	"encoding/json"
+	"path"
 )
 
-func Registrar(state map[string]*FileState, input chan []*FileEvent) {
+func Registrar(state map[string]*FileState, input chan []*FileEvent, workingDir string) {
 	for events := range input {
 		emit ("Registrar: processing %d events\n", len(events))
 		// Take the last event found for each file source
@@ -28,7 +29,7 @@ func Registrar(state map[string]*FileState, input chan []*FileEvent) {
 			//log.Printf("State %s: %d\n", *event.Source, event.Offset)
 		}
 
-		if e := writeRegistry(state, ".logstash-forwarder"); e != nil {
+		if e := writeRegistry(state, path.Join(workingDir, ".logstash-forwarder")); e != nil {
 			// REVU: but we should panic, or something, right?
 			emit("WARNING: (continuing) update of registry returned error: %s", e)
 		}

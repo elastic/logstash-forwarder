@@ -28,6 +28,7 @@ var options = &struct {
 	tailOnRotate        bool
 	quiet               bool
   version bool
+         workingdir	    string
 }{
 	spoolSize:           1024,
 	harvesterBufferSize: 16 << 10,
@@ -79,6 +80,7 @@ func init() {
 
 	flag.BoolVar(&options.quiet, "quiet", options.quiet, "operate in quiet mode - only emit errors to log")
 	flag.BoolVar(&options.version, "version", options.version, "output the version of this program")
+	flag.StringVar(&options.workingdir, "workingdir", options.workingdir, "set working dir")
 }
 
 func init() {
@@ -208,7 +210,7 @@ func main() {
 	go Publishv1(publisher_chan, registrar_chan, &config.Network)
 
 	// registrar records last acknowledged positions in all files.
-	Registrar(persist, registrar_chan)
+	Registrar(persist, registrar_chan, options.workingdir)
 }
 
 // REVU: yes, this is a temp hack.
