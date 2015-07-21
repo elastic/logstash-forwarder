@@ -8,6 +8,7 @@ import (
 	"runtime/pprof"
 	"time"
   "fmt"
+  "path"
 )
 
 var exitStat = struct {
@@ -165,7 +166,7 @@ func main() {
 
 	// Load the previous log file locations now, for use in prospector
 	restart.files = make(map[string]*FileState)
-	if existing, e := os.Open(".logstash-forwarder"); e == nil {
+	if existing, e := os.Open(path.Join(options.workingdir, ".logstash-forwarder")); e == nil {
 		defer existing.Close()
 		wd := ""
 		if wd, e = os.Getwd(); e != nil {
