@@ -145,12 +145,20 @@ func TestLoadConfigAndStripComments(t *testing.T) {
 
 func TestFinalizeConfig(t *testing.T) {
 	tests := []struct {
-		config   Config
-		validate func(c Config) error
+		config        Config
+		expectSuccess bool
+		validate      func(c Config) error
 	}{
 		{
 			// Uses correct default timeout when no explicit timeout is set
-			config: Config{},
+			config: Config{
+				Files: []FileConfig{
+					{
+						Paths: []string{"testfile"},
+					},
+				},
+			},
+			expectSuccess: true,
 			validate: func(c Config) error {
 				if c.Network.Timeout != defaultConfig.netTimeout {
 					return fmt.Errorf("Expected FinalizeConfig to default timeout to %d, got %d instead", defaultConfig.netTimeout, c.Network.Timeout)
@@ -161,10 +169,16 @@ func TestFinalizeConfig(t *testing.T) {
 		{
 			// When timeout is explicitly set it's converted to time.Duration
 			config: Config{
+				Files: []FileConfig{
+					{
+						Paths: []string{"testfile"},
+					},
+				},
 				Network: NetworkConfig{
 					Timeout: 40,
 				},
 			},
+			expectSuccess: true,
 			validate: func(c Config) error {
 				expected := time.Duration(40) * time.Second
 				if c.Network.timeout != expected {
@@ -173,10 +187,22 @@ func TestFinalizeConfig(t *testing.T) {
 				return nil
 			},
 		},
+		{
+			// No filename patterns results in an error
+			config: Config{
+				Files: []FileConfig{},
+			},
+			expectSuccess: false,
+		},
 	}
 
 	for testidx, test := range tests {
-		FinalizeConfig(&test.config)
+		err := FinalizeConfig(&test.config)
+		if test.expectSuccess && err != nil {
+			t.Errorf("Test %d: Expected success, got this instead: %s", testidx, err)
+		} else if !test.expectSuccess && err == nil {
+			t.Errorf("Test %d: Expected failure, got success instead", testidx)
+		}
 		if test.validate != nil {
 			err := test.validate(test.config)
 			if err != nil {

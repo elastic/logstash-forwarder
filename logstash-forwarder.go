@@ -135,18 +135,17 @@ func main() {
 			err = MergeConfig(&config, additional_config)
 		}
 		if err != nil {
-			fault("Could not load config file %s: %s", filename, err)
+			usageError("Could not load config file %s: %s", filename, err)
 		}
 	}
-	FinalizeConfig(&config)
+	err = FinalizeConfig(&config)
+	if err != nil {
+		usageError("Invalid configuration: %s", err)
+	}
 
 	event_chan := make(chan *FileEvent, 16)
 	publisher_chan := make(chan []*FileEvent, 1)
 	registrar_chan := make(chan []*FileEvent, 1)
-
-	if len(config.Files) == 0 {
-		log.Fatalf("No paths given. What files do you want me to watch?\n")
-	}
 
 	// The basic model of execution:
 	// - prospector: finds files in paths/globs to harvest, starts harvesters
@@ -221,6 +220,10 @@ func emit(msgfmt string, args ...interface{}) {
 
 func fault(msgfmt string, args ...interface{}) {
 	exit(exitStat.faulted, msgfmt, args...)
+}
+
+func usageError(msgfmt string, args ...interface{}) {
+	exit(exitStat.usageError, msgfmt, args...)
 }
 
 func exit(stat int, msgfmt string, args ...interface{}) {
