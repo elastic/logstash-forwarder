@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -143,18 +144,45 @@ func TestLoadConfigAndStripComments(t *testing.T) {
 }
 
 func TestFinalizeConfig(t *testing.T) {
-	config := Config{}
-
-	FinalizeConfig(&config)
-	if config.Network.Timeout != defaultConfig.netTimeout {
-		t.Fatalf("Expected FinalizeConfig to default timeout to %d, got %d instead", defaultConfig.netTimeout, config.Network.Timeout)
+	tests := []struct {
+		config   Config
+		validate func(c Config) error
+	}{
+		{
+			// Uses correct default timeout when no explicit timeout is set
+			config: Config{},
+			validate: func(c Config) error {
+				if c.Network.Timeout != defaultConfig.netTimeout {
+					return fmt.Errorf("Expected FinalizeConfig to default timeout to %d, got %d instead", defaultConfig.netTimeout, c.Network.Timeout)
+				}
+				return nil
+			},
+		},
+		{
+			// When timeout is explicitly set it's converted to time.Duration
+			config: Config{
+				Network: NetworkConfig{
+					Timeout: 40,
+				},
+			},
+			validate: func(c Config) error {
+				expected := time.Duration(40) * time.Second
+				if c.Network.timeout != expected {
+					return fmt.Errorf("Expected FinalizeConfig to set the timeout duration to %v, got %v instead", c.Network.timeout, expected)
+				}
+				return nil
+			},
+		},
 	}
 
-	config.Network.Timeout = 40
-	expected := time.Duration(40) * time.Second
-	FinalizeConfig(&config)
-	if config.Network.timeout != expected {
-		t.Fatalf("Expected FinalizeConfig to set the timeout duration to %v, got %v instead", config.Network.timeout, expected)
+	for testidx, test := range tests {
+		FinalizeConfig(&test.config)
+		if test.validate != nil {
+			err := test.validate(test.config)
+			if err != nil {
+				t.Errorf("Test %d: %s", testidx, err)
+			}
+		}
 	}
 }
 
