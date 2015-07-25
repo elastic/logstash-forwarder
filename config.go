@@ -157,6 +157,10 @@ func FinalizeConfig(config *Config) error {
 		return fmt.Errorf("No paths given. What files do you want me to watch?")
 	}
 
+	if len(config.Network.Servers) == 0 {
+		return fmt.Errorf("No server hostnames given. Where do you want to ship the log messages?")
+	}
+
 	return nil
 }
 

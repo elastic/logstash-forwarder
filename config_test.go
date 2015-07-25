@@ -157,6 +157,9 @@ func TestFinalizeConfig(t *testing.T) {
 						Paths: []string{"testfile"},
 					},
 				},
+				Network: NetworkConfig{
+					Servers: []string{"host.example.com"},
+				},
 			},
 			expectSuccess: true,
 			validate: func(c Config) error {
@@ -175,6 +178,7 @@ func TestFinalizeConfig(t *testing.T) {
 					},
 				},
 				Network: NetworkConfig{
+					Servers: []string{"host.example.com"},
 					Timeout: 40,
 				},
 			},
@@ -191,6 +195,23 @@ func TestFinalizeConfig(t *testing.T) {
 			// No filename patterns results in an error
 			config: Config{
 				Files: []FileConfig{},
+				Network: NetworkConfig{
+					Servers: []string{"host.example.com"},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			// Empty server list results in an error
+			config: Config{
+				Files: []FileConfig{
+					{
+						Paths: []string{"testfile"},
+					},
+				},
+				Network: NetworkConfig{
+					Servers: []string{},
+				},
 			},
 			expectSuccess: false,
 		},
