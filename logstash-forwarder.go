@@ -215,7 +215,7 @@ func main() {
 	go Publishv1(publisher_chan, registrar_chan, &config.Network)
 
 	// registrar records last acknowledged positions in all files.
-	Registrar(persist, registrar_chan)
+	Registrar(persist, registrar_chan, options.registryFile)
 }
 
 // REVU: yes, this is a temp hack.

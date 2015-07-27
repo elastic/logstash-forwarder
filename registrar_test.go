@@ -8,37 +8,42 @@ import (
 	"testing"
 )
 
-func setupRegistrarTests(t *testing.T) (string, os.FileInfo) {
-	f, err := ioutil.TempFile("", "lsf-registrar")
+func setupRegistrarTests(t *testing.T) (string, string, os.FileInfo) {
+	lf, err := ioutil.TempFile("", "lsf-registrar")
 	if err != nil {
-		t.Error("Failed to create file", err)
+		t.Error("Failed to create log file", err)
 	}
 
-	stat, err := f.Stat()
+	stat, err := lf.Stat()
 	if err != nil {
 		t.Error("Failed to stat file", err)
 	}
 
-	return f.Name(), stat
+	rf, err := ioutil.TempFile("", "lsf-registry")
+	if err != nil {
+		t.Error("Failed to create registry file", err)
+	}
+
+	return rf.Name(), lf.Name(), stat
 }
 
-func teardownRegistrarTests(f string) {
-	os.Remove(options.registryFile)
-	os.Remove(f)
+func teardownRegistrarTests(lf, rf string) {
+	os.Remove(lf)
+	os.Remove(rf)
 }
 
 func TestRegistrar(t *testing.T) {
-	file, stat := setupRegistrarTests(t)
-	defer teardownRegistrarTests(file)
+	registryFile, logFile, stat := setupRegistrarTests(t)
+	defer teardownRegistrarTests(registryFile, logFile)
 
 	testState := make(map[string]*FileState)
 	testInput := make(chan []*FileEvent)
 
 	mockEvents := []*FileEvent {
 		&FileEvent {
-			Source: &file,
+			Source: &logFile,
 			Offset: 1024,
-			Text: &file,
+			Text: &logFile,
 			fileinfo: &stat,
 		},
 	}
@@ -48,9 +53,9 @@ func TestRegistrar(t *testing.T) {
 		close(testInput)
 	}()
 
-	Registrar(testState, testInput)
+	Registrar(testState, testInput, registryFile)
 
-	rf, err := os.Open(options.registryFile)
+	rf, err := os.Open(registryFile)
 	if err != nil {
 		t.Fatal("Failed to open registry file", err)
 	}
