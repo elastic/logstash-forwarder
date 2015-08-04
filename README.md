@@ -78,6 +78,14 @@ the only thing on the line:
             # to see if any new files match the wildcard.
             "/var/log/*.log"
           ],
+		  
+		  # By default files are considered as dead files 
+		  # when the last chance was made 24 hours ago.
+		  # However you can set it to a different value 
+		  # i.e. "300ms", "-1.5h" or "2h45m". 
+		  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h". 
+		  # This can be used to release file locks more quickly.
+		  "dead files": "12h",
 
           # A dictionary of fields to annotate on each event.
           "fields": { "type": "syslog" }
