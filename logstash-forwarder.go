@@ -219,6 +219,10 @@ func emit(msgfmt string, args ...interface{}) {
 	log.Printf(msgfmt, args...)
 }
 
+func emitEvenInQuietMode(msgfmt string, args ...interface{}) {
+	log.Printf(msgfmt, args...)
+}
+
 func fault(msgfmt string, args ...interface{}) {
 	exit(exitStat.faulted, msgfmt, args...)
 }
