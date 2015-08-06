@@ -103,21 +103,30 @@ func Publishv1(input chan []*FileEvent,
 			}
 
 			// read ack
-			response := make([]byte, 0, 6)
-			ackbytes := 0
-			for ackbytes != 6 {
-				n, err := socket.Read(response[len(response):cap(response)])
-				if err != nil {
-					emit("Read error looking for ack: %s\n", err)
-					socket.Close()
-					socket = connect(config)
-					continue SendPayload // retry sending on new connection
-				} else {
-					ackbytes += n
-				}
-			}
+			response := make([]byte, 6)
+      _, err := io.ReadFull(socket, response)
 
-			// TODO(sissel): verify ack
+      if err != nil {
+        emit("Read error looking for ack: %s\n", err)
+        socket.Close()
+        socket = connect(config)
+        continue SendPayload // retry sending on new connection
+      }
+
+      var sequence_ack uint32
+      buf := bytes.NewBuffer(response[2:])
+      binary.Read(buf, binary.BigEndian, &sequence_ack)
+
+      // The server should send the last sequence number of the payload,
+      // if that doesn't match we close the connection, reconnect and retransmit the all the events.
+      if sequence != sequence_ack {
+        emit("Sequence and sequence ack doesnt match, %d != %d, resending payload", sequence, sequence_ack)
+        socket.Close()
+        socket = connect(config)
+        continue SendPayload
+      }
+
+
 			// Success, stop trying to send the payload.
 			break
 		}
