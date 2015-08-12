@@ -118,7 +118,7 @@ func Publishv1(input chan []*FileEvent,
 			binary.Read(buf, binary.BigEndian, &sequence_ack)
 
 			// The server should send the last sequence number of the payload,
-			// if that doesn't match we close the connection, reconnect and retransmit the all the events.
+			// if that doesn't match we close the connection, reconnect and retransmit all the events.
 			if sequence != sequence_ack {
 				emit("Sequence and sequence ack doesnt match, %d != %d, resending payload", sequence, sequence_ack)
 				socket.Close()
