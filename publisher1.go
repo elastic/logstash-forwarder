@@ -104,28 +104,27 @@ func Publishv1(input chan []*FileEvent,
 
 			// read ack
 			response := make([]byte, 6)
-      _, err := io.ReadFull(socket, response)
+			_, err := io.ReadFull(socket, response)
 
-      if err != nil {
-        emit("Read error looking for ack: %s\n", err)
-        socket.Close()
-        socket = connect(config)
-        continue SendPayload // retry sending on new connection
-      }
+			if err != nil {
+				emit("Read error looking for ack: %s\n", err)
+				socket.Close()
+				socket = connect(config)
+				continue SendPayload // retry sending on new connection
+			}
 
-      var sequence_ack uint32
-      buf := bytes.NewBuffer(response[2:])
-      binary.Read(buf, binary.BigEndian, &sequence_ack)
+			var sequence_ack uint32
+			buf := bytes.NewBuffer(response[2:])
+			binary.Read(buf, binary.BigEndian, &sequence_ack)
 
-      // The server should send the last sequence number of the payload,
-      // if that doesn't match we close the connection, reconnect and retransmit the all the events.
-      if sequence != sequence_ack {
-        emit("Sequence and sequence ack doesnt match, %d != %d, resending payload", sequence, sequence_ack)
-        socket.Close()
-        socket = connect(config)
-        continue SendPayload
-      }
-
+			// The server should send the last sequence number of the payload,
+			// if that doesn't match we close the connection, reconnect and retransmit the all the events.
+			if sequence != sequence_ack {
+				emit("Sequence and sequence ack doesnt match, %d != %d, resending payload", sequence, sequence_ack)
+				socket.Close()
+				socket = connect(config)
+				continue SendPayload
+			}
 
 			// Success, stop trying to send the payload.
 			break
@@ -145,7 +144,7 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
 			config.SSLCertificate, config.SSLKey)
 		cert, err := tls.LoadX509KeyPair(config.SSLCertificate, config.SSLKey)
 		if err != nil {
-			fault ("Failed loading client ssl certificate: %s\n", err)
+			fault("Failed loading client ssl certificate: %s\n", err)
 		}
 		tlsconfig.Certificates = []tls.Certificate{cert}
 	}
