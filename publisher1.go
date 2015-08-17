@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"math/rand"
 	"net"
 	"os"
@@ -37,6 +38,7 @@ func Publishv1(input chan []*FileEvent,
 	var socket *tls.Conn
 	var sequence uint32
 	var err error
+	var failCount uint32
 
 	socket = connect(config)
 	defer socket.Close()
@@ -56,13 +58,8 @@ func Publishv1(input chan []*FileEvent,
 
 		// Send buffer until we're successful...
 		oops := func(err error) {
-			// TODO(sissel): Track how frequently we timeout and reconnect. If we're
-			// timing out too frequently, there's really no point in timing out since
-			// basically everything is slow or down. We'll want to ratchet up the
-			// timeout value slowly until things improve, then ratchet it down once
-			// things seem healthy.
 			emit("Socket error, will reconnect: %s\n", err)
-			time.Sleep(1 * time.Second)
+			backoff(failCount)
 			socket.Close()
 			socket = connect(config)
 		}
@@ -108,9 +105,7 @@ func Publishv1(input chan []*FileEvent,
 			for ackbytes != 6 {
 				n, err := socket.Read(response[len(response):cap(response)])
 				if err != nil {
-					emit("Read error looking for ack: %s\n", err)
-					socket.Close()
-					socket = connect(config)
+					oops(fmt.Errorf("Read error looking for ack: %s\n", err))
 					continue SendPayload // retry sending on new connection
 				} else {
 					ackbytes += n
@@ -119,6 +114,7 @@ func Publishv1(input chan []*FileEvent,
 
 			// TODO(sissel): verify ack
 			// Success, stop trying to send the payload.
+			failCount = 0
 			break
 		}
 
@@ -127,7 +123,17 @@ func Publishv1(input chan []*FileEvent,
 	} /* for each event payload */
 } // Publish
 
+//exponentially backoff on network error by choosing a random delay between
+//0.5 and 2**min(8,failCount) seconds
+func backoff(failCount uint32) {
+	exp := math.Min(8, float64(failCount))
+	delay := 0.5 + rand.Float64()*math.Pow(2, exp)
+	emit("Backing off for %.2v seconds", delay)
+	time.Sleep(time.Duration(delay) * time.Second)
+}
+
 func connect(config *NetworkConfig) (socket *tls.Conn) {
+	var failCount uint32
 	var tlsconfig tls.Config
 	tlsconfig.MinVersion = tls.VersionTLS10
 
@@ -165,6 +171,12 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
 		tlsconfig.RootCAs.AddCert(cert)
 	}
 
+	oops := func(err error) {
+		emit(err.Error())
+		failCount += 1
+		backoff(failCount)
+	}
+
 	for {
 		// Pick a random server from the list.
 		hostport := config.Servers[rand.Int()%len(config.Servers)]
@@ -177,8 +189,7 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
 		addresses, err := net.LookupHost(host)
 
 		if err != nil {
-			emit("DNS lookup failure \"%s\": %s\n", host, err)
-			time.Sleep(1 * time.Second)
+			oops(fmt.Errorf("DNS lookup failure \"%s\": %s\n", host, err))
 			continue
 		}
 
@@ -196,8 +207,7 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
 
 		tcpsocket, err := net.DialTimeout("tcp", addressport, config.timeout)
 		if err != nil {
-			emit("Failure connecting to %s: %s\n", address, err)
-			time.Sleep(1 * time.Second)
+			oops(fmt.Errorf("Failure connecting to %s: %s\n", address, err))
 			continue
 		}
 
@@ -207,8 +217,7 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
 		socket.SetDeadline(time.Now().Add(config.timeout))
 		err = socket.Handshake()
 		if err != nil {
-			emit("Failed to tls handshake with %s %s\n", address, err)
-			time.Sleep(1 * time.Second)
+			oops(fmt.Errorf("Failed to tls handshake with %s %s\n", address, err))
 			socket.Close()
 			continue
 		}
