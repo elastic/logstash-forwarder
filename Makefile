@@ -19,7 +19,8 @@ generate-init-script:
 	pleaserun --install --no-install-actions --install-prefix ./build \
 		--chdir /var/lib/logstash-forwarder \
 		--sysv-log-path /var/log/logstash-forwarder/ \
-		--overwrite -p sysv -v lsb-3.1 $(PREFIX)/bin/logstash-forwarder -config /etc/logstash-forwarder.conf
+		--overwrite -p sysv -v lsb-3.1 $(PREFIX)/bin/logstash-forwarder -config /etc/logstash-forwarder.conf.d
+
  
 build/empty: | build
 	mkdir $@
@@ -43,9 +44,9 @@ rpm deb: compile generate-init-script build/empty
 		--after-install $(AFTER_INSTALL) \
 		--before-install $(BEFORE_INSTALL) \
 		--before-remove $(BEFORE_REMOVE) \
-		--config-files /etc/logstash-forwarder.conf \
+		--config-files /etc/logstash-forwarder.conf.d \
 		./logstash-forwarder=$(PREFIX)/bin/ \
-		./logstash-forwarder.conf.example=/etc/logstash-forwarder.conf \
+		./logstash-forwarder.conf.example=/etc/logstash-forwarder.conf.d/logstash-forwarder.conf \
 		./build/etc=/ \
 		./build/empty/=/var/lib/logstash-forwarder/ \
 		./build/empty/=/var/log/logstash-forwarder/ \
