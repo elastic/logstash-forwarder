@@ -47,7 +47,7 @@ the only thing on the line:
         # A list of downstream servers listening for our messages.
         # logstash-forwarder will pick one at random and only switch if
         # the selected one appears to be dead or unresponsive
-        "servers": [ "localhost:5043" ],
+        "servers": [ "localhost:12345" ],
 
         # The path to your client ssl certificate (optional)
         "ssl certificate": "./logstash-forwarder.crt",
