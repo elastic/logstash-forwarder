@@ -1,5 +1,7 @@
 # logstash-forwarder
 
+Important note: [Filebeat](https://www.elastic.co/products/beats/filebeat) is the replacement for Logstash Forwarder, built on top of extensible [Beats](https://www.elastic.co/products/beats) platform. It brings greater stability, performance, platform support, and an extensive [roadmap](https://github.com/elastic/filebeat/issues) for lightweight file shipping!
+
 ♫ I'm a lumberjack and I'm ok! I sleep when idle, then I ship logs all day! I parse your logs, I eat the JVM agent for lunch! ♫
 
 (This project was recently renamed from 'lumberjack' to 'logstash-forwarder' to
