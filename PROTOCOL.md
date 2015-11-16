@@ -2,7 +2,7 @@
 
 The needs that lead to this protocol are:
 
-* Encryption amd Authentication to protect 
+* Encryption and Authentication to protect 
 * Compression should be used to reduce bandwidth
 * Round-trip latency should not damage throughput
 * Application-level message acknowledgement
