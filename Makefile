@@ -49,3 +49,6 @@ rpm deb: compile generate-init-script build/empty
 		./build/etc=/ \
 		./build/empty/=/var/lib/logstash-forwarder/ \
 		./build/empty/=/var/log/logstash-forwarder/ \
+
+docker-build-deb:
+	./docker/build.sh
