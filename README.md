@@ -118,7 +118,7 @@ Creating a correct SSL/TLS infrastructure is outside the scope of this document.
 As a very poor example (largely due unpredictability in your system's defaults for openssl), you can try the following command as an example for creating a self-signed certificate/key pair for use with a server named "logstash.example.com":
 
 ```
-openssl req -x509  -batch -nodes -newkey rsa:2048 -keyout lumberjack.key -out lumberjack.crt -subj /CN=logstash.example.com
+openssl req -x509  -batch -nodes -newkey rsa:2048 -keyout lumberjack.key -out lumberjack.crt -subj /CN=logstash.example.com -days 365
 ```
 
 The above example will create an SSL cert for the host 'logstash.example.com'. You cannot use `/CN=1.2.3.4` to create an SSL certificate for an IP address. In order to do a certificate with an IP address, you must create a certificate with an "IP Subject Alternative" or often called "IP SAN". Creating a certificate with an IP SAN is difficult and annoying, so I highly recommend you use hostnames only. If you have no DNS available to you, it is still often easier to set hostnames in /etc/hosts than it is to create a certificate with an IP SAN.
@@ -232,7 +232,7 @@ Fatal errors are always sent to stderr regardless of the `-quiet` command-line o
 
 Logstash supports all certificates, including self-signed certificates. To generate a certificate, you can run the following command:
 
-    $ openssl req -x509 -batch -nodes -newkey rsa:2048 -keyout logstash-forwarder.key -out logstash-forwarder.crt -days 365
+    $ openssl req -x509  -batch -nodes -newkey rsa:2048 -keyout lumberjack.key -out lumberjack.crt -subj /CN=logstash.example.com -days 365
 
 This will generate a key at `logstash-forwarder.key` and the 1-year valid certificate at `logstash-forwarder.crt`. Both the server that is running logstash-forwarder as well as the logstash instances receiving logs will require these files on disk to verify the authenticity of messages. 
 
