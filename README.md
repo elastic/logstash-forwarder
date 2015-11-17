@@ -91,7 +91,17 @@ the only thing on the line:
           ],
 
           # A dictionary of fields to annotate on each event.
-          "fields": { "type": "syslog" }
+          "fields": { "type": "syslog" },
+
+          # To save on resources (open files), logstash-forwarder will close file handles
+          # on files that have not emitted new events after some time period.
+          # This setting controls that time period which we call 'dead time'.
+          # The file will still be monitored for new events, but just not as an
+          # open file.
+
+          # Valid units include "s" (seconds), "m" (minutes), and "h" (hours). 
+          # For example, "30m" is 30 minutes and "1h30m" is 1 hour and 30 minutes
+          "dead time": "1h"
         }, {
           # A path of "-" means stdin.
           "paths": [ "-" ],
