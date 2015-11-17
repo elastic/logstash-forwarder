@@ -230,9 +230,36 @@ Fatal errors are always sent to stderr regardless of the `-quiet` command-line o
 
 ### Generating an ssl certificate
 
-Logstash supports all certificates, including self-signed certificates. To generate a certificate, you can run the following command:
+Logstash supports all certificates, including self-signed certificates.
 
-    $ openssl req -x509 -batch -nodes -newkey rsa:2048 -keyout logstash-forwarder.key -out logstash-forwarder.crt -days 365
+- You should use a domain to connect to your logstash server from the logstash-forwarder (to validate the cert) for example:  `"servers": [ "logstash.domain.com:5000" ],`
+- Create a DNS record for this domain so "dig a logstash.domain.com" replies with your logstash servers ip.
+- (OPTIONAL) Its good practice to setup the logstash server to reply with this domain if you use "hostname -f" (fully qualified domain name) 
+
+To generate a certificate, you can run the following command:
+
+```
+$ openssl req -x509 -nodes -days 365 -newkey rsa:4096 -keyout logstash-forwarder.key -out logstash-forwarder.crt
+```
+
+which will produce:
+
+```
+Generating a 4096 bit RSA private key
+..........................................................................................++
+................................++
+writing new private key to 'logstash-forwarder.key'
+-----
+
+Country Name (2 letter code) [AU]:
+State or Province Name (full name) [Some-State]:
+Locality Name (eg, city) []:
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:
+Organizational Unit Name (eg, section) []:
+Common Name (e.g. server FQDN or YOUR name) []:logstash.domain.com  <-- VERY IMPORTANT TO USE THE DOMAIN YOU SETUP HERE
+Email Address []:
+
+```
 
 This will generate a key at `logstash-forwarder.key` and the 1-year valid certificate at `logstash-forwarder.crt`. Both the server that is running logstash-forwarder as well as the logstash instances receiving logs will require these files on disk to verify the authenticity of messages. 
 
