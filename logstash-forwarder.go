@@ -71,7 +71,7 @@ func init() {
 	flag.IntVar(&options.harvesterBufferSize, "harvest-buffer-size", options.harvesterBufferSize, "harvester reader buffer size")
 	flag.IntVar(&options.harvesterBufferSize, "hb", options.harvesterBufferSize, "harvester reader buffer size")
 
-	flag.BoolVar(&options.useSyslog, "log-to-syslog", options.useSyslog, "log to syslog instead of stdout") // deprecate this
+	flag.BoolVar(&options.useSyslog, "log-to-syslog", options.useSyslog, "log to syslog instead of stdout (avoid; deprecated in favor of -syslog)")
 	flag.BoolVar(&options.useSyslog, "syslog", options.useSyslog, "log to syslog instead of stdout")
 
 	flag.BoolVar(&options.tailOnRotate, "tail", options.tailOnRotate, "always tail on log rotation -note: may skip entries ")
