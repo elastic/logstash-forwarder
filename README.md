@@ -1,10 +1,10 @@
 # logstash-forwarder
 
-# THIS PROJECT IS REPLACED BY [FILEBEAT](https://github.com/elastic/filebeat)
+# THIS PROJECT IS REPLACED BY [FILEBEAT](https://github.com/elastic/beats/tree/master/filebeat)
 
-The [filebeat](https://github.com/elastic/filebeat) project replaces logstash-forwarder. Please use that instead.
+The [filebeat](https://github.com/elastic/beats/tree/master/filebeat) project replaces logstash-forwarder. Please use that instead.
 
-No further development will occur on this project. Major bug fixes or security fixes may be worked on through 2016, at which point this repository and its project will be abandoned. The replacement is [filebeat](https://github.com/elastic/filebeat) which receives new features and fixes frequently. :)
+No further development will occur on this project. Major bug fixes or security fixes may be worked on through 2016, at which point this repository and its project will be abandoned. The replacement is [filebeat](https://github.com/elastic/beats/tree/master/filebeat) which receives new features and fixes frequently. :)
 
 Happy logging!
 
