@@ -27,6 +27,7 @@ var options = &struct {
 	useSyslog           bool
 	tailOnRotate        bool
 	quiet               bool
+	maxLineBytes        int
   version bool
 }{
 	spoolSize:           1024,
@@ -42,8 +43,9 @@ func emitOptions() {
 	emit("\tharvester-buff-size: %d\n", options.harvesterBufferSize)
 	emit("\t--- flags ---------\n")
 	emit("\ttail (on-rotation):  %t\n", options.tailOnRotate)
-	emit("\tlog-to-syslog:          %t\n", options.useSyslog)
-	emit("\tquiet:             %t\n", options.quiet)
+	emit("\tlog-to-syslog:       %t\n", options.useSyslog)
+	emit("\tquiet:               %t\n", options.quiet)
+	emit("\tmax-line-bytes:      %d\n", options.maxLineBytes)
 	if runProfiler() {
 		emit("\t--- profile run ---\n")
 		emit("\tcpu-profile-file:    %s\n", options.cpuProfileFile)
@@ -79,6 +81,7 @@ func init() {
 
 	flag.BoolVar(&options.quiet, "quiet", options.quiet, "operate in quiet mode - only emit errors to log")
 	flag.BoolVar(&options.version, "version", options.version, "output the version of this program")
+	flag.IntVar(&options.maxLineBytes, "max-line-bytes", options.maxLineBytes, "max number of bytes forwarded per line - note: set to 0 for unlimited.")
 }
 
 func init() {
