@@ -20,7 +20,7 @@ type Harvester struct {
 
 func (h *Harvester) Harvest(output chan *FileEvent) {
 	h.open()
-	info, e := h.file.Stat()
+	_, e := h.file.Stat()
 	if e != nil {
 		panic(fmt.Sprintf("Harvest: unexpected error: %s", e.Error()))
 	}
@@ -52,11 +52,11 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 	for {
 		text, bytesread, err := h.readline(reader, buffer, read_timeout)
 
+		info, _ := h.file.Stat()
 		if err != nil {
 			if err == io.EOF {
 				// timed out waiting for data, got eof.
 				// Check to see if the file was truncated
-				info, _ := h.file.Stat()
 				if info.Size() < h.Offset {
 					emit("File truncated, seeking to beginning: %s\n", h.Path)
 					h.file.Seek(0, os.SEEK_SET)
