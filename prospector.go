@@ -104,6 +104,10 @@ func (p *Prospector) scan(path string, output chan *FileEvent, resume *Prospecto
 			continue
 		}
 
+		deadFilesMutex.Lock()
+		isFileDead := deadFiles[file]
+		deadFilesMutex.Unlock()
+
 		// Check the current info against p.prospectorinfo[file]
 		lastinfo, is_known := p.prospectorinfo[file]
 		newinfo := lastinfo
@@ -117,7 +121,7 @@ func (p *Prospector) scan(path string, output chan *FileEvent, resume *Prospecto
 
 			// Check for dead time, but only if the file modification time is before the last scan started
 			// This ensures we don't skip genuine creations with dead times less than 10s
-			if fileinfo.ModTime().Before(p.lastscan) && time.Since(fileinfo.ModTime()) > p.FileConfig.deadtime {
+			if fileinfo.ModTime().Before(p.lastscan) && time.Since(fileinfo.ModTime()) > p.FileConfig.deadTimeDur {
 				var offset int64 = 0
 				var is_resuming bool = false
 
@@ -135,7 +139,7 @@ func (p *Prospector) scan(path string, output chan *FileEvent, resume *Prospecto
 					go harvester.Harvest(output)
 				} else {
 					// Old file, skip it, but push offset of file size so we start from the end if this file changes and needs picking up
-					emit("Skipping file (older than dead time of %v): %s\n", p.FileConfig.deadtime, file)
+					emit("Skipping file (older than dead time of %v): %s\n", p.FileConfig.deadTimeDur, file)
 					newinfo.harvester <- fileinfo.Size()
 				}
 			} else if previous := is_file_renamed(file, fileinfo, p.prospectorinfo, missinginfo); previous != "" {
@@ -190,9 +194,14 @@ func (p *Prospector) scan(path string, output chan *FileEvent, resume *Prospecto
 				// Keep the old file in missinginfo so we don't rescan it if it was renamed and we've not yet reached the new filename
 				// We only need to keep it for the remainder of this iteration then we can assume it was deleted and forget about it
 				missinginfo[file] = lastinfo.fileinfo
-			} else if len(newinfo.harvester) != 0 && lastinfo.fileinfo.ModTime() != fileinfo.ModTime() {
+			} else if len(newinfo.harvester) != 0 && lastinfo.fileinfo.ModTime() != fileinfo.ModTime() && !isFileDead {
 				// Resume harvesting of an old file we've stopped harvesting from
 				emit("Resuming harvester on an old file that was just modified: %s\n", file)
+
+				// Un-mark the file as 'dead'
+				deadFilesMutex.Lock()
+				deadFiles[file] = true
+				deadFilesMutex.Unlock()
 
 				// Start a harvester on the path; an old file was just modified and it doesn't have a harvester
 				// The offset to continue from will be stored in the harvester channel - so take that to use and also clear the channel
