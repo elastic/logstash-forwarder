@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 	"reflect"
+	"sort"
 	"testing"
 	"time"
 )
@@ -32,27 +33,75 @@ func rmTempDir(tmpdir string) {
 // Tests
 // -------------------------------------------------------------------
 func TestDiscoverConfigs(t *testing.T) {
-	tmpdir := makeTempDir(t)
-	defer rmTempDir(tmpdir)
-	tmpfile1 := path.Join(tmpdir, "myfile1")
-	tmpfile2 := path.Join(tmpdir, "myfile2")
-	err := ioutil.WriteFile(tmpfile1, make([]byte, 0), 0644)
-	chkerr(t, err)
-	err = ioutil.WriteFile(tmpfile2, make([]byte, 0), 0644)
-
-	configs, err := DiscoverConfigs(tmpdir)
-	chkerr(t, err)
-
-	expected := []string{tmpfile1, tmpfile2}
-	if !reflect.DeepEqual(configs, expected) {
-		t.Fatalf("Expected to find %v, got %v instead", configs, expected)
+	tests := []struct {
+		dirsToCreate    []string
+		filesToCreate   []string
+		expectedConfigs []string
+		discoverPath    string
+	}{
+		{
+			[]string{},
+			[]string{"myfile1", "myfile2"},
+			[]string{"myfile1", "myfile2"},
+			".",
+		},
+		{
+			[]string{},
+			[]string{"myfile1"},
+			[]string{"myfile1"},
+			"myfile1",
+		},
+		{
+			[]string{"empty_dir"},
+			[]string{"myfile1"},
+			[]string{"myfile1"},
+			".",
+		},
+		{
+			[]string{"sub_dir"},
+			[]string{"myfile1", "sub_dir/ignore_me"},
+			[]string{"myfile1"},
+			".",
+		},
+		{
+			[]string{},
+			[]string{"myfile1", "myfile1~"},
+			[]string{"myfile1"},
+			".",
+		},
 	}
 
-	configs, err = DiscoverConfigs(tmpfile1)
+	for testidx, test := range tests {
+		tmpdir := makeTempDir(t)
+		defer rmTempDir(tmpdir)
 
-	expected = []string{tmpfile1}
-	if !reflect.DeepEqual(configs, expected) {
-		t.Fatalf("Expected to find %v, got %v instead", configs, expected)
+		// Create directories first to allow creation of files
+		// inside those directories.
+		for _, dir := range test.dirsToCreate {
+			err := os.MkdirAll(path.Join(tmpdir, dir), 0755)
+			chkerr(t, err)
+		}
+
+		for _, file := range test.filesToCreate {
+			err := ioutil.WriteFile(path.Join(tmpdir, file), make([]byte, 0), 0644)
+			chkerr(t, err)
+		}
+
+		configs, err := DiscoverConfigs(path.Join(tmpdir, test.discoverPath))
+		chkerr(t, err)
+
+		expectedFullPaths := make([]string, 0, len(test.expectedConfigs))
+		for _, f := range test.expectedConfigs {
+			expectedFullPaths = append(expectedFullPaths, path.Join(tmpdir, f))
+		}
+
+		// Don't make assumptions about the order of files
+		// returned from DiscoverConfigs().
+		sort.Strings(configs)
+		sort.Strings(expectedFullPaths)
+		if !reflect.DeepEqual(configs, expectedFullPaths) {
+			t.Errorf("Test %d: Expected to find %v, got %v instead", testidx, expectedFullPaths, configs)
+		}
 	}
 }
 
