@@ -20,6 +20,7 @@ var exitStat = struct {
 
 var options = &struct {
 	configArg           string
+	hostname            string
 	spoolSize           uint64
 	harvesterBufferSize int
 	cpuProfileFile      string
@@ -37,6 +38,7 @@ var options = &struct {
 func emitOptions() {
 	emit("\t--- options -------\n")
 	emit("\tconfig-arg:          %s\n", options.configArg)
+	emit("\thostname:            %s\n", options.hostname)
 	emit("\tidle-timeout:        %v\n", options.idleTimeout)
 	emit("\tspool-size:          %d\n", options.spoolSize)
 	emit("\tharvester-buff-size: %d\n", options.harvesterBufferSize)
@@ -63,6 +65,7 @@ const logflags = log.Ldate | log.Ltime | log.Lmicroseconds
 func init() {
 	flag.StringVar(&options.configArg, "config", options.configArg, "path to logstash-forwarder configuration file or directory")
 
+	flag.StringVar(&options.hostname, "hostname", options.hostname, "hostname we want to advertise as")
 	flag.StringVar(&options.cpuProfileFile, "cpuprofile", options.cpuProfileFile, "path to cpu profile output - note: exits on profile end.")
 
 	flag.Uint64Var(&options.spoolSize, "spool-size", options.spoolSize, "event count spool threshold - forces network flush")
