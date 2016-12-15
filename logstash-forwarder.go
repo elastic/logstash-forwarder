@@ -68,6 +68,9 @@ func init() {
 	flag.Uint64Var(&options.spoolSize, "spool-size", options.spoolSize, "event count spool threshold - forces network flush")
 	flag.Uint64Var(&options.spoolSize, "sv", options.spoolSize, "event count spool threshold - forces network flush")
 
+	flag.DurationVar(&options.idleTimeout, "idle-timeout", options.idleTimeout, "maximum time an event stays spooled before it's flushed")
+	flag.DurationVar(&options.idleTimeout, "it", options.idleTimeout, "maximum time an event stays spooled before it's flushed")
+
 	flag.IntVar(&options.harvesterBufferSize, "harvest-buffer-size", options.harvesterBufferSize, "harvester reader buffer size")
 	flag.IntVar(&options.harvesterBufferSize, "hb", options.harvesterBufferSize, "harvester reader buffer size")
 
