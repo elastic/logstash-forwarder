@@ -54,6 +54,9 @@ func DiscoverConfigs(file_or_directory string) (files []string, err error) {
 			return nil, err
 		}
 		for _, filename := range entries {
+			if filename.IsDir() {
+				continue
+			}
 			files = append(files, path.Join(file_or_directory, filename.Name()))
 		}
 	} else {
