@@ -22,8 +22,9 @@ var defaultConfig = &struct {
 }
 
 type Config struct {
-	Network NetworkConfig `json:network`
-	Files   []FileConfig  `json:files`
+	Network    NetworkConfig `json:network`
+	Files      []FileConfig  `json:files`
+	WorkingDir string        `json:workingDir`
 }
 
 type NetworkConfig struct {
