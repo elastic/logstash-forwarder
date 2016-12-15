@@ -42,10 +42,10 @@ func writeRegistry(state map[string]*FileState, path string) error {
 		emit("Failed to create tempfile (%s) for writing: %s\n", tempfile, e)
 		return e
 	}
-	defer file.Close()
 
 	encoder := json.NewEncoder(file)
 	encoder.Encode(state)
-
+	file.Close()
+    
 	return onRegistryWrite(path, tempfile)
 }
