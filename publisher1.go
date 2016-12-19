@@ -207,7 +207,7 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
 		socket.SetDeadline(time.Now().Add(config.timeout))
 		err = socket.Handshake()
 		if err != nil {
-			emit("Failed to tls handshake with %s %s\n", address, err)
+			emitEvenInQuietMode("Failed to tls handshake with %s %s\n", address, err)
 			time.Sleep(1 * time.Second)
 			socket.Close()
 			continue
