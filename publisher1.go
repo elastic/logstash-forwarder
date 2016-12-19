@@ -142,27 +142,17 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
 	}
 
 	if len(config.SSLCA) > 0 {
-		emit("Setting trusted CA from file: %s\n", config.SSLCA)
+		emit("Setting trusted CA certificates from file: %s\n", config.SSLCA)
 		tlsconfig.RootCAs = x509.NewCertPool()
 
 		pemdata, err := ioutil.ReadFile(config.SSLCA)
 		if err != nil {
-			fault("Failure reading CA certificate: %s\n", err)
+			fault("Failure reading CA certificates: %s\n", err)
 		}
 
-		block, _ := pem.Decode(pemdata)
-		if block == nil {
-			fault("Failed to decode PEM data, is %s a valid cert?\n", config.SSLCA)
+		if(!tlsconfig.RootCAs.AppendCertsFromPEM(pemdata)) {
+			fault("Failed to import CA certificates: %s\n", config.SSLCA)
 		}
-		if block.Type != "CERTIFICATE" {
-			fault("This is not a certificate file: %s\n", config.SSLCA)
-		}
-
-		cert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			fault("Failed to parse a certificate: %s\n", config.SSLCA)
-		}
-		tlsconfig.RootCAs.AddCert(cert)
 	}
 
 	for {
