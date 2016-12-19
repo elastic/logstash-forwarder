@@ -8,6 +8,7 @@ import (
 	"runtime/pprof"
 	"time"
   "fmt"
+  "path"
 )
 
 var exitStat = struct {
@@ -28,6 +29,7 @@ var options = &struct {
 	tailOnRotate        bool
 	quiet               bool
   version bool
+         workingdir	    string
 }{
 	spoolSize:           1024,
 	harvesterBufferSize: 16 << 10,
@@ -44,6 +46,7 @@ func emitOptions() {
 	emit("\ttail (on-rotation):  %t\n", options.tailOnRotate)
 	emit("\tlog-to-syslog:          %t\n", options.useSyslog)
 	emit("\tquiet:             %t\n", options.quiet)
+	emit("\tworkingdir:             %s\n", options.workingdir)
 	if runProfiler() {
 		emit("\t--- profile run ---\n")
 		emit("\tcpu-profile-file:    %s\n", options.cpuProfileFile)
@@ -79,6 +82,7 @@ func init() {
 
 	flag.BoolVar(&options.quiet, "quiet", options.quiet, "operate in quiet mode - only emit errors to log")
 	flag.BoolVar(&options.version, "version", options.version, "output the version of this program")
+	flag.StringVar(&options.workingdir, "workingdir", options.workingdir, "set working dir")
 }
 
 func init() {
@@ -162,7 +166,7 @@ func main() {
 
 	// Load the previous log file locations now, for use in prospector
 	restart.files = make(map[string]*FileState)
-	if existing, e := os.Open(".logstash-forwarder"); e == nil {
+	if existing, e := os.Open(path.Join(options.workingdir, ".logstash-forwarder")); e == nil {
 		defer existing.Close()
 		wd := ""
 		if wd, e = os.Getwd(); e != nil {
@@ -208,7 +212,7 @@ func main() {
 	go Publishv1(publisher_chan, registrar_chan, &config.Network)
 
 	// registrar records last acknowledged positions in all files.
-	Registrar(persist, registrar_chan)
+	Registrar(persist, registrar_chan, options.workingdir)
 }
 
 // REVU: yes, this is a temp hack.
