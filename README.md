@@ -150,7 +150,7 @@ dns names and set the CN in your cert to your dns name.
 
 ## Building it
 
-1. Install [go](http://golang.org/doc/install)
+1. Install [go](http://golang.org/doc/install) (version 1.1 or better is required)
 
 2. Compile logstash-forwarder
 
