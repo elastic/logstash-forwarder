@@ -136,7 +136,7 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
 			config.SSLCertificate, config.SSLKey)
 		cert, err := tls.LoadX509KeyPair(config.SSLCertificate, config.SSLKey)
 		if err != nil {
-			fault ("Failed loading client ssl certificate: %s\n", err)
+			fault("Failed loading client ssl certificate: %s\n", err)
 		}
 		tlsconfig.Certificates = []tls.Certificate{cert}
 	}
@@ -150,19 +150,27 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
 			fault("Failure reading CA certificate: %s\n", err)
 		}
 
-		block, _ := pem.Decode(pemdata)
-		if block == nil {
-			fault("Failed to decode PEM data, is %s a valid cert?\n", config.SSLCA)
-		}
-		if block.Type != "CERTIFICATE" {
-			fault("This is not a certificate file: %s\n", config.SSLCA)
-		}
+		rest := pemdata
+		var block *pem.Block
+		var pemBlockNum = 1
+		for {
+			block, rest = pem.Decode(rest)
+			if block != nil {
+				if block.Type != "CERTIFICATE" {
+					fault("Block %d does not contain a certificate: %s\n", pemBlockNum, config.SSLCA)
+				}
 
-		cert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			fault("Failed to parse a certificate: %s\n", config.SSLCA)
+				cert, err := x509.ParseCertificate(block.Bytes)
+				if err != nil {
+					fault("Failed to parse CA certificate in block %d: %s\n", config.SSLCA, pemBlockNum)
+				}
+
+				tlsconfig.RootCAs.AddCert(cert)
+				pemBlockNum += 1
+			} else {
+				break
+			}
 		}
-		tlsconfig.RootCAs.AddCert(cert)
 	}
 
 	for {
