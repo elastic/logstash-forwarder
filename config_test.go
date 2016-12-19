@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -143,18 +144,92 @@ func TestLoadConfigAndStripComments(t *testing.T) {
 }
 
 func TestFinalizeConfig(t *testing.T) {
-	config := Config{}
-
-	FinalizeConfig(&config)
-	if config.Network.Timeout != defaultConfig.netTimeout {
-		t.Fatalf("Expected FinalizeConfig to default timeout to %d, got %d instead", defaultConfig.netTimeout, config.Network.Timeout)
+	tests := []struct {
+		config        Config
+		expectSuccess bool
+		validate      func(c Config) error
+	}{
+		{
+			// Uses correct default timeout when no explicit timeout is set
+			config: Config{
+				Files: []FileConfig{
+					{
+						Paths: []string{"testfile"},
+					},
+				},
+				Network: NetworkConfig{
+					Servers: []string{"host.example.com"},
+				},
+			},
+			expectSuccess: true,
+			validate: func(c Config) error {
+				if c.Network.Timeout != defaultConfig.netTimeout {
+					return fmt.Errorf("Expected FinalizeConfig to default timeout to %d, got %d instead", defaultConfig.netTimeout, c.Network.Timeout)
+				}
+				return nil
+			},
+		},
+		{
+			// When timeout is explicitly set it's converted to time.Duration
+			config: Config{
+				Files: []FileConfig{
+					{
+						Paths: []string{"testfile"},
+					},
+				},
+				Network: NetworkConfig{
+					Servers: []string{"host.example.com"},
+					Timeout: 40,
+				},
+			},
+			expectSuccess: true,
+			validate: func(c Config) error {
+				expected := time.Duration(40) * time.Second
+				if c.Network.timeout != expected {
+					return fmt.Errorf("Expected FinalizeConfig to set the timeout duration to %v, got %v instead", c.Network.timeout, expected)
+				}
+				return nil
+			},
+		},
+		{
+			// No filename patterns results in an error
+			config: Config{
+				Files: []FileConfig{},
+				Network: NetworkConfig{
+					Servers: []string{"host.example.com"},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			// Empty server list results in an error
+			config: Config{
+				Files: []FileConfig{
+					{
+						Paths: []string{"testfile"},
+					},
+				},
+				Network: NetworkConfig{
+					Servers: []string{},
+				},
+			},
+			expectSuccess: false,
+		},
 	}
 
-	config.Network.Timeout = 40
-	expected := time.Duration(40) * time.Second
-	FinalizeConfig(&config)
-	if config.Network.timeout != expected {
-		t.Fatalf("Expected FinalizeConfig to set the timeout duration to %v, got %v instead", config.Network.timeout, expected)
+	for testidx, test := range tests {
+		err := FinalizeConfig(&test.config)
+		if test.expectSuccess && err != nil {
+			t.Errorf("Test %d: Expected success, got this instead: %s", testidx, err)
+		} else if !test.expectSuccess && err == nil {
+			t.Errorf("Test %d: Expected failure, got success instead", testidx)
+		}
+		if test.validate != nil {
+			err := test.validate(test.config)
+			if err != nil {
+				t.Errorf("Test %d: %s", testidx, err)
+			}
+		}
 	}
 }
 

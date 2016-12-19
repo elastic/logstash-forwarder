@@ -147,12 +147,21 @@ func LoadConfig(path string) (config Config, err error) {
 	return
 }
 
-func FinalizeConfig(config *Config) {
+func FinalizeConfig(config *Config) error {
 	if config.Network.Timeout == 0 {
 		config.Network.Timeout = defaultConfig.netTimeout
 	}
-
 	config.Network.timeout = time.Duration(config.Network.Timeout) * time.Second
+
+	if len(config.Files) == 0 {
+		return fmt.Errorf("No paths given. What files do you want me to watch?")
+	}
+
+	if len(config.Network.Servers) == 0 {
+		return fmt.Errorf("No server hostnames given. Where do you want to ship the log messages?")
+	}
+
+	return nil
 }
 
 func StripComments(data []byte) ([]byte, error) {
