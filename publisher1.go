@@ -7,7 +7,6 @@ import (
 	"crypto/x509"
 	"encoding/binary"
 	"encoding/pem"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -136,7 +135,7 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
 			config.SSLCertificate, config.SSLKey)
 		cert, err := tls.LoadX509KeyPair(config.SSLCertificate, config.SSLKey)
 		if err != nil {
-			fault ("Failed loading client ssl certificate: %s\n", err)
+			fault("Failed loading client ssl certificate: %s\n", err)
 		}
 		tlsconfig.Certificates = []tls.Certificate{cert}
 	}
@@ -174,23 +173,21 @@ func connect(config *NetworkConfig) (socket *tls.Conn) {
 		}
 		host := string(submatch[1])
 		port := string(submatch[2])
-		addresses, err := net.LookupHost(host)
 
-		if err != nil {
-			emit("DNS lookup failure \"%s\": %s\n", host, err)
-			time.Sleep(1 * time.Second)
-			continue
+		var address string
+		if net.ParseIP(host) != nil {
+			address = host
+		} else {
+			addresses, err := net.LookupHost(host)
+			if err != nil {
+				emit("DNS lookup failure \"%s\": %s\n", host, err)
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
+			address = addresses[rand.Int()%len(addresses)]
 		}
-
-		address := addresses[rand.Int()%len(addresses)]
-		var addressport string
-
-		ip := net.ParseIP(address)
-		if len(ip) == net.IPv4len {
-			addressport = fmt.Sprintf("%s:%s", address, port)
-		} else if len(ip) == net.IPv6len {
-			addressport = fmt.Sprintf("[%s]:%s", address, port)
-		}
+		addressport := net.JoinHostPort(address, port)
 
 		emit("Connecting to %s (%s) \n", addressport, host)
 
