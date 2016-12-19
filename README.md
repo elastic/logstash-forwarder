@@ -19,8 +19,7 @@ make its intended use clear. The 'lumberjack' name now remains as the network pr
 ## Questions and support
 
 If you have questions and cannot find answers, please join the #logstash irc
-channel on freenode irc or ask on the logstash-users@googlegroups.com mailing
-list.
+channel on freenode irc or ask on the https://discuss.elastic.co/c/logstash discussion forum.
 
 ## What is this?
 
